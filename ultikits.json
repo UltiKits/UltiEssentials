@@ -1,0 +1,6 @@
+{
+  "identifyString": "ultiessentials",
+  "name": "UltiEssentials",
+  "shortDescription": "服务器核心功能模块，包含传送系统、玩家状态管理、管理员工具和自定义服务器功能。",
+  "categoryId": 1
+}

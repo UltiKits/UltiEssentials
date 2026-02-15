@@ -113,10 +113,10 @@ public class WhitelistCommand extends BaseEssentialsCommand {
     @Override
     protected void handleHelp(CommandSender sender) {
         sender.sendMessage(i18n("白名单命令帮助:"));
-        sender.sendMessage("/wl add <玩家> - 添加玩家到白名单");
-        sender.sendMessage("/wl remove <玩家> - 从白名单移除玩家");
-        sender.sendMessage("/wl list - 查看白名单列表");
-        sender.sendMessage("/wl on/off - 启用/禁用白名单");
-        sender.sendMessage("/wl status - 查看白名单状态");
+        sender.sendMessage(i18n("/wl add <玩家> - 添加玩家到白名单"));
+        sender.sendMessage(i18n("/wl remove <玩家> - 从白名单移除玩家"));
+        sender.sendMessage(i18n("/wl list - 查看白名单列表"));
+        sender.sendMessage(i18n("/wl on/off - 启用/禁用白名单"));
+        sender.sendMessage(i18n("/wl status - 查看白名单状态"));
     }
 }

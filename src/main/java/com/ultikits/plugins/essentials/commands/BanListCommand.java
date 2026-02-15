@@ -66,17 +66,17 @@ public class BanListCommand extends BaseEssentialsCommand {
             info.append("§e").append(ban.getPlayerName());
             
             if (ban.isPermanent()) {
-                info.append(" §c[永久]");
+                info.append(i18n(" §c[永久]"));
             } else {
-                info.append(" §7[剩余: §f");
+                info.append(i18n(" §7[剩余: §f"));
                 info.append(BanService.formatDuration(ban.getRemainingTime()));
                 info.append("§7]");
             }
-            
+
             sender.sendMessage(info.toString());
-            sender.sendMessage("  §7原因: §f" + ban.getReason());
-            sender.sendMessage("  §7操作者: §f" + ban.getBannedByName() + 
-                " §7于 " + DATE_FORMAT.format(new Date(ban.getBanTime())));
+            sender.sendMessage(i18n("  §7原因: §f") + ban.getReason());
+            sender.sendMessage(i18n("  §7操作者: §f") + ban.getBannedByName() +
+                i18n(" §7于 ") + DATE_FORMAT.format(new Date(ban.getBanTime())));
         }
         
         sender.sendMessage(i18n("§7共 ") + allBans.size() + 

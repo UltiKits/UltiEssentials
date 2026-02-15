@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.utils;
 
+import org.bukkit.Server;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.*;
 
@@ -7,6 +8,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -346,6 +348,122 @@ class MessageUtilsTest {
             MessageUtils.sendTitle(player, null, "Subtitle", 10, 70, 20);
 
             verify(player).sendTitle(anyString(), anyString(), eq(10), eq(70), eq(20));
+        }
+
+        @Test
+        @DisplayName("Should handle null subtitle")
+        void shouldHandleNullSubtitle() throws Exception {
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+
+            MessageUtils.sendTitle(player, "Title", null, 10, 70, 20);
+
+            verify(player).sendTitle(anyString(), anyString(), eq(10), eq(70), eq(20));
+        }
+    }
+
+    @Nested
+    @DisplayName("broadcast")
+    class BroadcastTests {
+
+        @Test
+        @DisplayName("Should broadcast formatted message")
+        void shouldBroadcastFormattedMessage() {
+            Server server = EssentialsTestHelper.getMockServer();
+
+            MessageUtils.broadcast("&aServer announcement!");
+
+            verify(server).broadcastMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should not broadcast null message")
+        void shouldNotBroadcastNullMessage() {
+            Server server = EssentialsTestHelper.getMockServer();
+
+            MessageUtils.broadcast(null);
+
+            verify(server, never()).broadcastMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should not broadcast empty message")
+        void shouldNotBroadcastEmptyMessage() {
+            Server server = EssentialsTestHelper.getMockServer();
+
+            MessageUtils.broadcast("");
+
+            verify(server, never()).broadcastMessage(anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("formatDuration - additional cases")
+    class FormatDurationAdditionalTests {
+
+        @Test
+        @DisplayName("Should format weeks")
+        void shouldFormatWeeks() {
+            long oneWeek = 7L * 86400 * 1000;
+            String result = MessageUtils.formatDuration(oneWeek);
+            assertThat(result).contains("1周");
+        }
+
+        @Test
+        @DisplayName("Should format hours only")
+        void shouldFormatHoursOnly() {
+            long threeHours = 3L * 3600 * 1000;
+            String result = MessageUtils.formatDuration(threeHours);
+            assertThat(result).contains("3小时");
+        }
+
+        @Test
+        @DisplayName("Should format exactly 1 second")
+        void shouldFormatOneSecond() {
+            String result = MessageUtils.formatDuration(1000);
+            assertThat(result).isEqualTo("1秒");
+        }
+
+        @Test
+        @DisplayName("Should format 1 day exactly")
+        void shouldFormatOneDay() {
+            long oneDay = 86400L * 1000;
+            String result = MessageUtils.formatDuration(oneDay);
+            assertThat(result).contains("1天");
+        }
+    }
+
+    @Nested
+    @DisplayName("parsePlaceholders - additional cases")
+    class ParsePlaceholdersAdditionalTests {
+
+        @Test
+        @DisplayName("Should replace {displayname} bracket placeholder")
+        void shouldReplaceBracketDisplayNamePlaceholder() throws Exception {
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+            when(player.getDisplayName()).thenReturn("[VIP] Steve");
+
+            String result = MessageUtils.parsePlaceholders(player, "Name: {displayname}");
+            assertThat(result).contains("[VIP] Steve");
+        }
+
+        @Test
+        @DisplayName("Should handle text with no placeholders")
+        void shouldHandleTextWithNoPlaceholders() {
+            String result = MessageUtils.parsePlaceholders(null, "No placeholders here");
+            assertThat(result).isEqualTo("No placeholders here");
+        }
+
+        @Test
+        @DisplayName("Should handle multiple placeholders in one string")
+        void shouldHandleMultiplePlaceholders() throws Exception {
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+            when(player.getHealth()).thenReturn(15.0);
+            when(player.getFoodLevel()).thenReturn(10);
+
+            String result = MessageUtils.parsePlaceholders(player, "%player% HP:%health% Food:%food%");
+            assertThat(result).contains("Steve");
+            assertThat(result).contains("15");
+            assertThat(result).contains("10");
         }
     }
 }

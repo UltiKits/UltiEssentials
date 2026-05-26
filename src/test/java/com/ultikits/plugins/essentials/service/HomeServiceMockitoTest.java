@@ -273,7 +273,7 @@ class HomeServiceMockitoTest {
             boolean result = homeService.deleteHome(UUID.randomUUID(), "home");
 
             assertThat(result).isTrue();
-            verify(homeOperator).delById(homeId);
+            verify(homeOperator).delById(homeId.toString());
         }
 
         @Test

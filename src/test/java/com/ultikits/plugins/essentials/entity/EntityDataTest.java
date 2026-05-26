@@ -114,7 +114,7 @@ class EntityDataTest {
 
             ban.setId(id);
 
-            assertThat(ban.getId()).isEqualTo(id);
+            assertThat(ban.getId()).isEqualTo(id.toString());
             assertThat(ban.getUuid()).isEqualTo(id);
         }
 
@@ -185,7 +185,7 @@ class EntityDataTest {
 
             lock.setId(id);
 
-            assertThat(lock.getId()).isEqualTo(id);
+            assertThat(lock.getId()).isEqualTo(id.toString());
         }
 
         @Test
@@ -230,7 +230,7 @@ class EntityDataTest {
 
             home.setId(id);
 
-            assertThat(home.getId()).isEqualTo(id);
+            assertThat(home.getId()).isEqualTo(id.toString());
         }
     }
 
@@ -281,7 +281,7 @@ class EntityDataTest {
 
             warp.setId(id);
 
-            assertThat(warp.getId()).isEqualTo(id);
+            assertThat(warp.getId()).isEqualTo(id.toString());
         }
     }
 }

@@ -246,7 +246,7 @@ class ChestLockServiceMockitoTest {
             ChestLockService.UnlockResult result = service.unlockBlock(block, player);
 
             assertThat(result).isEqualTo(ChestLockService.UnlockResult.SUCCESS);
-            verify(lockOperator).delById(lockId);
+            verify(lockOperator).delById(lockId.toString());
         }
 
         @Test
@@ -450,7 +450,7 @@ class ChestLockServiceMockitoTest {
             Location loc = new Location(world, 100, 64, 200);
             service.onBlockBreak(loc);
 
-            verify(lockOperator).delById(lockId);
+            verify(lockOperator).delById(lockId.toString());
             assertThat(service.isLocked(loc)).isFalse();
         }
 

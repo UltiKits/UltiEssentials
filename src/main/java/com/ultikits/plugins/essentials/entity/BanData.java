@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Table("essentials_bans")
-public class BanData extends BaseDataEntity<UUID> {
+public class BanData extends BaseDataEntity<String> {
 
     /**
      * Unique identifier for this ban record.
@@ -120,11 +120,15 @@ public class BanData extends BaseDataEntity<UUID> {
     }
 
     @Override
-    public UUID getId() {
-        return uuid;
+    public String getId() {
+        return uuid == null ? null : uuid.toString();
     }
 
     @Override
+    public void setId(String id) {
+        this.uuid = id == null ? null : UUID.fromString(id);
+    }
+
     public void setId(UUID id) {
         this.uuid = id;
     }

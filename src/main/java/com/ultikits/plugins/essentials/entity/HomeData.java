@@ -44,11 +44,15 @@ public class HomeData extends LocationDataEntity {
     }
     
     @Override
-    public UUID getId() {
-        return uuid;
+    public String getId() {
+        return uuid == null ? null : uuid.toString();
     }
-    
+
     @Override
+    public void setId(String id) {
+        this.uuid = id == null ? null : UUID.fromString(id);
+    }
+
     public void setId(UUID id) {
         this.uuid = id;
     }

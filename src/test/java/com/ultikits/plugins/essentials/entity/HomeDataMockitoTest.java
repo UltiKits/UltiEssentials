@@ -71,7 +71,7 @@ class HomeDataMockitoTest {
         void getIdShouldReturnUuid() {
             UUID uuid = UUID.randomUUID();
             HomeData home = HomeData.builder().uuid(uuid).build();
-            assertThat(home.getId()).isEqualTo(uuid);
+            assertThat(home.getId()).isEqualTo(uuid.toString());
         }
 
         @Test
@@ -81,7 +81,7 @@ class HomeDataMockitoTest {
             UUID uuid = UUID.randomUUID();
             home.setId(uuid);
             assertThat(home.getUuid()).isEqualTo(uuid);
-            assertThat(home.getId()).isEqualTo(uuid);
+            assertThat(home.getId()).isEqualTo(uuid.toString());
         }
     }
 

@@ -274,7 +274,7 @@ class WarpServiceMockitoTest {
             boolean result = warpService.deleteWarp("spawn");
 
             assertThat(result).isTrue();
-            verify(warpOperator).delById(warpId);
+            verify(warpOperator).delById(warpId.toString());
         }
 
         @Test

@@ -81,7 +81,7 @@ class WarpDataMockitoTest {
         void getIdShouldReturnUuid() {
             UUID uuid = UUID.randomUUID();
             WarpData warp = WarpData.builder().uuid(uuid).build();
-            assertThat(warp.getId()).isEqualTo(uuid);
+            assertThat(warp.getId()).isEqualTo(uuid.toString());
         }
 
         @Test
@@ -91,7 +91,7 @@ class WarpDataMockitoTest {
             UUID uuid = UUID.randomUUID();
             warp.setId(uuid);
             assertThat(warp.getUuid()).isEqualTo(uuid);
-            assertThat(warp.getId()).isEqualTo(uuid);
+            assertThat(warp.getId()).isEqualTo(uuid.toString());
         }
     }
 

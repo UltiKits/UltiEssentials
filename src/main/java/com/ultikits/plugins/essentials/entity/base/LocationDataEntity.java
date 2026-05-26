@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public abstract class LocationDataEntity extends BaseDataEntity<UUID> {
+public abstract class LocationDataEntity extends BaseDataEntity<String> {
     
     @Column("world")
     protected String world;

@@ -1,6 +1,6 @@
 # UltiEssentials
 
-[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.2.0-blue)](https://github.com/UltiKits/UltiTools-Reborn)
+[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.2.1-blue)](https://github.com/UltiKits/UltiTools-Reborn)
 [![Minecraft](https://img.shields.io/badge/Minecraft-1.8--1.21-green)](https://www.spigotmc.org/)
 [![Java](https://img.shields.io/badge/Java-8+-orange)](https://www.java.com/)
 
@@ -64,7 +64,7 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 
 ## 📦 安装
 
-1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.2.0+
+1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.2.1+
 2. 将 `UltiEssentials-1.0.0.jar` 放入 `plugins/UltiTools/plugins/` 目录
 3. 重启服务器或使用 `/ul reload` 重载插件
 

@@ -115,8 +115,18 @@ class BanCommandBehaviorTest {
     @Test
     @DisplayName("suggest with a non-1 argument count defers to the framework's own mapping-based completion")
     void suggestWithOtherArgCountDefersToSuper() {
+        // Stub an online player so a regression that mis-routes empty args into
+        // suggestOnlinePlayers(...) would return a non-empty ["Alice"] list. The correct
+        // super.suggest(...) path (CommandTabCompletionDispatch.suggest) returns a fresh empty
+        // list unconditionally for a zero-length argument vector, regardless of who is online --
+        // so isEmpty() distinguishes "delegated to super" from "delegated to the wrong branch and
+        // happened to return something non-null", which a bare isNotNull() cannot.
+        Player online = EssentialsTestHelper.createMockPlayer("Alice", UUID.randomUUID());
+        doReturn(java.util.Collections.singletonList(online))
+                .when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
+
         List<String> result = command.suggest(player, mock(org.bukkit.command.Command.class), new String[]{});
 
-        assertThat(result).isNotNull();
+        assertThat(result).isEmpty();
     }
 }

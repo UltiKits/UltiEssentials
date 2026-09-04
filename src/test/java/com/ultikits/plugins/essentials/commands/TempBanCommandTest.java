@@ -90,7 +90,10 @@ class TempBanCommandTest {
 
             command.tempbanWithReason(player, "BadPlayer", "not-a-duration", "reason");
 
-            verify(player, times(2)).sendMessage(anyString());
+            // Exact content, not just count -- a regression that sent two different (but still
+            // wrong) messages would still satisfy times(2).sendMessage(anyString()).
+            verify(player).sendMessage(eq("§c无效的时长格式"));
+            verify(player).sendMessage(eq("§7示例: 1d, 2h, 30m, 1w, 1d12h30m"));
             verifyNoInteractions(banService);
         }
 
@@ -137,9 +140,16 @@ class TempBanCommandTest {
             when(banService.banPlayer(any(), anyString(), anyString(), any(), anyString(), anyLong(), isNull()))
                     .thenReturn(BanService.BanResult.ALREADY_BANNED);
 
-            command.tempbanWithReason(player, "BadPlayer", "1d", "hacking");
+            // Wrap Bukkit statics so an unwanted Bukkit.broadcastMessage(...) added to this
+            // branch is actually observed, instead of hitting the real static -> mocked-server
+            // path unnoticed. Exact message content, not just anyString(), so the
+            // ALREADY_BANNED and DISABLED branches can't pass with their messages swapped.
+            try (org.mockito.MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class, org.mockito.Mockito.CALLS_REAL_METHODS)) {
+                command.tempbanWithReason(player, "BadPlayer", "1d", "hacking");
 
-            verify(player).sendMessage(anyString());
+                verify(player).sendMessage(eq("§c该玩家已被封禁"));
+                bukkit.verify(() -> Bukkit.broadcastMessage(anyString()), never());
+            }
         }
 
         @Test
@@ -150,9 +160,12 @@ class TempBanCommandTest {
             when(banService.banPlayer(any(), anyString(), anyString(), any(), anyString(), anyLong(), isNull()))
                     .thenReturn(BanService.BanResult.DISABLED);
 
-            command.tempbanWithReason(player, "BadPlayer", "1d", "hacking");
+            try (org.mockito.MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class, org.mockito.Mockito.CALLS_REAL_METHODS)) {
+                command.tempbanWithReason(player, "BadPlayer", "1d", "hacking");
 
-            verify(player).sendMessage(anyString());
+                verify(player).sendMessage(eq("§c封禁功能已禁用"));
+                bukkit.verify(() -> Bukkit.broadcastMessage(anyString()), never());
+            }
         }
 
         @Test

@@ -146,7 +146,11 @@ class ScoreboardServiceBehaviorTest {
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockObjective).getScore(captor.capture());
-            assertThat(captor.getValue()).hasSizeLessThanOrEqualTo(40);
+            // Exact length (and exact value), not "at most 40" -- ScoreboardService.java does an
+            // exact substring(0, 40), so any truncation short of 40 would still satisfy a "<= 40"
+            // check while visibly breaking the feature. The appended ChatColor code lands past
+            // position 40, so the expected value is simply the original line's first 40 chars.
+            assertThat(captor.getValue()).hasSize(40).isEqualTo(longLine.substring(0, 40));
         }
     }
 

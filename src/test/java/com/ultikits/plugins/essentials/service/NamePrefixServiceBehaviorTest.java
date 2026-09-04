@@ -139,7 +139,11 @@ class NamePrefixServiceBehaviorTest {
 
             service.updatePlayer(player);
 
-            verify(team).setSuffix(argThat(suffix -> suffix.length() <= 64));
+            // Exact length (and exact value), not "at most 64" -- NamePrefixService.java does an
+            // exact substring(0, 64), so any truncation short of 64 would still satisfy a "<= 64"
+            // check while visibly breaking the feature.
+            String expected = "b".repeat(100).substring(0, 64);
+            verify(team).setSuffix(argThat(suffix -> suffix.length() == 64 && suffix.equals(expected)));
         }
     }
 }

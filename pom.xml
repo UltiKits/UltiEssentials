@@ -29,7 +29,7 @@
             <id>sonatype-releases</id>
             <url>https://s01.oss.sonatype.org/content/repositories/releases/</url>
         </repository>
-        <!-- JitPack for MockBukkit -->
+        <!-- JitPack for XSeries -->
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -104,19 +104,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- MockBukkit (Paper 1.21 generation) for Bukkit API mocking -->
+        <!-- MockBukkit for Bukkit API mocking -->
         <dependency>
             <groupId>org.mockbukkit.mockbukkit</groupId>
             <artifactId>mockbukkit-v1.21</artifactId>
             <version>4.101.0</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- MockBukkit for Bukkit API mocking -->
-        <dependency>
-            <groupId>com.github.seeseemelk</groupId>
-            <artifactId>MockBukkit-v1.19</artifactId>
-            <version>3.1.0</version>
             <scope>test</scope>
         </dependency>
 

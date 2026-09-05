@@ -1,7 +1,7 @@
 package com.ultikits.plugins.essentials;
 
-import be.seeseemelk.mockbukkit.MockBukkit;
-import be.seeseemelk.mockbukkit.ServerMock;
+import org.mockbukkit.mockbukkit.MockBukkit;
+import org.mockbukkit.mockbukkit.ServerMock;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import org.junit.jupiter.api.AfterEach;

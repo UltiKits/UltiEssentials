@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 
+import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
+
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,11 +23,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * registry constant alone would resolve merely from the dependency being on the classpath, even
  * with every {@code MockBukkit.mock()} call deleted. This class must go red the moment the
  * bootstrap is removed, and green the moment it is restored.</p>
+ *
+ * <p>{@link MockBukkitHelper#clearForeignServer()} guards against a real, measured hazard in this
+ * repository: several test classes (e.g. {@code WildCommandTest} via {@code EssentialsTestHelper})
+ * install a raw Mockito {@code mock(Server.class)} into {@code Bukkit.server} via reflection and
+ * never clear it. Without this call, this sentinel's own {@code MockBukkit.mock()} throws
+ * {@code UnsupportedOperationException: Cannot redefine singleton Server} whenever it happens to
+ * run after one of those classes in the same forked JVM -- a reopen guard must not itself be
+ * fragile to unrelated test ordering (14-09).</p>
  */
 public class UltiEssentialsRegistrySentinelTest {
 
     @BeforeEach
     void setUp() {
+        MockBukkitHelper.clearForeignServer();
         MockBukkit.mock();
     }
 

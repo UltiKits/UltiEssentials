@@ -1,6 +1,7 @@
 /**
- * Synced from UltiTools-API v6.2.0 - 2026-01-08
- * Source: src/test/java/com/ultikits/ultitools/utils/MockBukkitHelper.java
+ * Migrated off the legacy `be.seeseemelk.mockbukkit` generation to
+ * `org.mockbukkit.mockbukkit` (Phase 14, 14-09) - 2026-09-06.
+ * Source of the original pattern: src/test/java/com/ultikits/ultitools/utils/MockBukkitHelper.java
  *
  * 如需更新，请从 UltiTools-Reborn 主项目同步此文件
  */
@@ -10,7 +11,7 @@ import java.lang.reflect.Field;
 
 import org.bukkit.Bukkit;
 
-import be.seeseemelk.mockbukkit.MockBukkit;
+import org.mockbukkit.mockbukkit.MockBukkit;
 
 /**
  * MockBukkit 测试工具类
@@ -41,11 +42,14 @@ public final class MockBukkitHelper {
         } catch (Exception ignored) {
         }
 
-        // Reset the mocked flag so MockBukkit.mock() can be called again
+        // Reset the static mock-holder field so MockBukkit.mock() can be called again.
+        // NOTE (14-09): on the 1.21 generation this field is named `mock`
+        // (a private static ServerMock), not the legacy `mocked` boolean flag --
+        // confirmed via javap, `mocked` does not exist on this generation at all.
         try {
-            Field mockedField = MockBukkit.class.getDeclaredField("mocked");
-            mockedField.setAccessible(true);
-            mockedField.setBoolean(null, false);
+            Field mockField = MockBukkit.class.getDeclaredField("mock");
+            mockField.setAccessible(true);
+            mockField.set(null, null);
         } catch (Exception ignored) {
         }
 
@@ -61,6 +65,39 @@ public final class MockBukkitHelper {
     public static void safeUnmock() {
         try {
             MockBukkit.unmock();
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Clears {@code Bukkit.server} when it is occupied by something MockBukkit
+     * did not install -- most commonly {@code EssentialsTestHelper.setUp()}'s own
+     * raw Mockito {@code mock(Server.class)}, which several test classes in this
+     * repository set via reflection (bypassing {@code Bukkit.setServer()}'s own
+     * "already set" guard) and deliberately never clear afterward.
+     *
+     * <p>Call this immediately before {@code MockBukkit.mock()} in a test class
+     * whose fixture (or a fixture that ran earlier in the same forked JVM) may
+     * have left a non-MockBukkit occupant behind -- {@code MockBukkit.mock()}
+     * itself throws {@code UnsupportedOperationException: Cannot redefine
+     * singleton Server} if {@code Bukkit.server} is already non-null, from any
+     * source (14-09).</p>
+     *
+     * <p><b>Deliberately distinct from {@link #ensureCleanState()}'s own "do not
+     * clear Bukkit.server" rule.</b> That rule protects against double-clearing a
+     * server MockBukkit itself owns, which can leave already-memoized
+     * registry/PotionEffectType static caches pointing at a torn-down instance.
+     * This method only acts when {@link MockBukkit#isMocked()} is already
+     * {@code false} -- i.e. the occupant, if any, was never MockBukkit's to begin
+     * with, so no such cache exists yet to corrupt.</p>
+     */
+    public static void clearForeignServer() {
+        try {
+            if (!MockBukkit.isMocked() && Bukkit.getServer() != null) {
+                Field serverField = Bukkit.class.getDeclaredField("server");
+                serverField.setAccessible(true);
+                serverField.set(null, null);
+            }
         } catch (Exception ignored) {
         }
     }

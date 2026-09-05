@@ -1,8 +1,8 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.cryptomorin.xseries.XAttribute;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.*;
@@ -33,11 +33,11 @@ class HealCommandTest {
         // Mock Attribute for health
         AttributeInstance attrSender = mock(AttributeInstance.class);
         when(attrSender.getValue()).thenReturn(20.0);
-        lenient().when(player.getAttribute(Attribute.GENERIC_MAX_HEALTH)).thenReturn(attrSender);
+        lenient().when(player.getAttribute(XAttribute.MAX_HEALTH.get())).thenReturn(attrSender);
 
         AttributeInstance attrTarget = mock(AttributeInstance.class);
         when(attrTarget.getValue()).thenReturn(20.0);
-        lenient().when(target.getAttribute(Attribute.GENERIC_MAX_HEALTH)).thenReturn(attrTarget);
+        lenient().when(target.getAttribute(XAttribute.MAX_HEALTH.get())).thenReturn(attrTarget);
     }
 
     @AfterEach

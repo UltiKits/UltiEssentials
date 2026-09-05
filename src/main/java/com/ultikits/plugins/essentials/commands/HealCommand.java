@@ -1,8 +1,8 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.cryptomorin.xseries.XAttribute;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.command.*;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -26,7 +26,7 @@ public class HealCommand extends BaseEssentialsCommand {
             return;
         }
 
-        double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        double maxHealth = player.getAttribute(XAttribute.MAX_HEALTH.get()).getValue();
         player.setHealth(maxHealth);
         player.sendMessage(i18n("生命值已恢复"));
     }
@@ -46,7 +46,7 @@ public class HealCommand extends BaseEssentialsCommand {
             return;
         }
 
-        double maxHealth = target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        double maxHealth = target.getAttribute(XAttribute.MAX_HEALTH.get()).getValue();
         target.setHealth(maxHealth);
         sender.sendMessage(String.format(i18n("已恢复 %s 的生命值"), target.getName()));
         target.sendMessage(i18n("你的生命值已被恢复"));

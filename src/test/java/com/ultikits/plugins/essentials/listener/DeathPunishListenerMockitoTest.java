@@ -4,6 +4,7 @@ import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import org.bukkit.World;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
@@ -27,6 +28,7 @@ class DeathPunishListenerMockitoTest {
 
     private DeathPunishListener listener;
     private EssentialsConfig config;
+    private DamageSource damageSource;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -35,6 +37,10 @@ class DeathPunishListenerMockitoTest {
         listener = new DeathPunishListener();
         config = new EssentialsConfig();
         EssentialsTestHelper.setField(listener, "config", config);
+
+        // Paper 1.21's PlayerDeathEvent constructors all require a DamageSource; a mock is enough
+        // here since none of these tests assert on the death cause itself.
+        damageSource = mock(DamageSource.class);
     }
 
     @AfterEach
@@ -62,7 +68,7 @@ class DeathPunishListenerMockitoTest {
 
             Player player = createDeathPlayer("world");
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "Steve died");
 
             listener.onPlayerDeath(event);
 
@@ -77,7 +83,7 @@ class DeathPunishListenerMockitoTest {
 
             Player player = createDeathPlayer("world_creative");
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "Steve died");
 
             listener.onPlayerDeath(event);
 
@@ -93,7 +99,7 @@ class DeathPunishListenerMockitoTest {
             Player player = createDeathPlayer("world");
             when(player.hasPermission("ultiessentials.deathpunish.bypass")).thenReturn(true);
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "Steve died");
 
             listener.onPlayerDeath(event);
 
@@ -120,7 +126,7 @@ class DeathPunishListenerMockitoTest {
             when(player.getTotalExperience()).thenReturn(1000);
 
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 100, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 100, "Steve died");
 
             listener.onPlayerDeath(event);
 
@@ -145,7 +151,7 @@ class DeathPunishListenerMockitoTest {
             when(player.getTotalExperience()).thenReturn(1000);
 
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 50, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 50, "Steve died");
 
             listener.onPlayerDeath(event);
 
@@ -173,7 +179,7 @@ class DeathPunishListenerMockitoTest {
             when(EssentialsTestHelper.getMockServer().getConsoleSender()).thenReturn(consoleSender);
 
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "Steve died");
 
             listener.onPlayerDeath(event);
 
@@ -200,7 +206,7 @@ class DeathPunishListenerMockitoTest {
 
             Player player = createDeathPlayer("world");
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "Steve died");
 
             // Should not throw, just skip money loss
             listener.onPlayerDeath(event);
@@ -223,7 +229,7 @@ class DeathPunishListenerMockitoTest {
 
             Player player = createDeathPlayer("world");
             List<ItemStack> drops = new ArrayList<>();
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "Steve died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "Steve died");
 
             listener.onPlayerDeath(event);
 

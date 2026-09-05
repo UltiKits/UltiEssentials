@@ -3,6 +3,7 @@ package com.ultikits.plugins.essentials.listener;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import org.bukkit.entity.Player;
+import org.bukkit.damage.DamageSource;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.*;
@@ -32,6 +33,7 @@ class DeathPunishListenerBehaviorTest {
 
     private DeathPunishListener listener;
     private EssentialsConfig config;
+    private DamageSource damageSource;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -40,6 +42,10 @@ class DeathPunishListenerBehaviorTest {
         listener = new DeathPunishListener();
         config = new EssentialsConfig();
         EssentialsTestHelper.setField(listener, "config", config);
+
+        // Paper 1.21's PlayerDeathEvent constructors all require a DamageSource; a mock is enough
+        // here since none of these tests assert on the death cause itself.
+        damageSource = mock(DamageSource.class);
 
         config.setDeathPunishEnabled(true);
         config.setDeathPunishWorldWhitelist(Collections.emptyList());
@@ -82,7 +88,7 @@ class DeathPunishListenerBehaviorTest {
 
             Player player = createDeathPlayer();
             List<ItemStack> drops = new ArrayList<>(Collections.singletonList(mockItem(org.bukkit.Material.DIAMOND)));
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "died");
 
             listener.onPlayerDeath(event);
 
@@ -99,7 +105,7 @@ class DeathPunishListenerBehaviorTest {
 
             Player player = createDeathPlayer();
             List<ItemStack> drops = new ArrayList<>(Collections.singletonList(mockItem(org.bukkit.Material.STONE)));
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "died");
 
             listener.onPlayerDeath(event);
 
@@ -115,7 +121,7 @@ class DeathPunishListenerBehaviorTest {
 
             Player player = createDeathPlayer();
             List<ItemStack> drops = new ArrayList<>(Collections.singletonList(mockItem(org.bukkit.Material.STONE)));
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "died");
 
             listener.onPlayerDeath(event);
 
@@ -137,7 +143,7 @@ class DeathPunishListenerBehaviorTest {
             Player player = createDeathPlayer();
             ItemStack notSelected = mockItem(org.bukkit.Material.STONE);
             List<ItemStack> drops = new ArrayList<>(Collections.singletonList(notSelected));
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "died");
 
             listener.onPlayerDeath(event);
 
@@ -155,7 +161,7 @@ class DeathPunishListenerBehaviorTest {
             Player player = createDeathPlayer();
             ItemStack notSelected = mockItem(org.bukkit.Material.STONE);
             List<ItemStack> drops = new ArrayList<>(Collections.singletonList(notSelected));
-            PlayerDeathEvent event = new PlayerDeathEvent(player, drops, 0, "died");
+            PlayerDeathEvent event = new PlayerDeathEvent(player, damageSource, drops, 0, "died");
 
             listener.onPlayerDeath(event);
 

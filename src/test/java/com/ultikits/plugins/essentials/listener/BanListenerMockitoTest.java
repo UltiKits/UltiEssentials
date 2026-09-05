@@ -4,9 +4,11 @@ import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
 import com.ultikits.plugins.essentials.service.BanService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
+import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.junit.jupiter.api.*;
+import org.mockbukkit.mockbukkit.MockBukkit;
 
 import java.net.InetAddress;
 import java.util.UUID;
@@ -35,6 +37,22 @@ class BanListenerMockitoTest {
     void setUp() throws Exception {
         EssentialsTestHelper.setUp();
 
+        // EssentialsTestHelper.setUp() above just installed its own raw, unstubbed
+        // Mockito Server mock into Bukkit.server via reflection. That mock never
+        // stubs Server.createProfile(...), so AsyncPlayerPreLoginEvent's 3-arg
+        // constructor -- which delegates to Bukkit.createProfile(uuid, name) --
+        // silently gets back null (Mockito's default return for an unstubbed
+        // Object-returning method), and the NPE only surfaces one call later
+        // inside production code (BanListener.onPlayerLogin -> getUniqueId()).
+        // Give this class its own explicit, live-server bootstrap for that one
+        // call: clear the raw mock (bypassing Bukkit.setServer()'s "already set"
+        // guard the same way EssentialsTestHelper itself does) and install a
+        // real MockBukkit ServerMock instead, so createProfile() genuinely
+        // resolves rather than depending on either Mockito's default or on
+        // another class's leftover state (14-09, shape 3).
+        MockBukkitHelper.clearForeignServer();
+        MockBukkit.mock();
+
         config = new EssentialsConfig();
         banService = mock(BanService.class);
 
@@ -45,6 +63,7 @@ class BanListenerMockitoTest {
 
     @AfterEach
     void tearDown() throws Exception {
+        MockBukkitHelper.safeUnmock();
         EssentialsTestHelper.tearDown();
     }
 

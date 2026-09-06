@@ -103,5 +103,7 @@
   "用法: /banlist [页码]": "Usage: /banlist [page]",
   "查看当前活跃的封禁列表": "View currently active ban list",
 
-  "§c该玩家未被本插件封禁，但已被服务器封禁名单封禁: ": "§cThis player is not banned by this plugin, but is banned in the server's ban list: "
+  "§c该玩家未被本插件封禁，但已被服务器封禁名单封禁: ": "§cThis player is not banned by this plugin, but is banned in the server's ban list: ",
+  "§e已解除本插件对 ": "§eRemoved this plugin's ban on ",
+  " 的封禁，但服务器封禁名单仍封禁该玩家": ", but the server's ban list still bans this player"
 }

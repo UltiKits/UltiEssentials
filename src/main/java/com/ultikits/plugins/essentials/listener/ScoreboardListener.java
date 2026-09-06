@@ -57,10 +57,19 @@ public class ScoreboardListener implements Listener {
         }
         
         if (config.isScoreboardAutoEnable()) {
-            // Delay a bit to ensure player is fully loaded
+            // Delay a bit to ensure player is fully loaded. A player who disconnects during the
+            // delay is already removed by onPlayerQuit (ScoreboardService#disableScoreboard) by
+            // the time this runs; calling enableScoreboard anyway would re-add their (now
+            // offline) UUID to ScoreboardService#enabledPlayers and immediately build and assign
+            // a scoreboard to a disconnected Player, undoing the quit cleanup until a later
+            // periodic update removes it.
             Bukkit.getScheduler().runTaskLater(
                 bukkitPlugin,
-                () -> scoreboardService.enableScoreboard(event.getPlayer()),
+                () -> {
+                    if (event.getPlayer().isOnline()) {
+                        scoreboardService.enableScoreboard(event.getPlayer());
+                    }
+                },
                 20L // 1 second delay
             );
         }

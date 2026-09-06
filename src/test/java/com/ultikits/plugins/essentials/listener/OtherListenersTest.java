@@ -118,6 +118,38 @@ class OtherListenersTest {
 
             verify(scoreboardService).disableScoreboard(player);
         }
+
+        /**
+         * Proves the review round-4 Codex finding on PR#22 (comment 3944635309): a player who
+         * disconnects during the 20-tick auto-enable delay is removed by {@code onPlayerQuit}
+         * (which calls {@code ScoreboardService#disableScoreboard}) before this scheduled
+         * callback runs. Without an online check, the callback would call
+         * {@code enableScoreboard} anyway, which re-adds the player's (now offline) UUID to
+         * {@code ScoreboardService#enabledPlayers} and immediately builds and assigns a
+         * scoreboard to a disconnected {@code Player}, undoing the quit cleanup until a later
+         * periodic update removes it. Same shape and technique as
+         * {@code NamePrefixListenerTests#shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan}.
+         */
+        @Test
+        @DisplayName("Should skip the delayed auto-enable if the player quit before it ran (13-11, review round 4)")
+        void shouldSkipDelayedEnableIfPlayerQuitBeforeItRan() {
+            config.setScoreboardEnabled(true);
+            config.setScoreboardAutoEnable(true);
+
+            PlayerJoinEvent event = new PlayerJoinEvent(player, "joined");
+            listener.onPlayerJoin(event);
+
+            ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+            BukkitScheduler scheduler = Bukkit.getScheduler();
+            verify(scheduler).runTaskLater(any(Plugin.class), runnableCaptor.capture(), eq(20L));
+
+            // Player disconnected during the delay -- simulated the same way onPlayerQuit
+            // observes it, before the captured callback runs.
+            when(player.isOnline()).thenReturn(false);
+            runnableCaptor.getValue().run();
+
+            verify(scoreboardService, never()).enableScoreboard(player);
+        }
     }
 
     @Nested

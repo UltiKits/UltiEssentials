@@ -8,7 +8,6 @@ import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.junit.jupiter.api.*;
-import org.mockbukkit.mockbukkit.MockBukkit;
 
 import java.net.InetAddress;
 import java.util.UUID;
@@ -45,13 +44,17 @@ class BanListenerMockitoTest {
         // Object-returning method), and the NPE only surfaces one call later
         // inside production code (BanListener.onPlayerLogin -> getUniqueId()).
         // Give this class its own explicit, live-server bootstrap for that one
-        // call: clear the raw mock (bypassing Bukkit.setServer()'s "already set"
-        // guard the same way EssentialsTestHelper itself does) and install a
+        // call, via the module's shared MockBukkitHelper.bootstrapLiveServer():
+        // clears the raw mock (bypassing Bukkit.setServer()'s "already set"
+        // guard the same way EssentialsTestHelper itself does) and installs a
         // real MockBukkit ServerMock instead, so createProfile() genuinely
         // resolves rather than depending on either Mockito's default or on
-        // another class's leftover state (14-09, shape 3).
-        MockBukkitHelper.clearForeignServer();
-        MockBukkit.mock();
+        // another class's leftover state (14-09, shape 3). Routed through the
+        // shared helper method (not an inlined MockBukkit.mock() call) so this
+        // class's greenness -- a real production-path test of
+        // BanListener.onPlayerLogin -- is exactly what UltiEssentialsRegistrySentinelTest
+        // is now also standing guard over (14-13).
+        MockBukkitHelper.bootstrapLiveServer();
 
         config = new EssentialsConfig();
         banService = mock(BanService.class);

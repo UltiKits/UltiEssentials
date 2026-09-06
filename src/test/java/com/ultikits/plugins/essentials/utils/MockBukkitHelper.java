@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import org.bukkit.Bukkit;
 
 import org.mockbukkit.mockbukkit.MockBukkit;
+import org.mockbukkit.mockbukkit.ServerMock;
 
 /**
  * MockBukkit 测试工具类
@@ -100,5 +101,30 @@ public final class MockBukkitHelper {
             }
         } catch (Exception ignored) {
         }
+    }
+
+    /**
+     * The module's single, shared entry point for bootstrapping a live MockBukkit server in an
+     * active (non-{@code @Disabled}) test class.
+     *
+     * <p>Before this method existed, {@code UltiEssentialsRegistrySentinelTest} and
+     * {@code BanListenerMockitoTest} -- the only two currently-enabled test classes in this module
+     * that need a genuinely live server rather than a raw Mockito {@code mock(Server.class)} --
+     * each inlined the identical {@link #clearForeignServer()} + {@code MockBukkit.mock()} pair
+     * independently. That duplication defeated the sentinel's own purpose: deleting or breaking
+     * this bootstrap sequence in the sentinel's own {@code @BeforeEach} left every other class's
+     * live-server wiring untouched, so the sentinel could go red while the module's actual
+     * production-path test ({@code BanListenerMockitoTest}, which exercises
+     * {@code BanListener.onPlayerLogin} against a real {@code Bukkit.createProfile(...)}) never
+     * noticed. Routing both classes through this one method means breaking it breaks both --
+     * the sentinel is now watching the same wiring the production-path test actually depends on,
+     * not merely its own private copy of it (14-13).</p>
+     *
+     * @return the freshly-mocked {@link ServerMock}, for callers that need direct access to it
+     *         (e.g. to add players or worlds) without a second lookup via {@link MockBukkit#getMock()}
+     */
+    public static ServerMock bootstrapLiveServer() {
+        clearForeignServer();
+        return MockBukkit.mock();
     }
 }

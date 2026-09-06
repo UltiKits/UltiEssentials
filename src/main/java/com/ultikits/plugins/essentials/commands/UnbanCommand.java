@@ -41,6 +41,12 @@ public class UnbanCommand extends BaseEssentialsCommand {
                 i18n(" 的封禁"));
             Bukkit.broadcastMessage(i18n("§a[解禁] §f") + 
                 playerName + " §7的封禁已被解除");
+        } else if (banService.isBannedInServerBanList(playerName)) {
+            // banPlayer() never writes to the server's own ban list, so a name absent from this
+            // plugin's own records may still be banned there (e.g. a vanilla /ban). Reporting
+            // that the same way as "not banned anywhere" would be a false "not banned" for a
+            // player who is demonstrably banned -- see BanService#isBannedInServerBanList.
+            sender.sendMessage(i18n("§c该玩家未被本插件封禁，但已被服务器封禁名单封禁: ") + playerName);
         } else {
             sender.sendMessage(i18n("§c该玩家未被封禁: ") + playerName);
         }

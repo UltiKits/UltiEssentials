@@ -9,6 +9,7 @@ import org.bukkit.Server;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.*;
+import org.mockito.ArgumentCaptor;
 
 import java.util.*;
 
@@ -380,6 +381,20 @@ class BanCommandsTest {
             command.unban(player, "GoodPlayer");
 
             verify(player).sendMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should distinguish a name banned outside this plugin from not banned anywhere (13-11, UltiEssentials#12 half 2)")
+        void shouldDistinguishServerBanFromNoBanAtAll() {
+            when(banService.unbanPlayerByName("VanillaBannedPlayer")).thenReturn(false);
+            when(banService.isBannedInServerBanList("VanillaBannedPlayer")).thenReturn(true);
+
+            command.unban(player, "VanillaBannedPlayer");
+
+            ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+            verify(player).sendMessage(messageCaptor.capture());
+            org.assertj.core.api.Assertions.assertThat(messageCaptor.getValue())
+                .contains("服务器封禁名单");
         }
 
         @Test

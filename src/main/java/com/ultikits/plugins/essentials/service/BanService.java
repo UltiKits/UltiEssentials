@@ -7,6 +7,7 @@ import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.Service;
 import com.ultikits.ultitools.interfaces.DataOperator;
 import lombok.extern.slf4j.Slf4j;
+import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -175,11 +176,21 @@ public class BanService {
     }
     
     /**
-     * RED-phase stub (13-11 TDD cycle) -- intentionally does not yet check the server's own ban
-     * list. See the GREEN commit for the real implementation.
+     * Checks whether a player is currently banned in the server's own ban list, independent of
+     * this plugin's own ban records.
+     * <p>
+     * {@link #banPlayer} never writes to the server's own ban list -- a ban created through this
+     * plugin's own commands lives only in {@link #banOperator}. That means a name for which
+     * {@link #unbanPlayerByName} returns {@code false} is not necessarily unbanned everywhere: it
+     * may still be banned through the server's own list (for example, a vanilla {@code /ban}).
+     * Callers use this method to tell "not banned by this plugin" apart from "not banned
+     * anywhere" when reporting an unban outcome, rather than reporting the two as the same thing.
+     *
+     * @param playerName the player name to check
+     * @return true if the server's own ban list currently bans this name
      */
     public boolean isBannedInServerBanList(String playerName) {
-        return false;
+        return Bukkit.getBanList(BanList.Type.NAME).isBanned(playerName);
     }
 
     /**

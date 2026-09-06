@@ -115,6 +115,22 @@ class WhitelistCommandTest {
             Server server = Bukkit.getServer();
             verify(server, never()).getOfflinePlayer(anyString());
         }
+
+        @Test
+        @DisplayName("aNameWithIncidentalWhitespaceIsTrimmedBeforeResolution: leading/trailing whitespace is trimmed before both the length check and Bukkit.getOfflinePlayer are applied")
+        void aNameWithIncidentalWhitespaceIsTrimmedBeforeResolution() {
+            String padded = "  ABC  ";
+            OfflinePlayer target = mock(OfflinePlayer.class);
+            when(target.getName()).thenReturn("ABC");
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer("ABC")).thenReturn(target);
+
+            command.add(player, padded);
+
+            verify(server).getOfflinePlayer("ABC");
+            verify(server, never()).getOfflinePlayer(padded);
+            verify(target).setWhitelisted(true);
+        }
     }
 
     @Nested

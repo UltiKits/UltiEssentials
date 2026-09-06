@@ -10,7 +10,6 @@ package com.ultikits.plugins.essentials.utils;
 import java.lang.reflect.Field;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Server;
 
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
@@ -45,15 +44,7 @@ public final class MockBukkitHelper {
         }
 
         // Reset the static mock-holder field so MockBukkit.mock() can be called again.
-        // NOTE (14-09): on the 1.21 generation this field is named `mock`
-        // (a private static ServerMock), not the legacy `mocked` boolean flag --
-        // confirmed via javap, `mocked` does not exist on this generation at all.
-        try {
-            Field mockField = MockBukkit.class.getDeclaredField("mock");
-            mockField.setAccessible(true);
-            mockField.set(null, null);
-        } catch (Exception ignored) {
-        }
+        clearMockHolder();
 
         // DO NOT clear Bukkit.server to null here!
         // MockBukkit.unmock() already does that, and setting it to null
@@ -98,26 +89,64 @@ public final class MockBukkitHelper {
      * {@code Bukkit.server} still holds a live {@code ServerMock}, and the old guard would have torn
      * that server down through the "foreign" path it was written to avoid.</p>
      *
-     * <p>So a {@link ServerMock} occupant is handed back to MockBukkit via {@link #safeUnmock()}
-     * first, letting MockBukkit's own teardown bookkeeping run, and is cleared reflectively only if
-     * that leaves the field still occupied -- which is what an orphaned {@code ServerMock} (holder
-     * already nulled, so {@code unmock()} returns immediately) looks like, and is the same clear
-     * MockBukkit's own {@code setServerInstanceToNull()} performs. Anything else is genuinely
-     * foreign and is cleared directly. Either way the postcondition is the one callers need:
-     * {@code Bukkit.server == null}.</p>
+     * <p><b>Postcondition: BOTH singletons are clear -- {@code Bukkit.server == null} and MockBukkit's
+     * private static {@code mock} holder null.</b> An earlier revision stated only the first half, and
+     * delivered only the first half, which is too weak for the sole caller. {@code MockBukkit.mock(T)}
+     * tests the holder <em>first</em> (offsets 0-15, {@code IllegalStateException: "Already mocking"})
+     * and reaches {@code Bukkit.setServer(...)} only at offset 45, so a run that clears
+     * {@code Bukkit.server} while leaving the holder set does not recover -- it swaps one failure for
+     * another. {@link #safeUnmock()} cannot be relied on to clear either field: it swallows every
+     * exception, and {@code unmock()}'s own exception table covers offsets 25-34 alone, so a throw
+     * from {@code getPluginManager()}/{@code disablePlugins()} (7-22) or from {@code unload()}/
+     * {@code reset()} (34-49) escapes before {@code setServerInstanceToNull()} at offset 49 ever runs.
+     * Measured against the previous implementation with a {@code ServerMock} whose
+     * {@code getPluginManager()} throws: it left {@code Bukkit.server=null, mock!=null} and the next
+     * {@code MockBukkit.mock()} threw {@code IllegalStateException: Already mocking}.</p>
+     *
+     * <p>So a {@link ServerMock} occupant is still handed back to MockBukkit via {@link #safeUnmock()}
+     * first, letting MockBukkit's own teardown bookkeeping run; both fields are then cleared
+     * unconditionally and independently -- the same pair {@code setServerInstanceToNull()} clears, with
+     * the holder clear shared with {@link #ensureCleanState()} through {@link #clearMockHolder()}
+     * rather than written a third time. Clearing an already-null field is a no-op, so the
+     * unconditional form is also correct for a genuinely foreign occupant and for an orphaned holder
+     * with no server at all -- a state the old {@code occupant == null} early return left untouched.
+     * Each clear sits in its own {@code try}, so a failure of one cannot skip the other; if reflection
+     * itself fails the postcondition is unmet, but the caller's immediately following
+     * {@code MockBukkit.mock()} then fails loudly rather than silently.</p>
      */
     public static void clearForeignServer() {
+        if (Bukkit.getServer() instanceof ServerMock) {
+            safeUnmock();
+        }
+        clearBukkitServerField();
+        clearMockHolder();
+    }
+
+    /**
+     * Nulls MockBukkit's private static {@code mock} holder -- the field {@link MockBukkit#isMocked()}
+     * reads and the field {@code MockBukkit.mock(T)} guards on before installing a new server.
+     *
+     * <p>NOTE (14-09): on the 1.21 generation this field is named {@code mock} (a private static
+     * {@link ServerMock}), not the legacy {@code mocked} boolean flag -- confirmed via javap,
+     * {@code mocked} does not exist on this generation at all.</p>
+     */
+    private static void clearMockHolder() {
         try {
-            Server occupant = Bukkit.getServer();
-            if (occupant == null) {
-                return;
-            }
-            if (occupant instanceof ServerMock) {
-                safeUnmock();
-                if (Bukkit.getServer() == null) {
-                    return;
-                }
-            }
+            Field mockField = MockBukkit.class.getDeclaredField("mock");
+            mockField.setAccessible(true);
+            mockField.set(null, null);
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Nulls {@code Bukkit.server} reflectively, which is what MockBukkit's own
+     * {@code setServerInstanceToNull()} does. {@code Bukkit} exposes no public setter that can
+     * displace an existing occupant -- {@code Bukkit.setServer(...)} throws
+     * {@code UnsupportedOperationException} whenever the field is already populated.
+     */
+    private static void clearBukkitServerField() {
+        try {
             Field serverField = Bukkit.class.getDeclaredField("server");
             serverField.setAccessible(true);
             serverField.set(null, null);

@@ -37,13 +37,14 @@ public class WhitelistCommand extends BaseEssentialsCommand {
             return;
         }
 
-        String rejection = rejectInvalidPlayerName(playerName);
+        String trimmedName = playerName == null ? null : playerName.trim();
+        String rejection = rejectInvalidPlayerName(trimmedName);
         if (rejection != null) {
             sender.sendMessage(rejection);
             return;
         }
 
-        OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
+        OfflinePlayer target = Bukkit.getOfflinePlayer(trimmedName);
 
         if (target == null) {
             sender.sendMessage(i18n("玩家不存在"));
@@ -84,13 +85,17 @@ public class WhitelistCommand extends BaseEssentialsCommand {
      * afterward: reacting to whichever exception type a platform release happens to throw would
      * bind this module's correctness to that platform detail, and the check itself is two
      * conditions.
+     * <p>
+     * Expects an already-trimmed argument -- callers must trim incidental leading/trailing
+     * whitespace before both this check and the resolution call that follows it, so the two
+     * agree on which string they are validating and resolving.
      *
-     * @param playerName the raw argument, unresolved
+     * @param playerName the argument, already trimmed
      * @return an i18n-ready refusal message if the name is empty, blank, or longer than the
      *         platform allows; {@code null} if the name is fine to resolve
      */
     private String rejectInvalidPlayerName(String playerName) {
-        if (playerName == null || playerName.trim().isEmpty()) {
+        if (playerName == null || playerName.isEmpty()) {
             return i18n("玩家名不能为空");
         }
         if (playerName.length() > MAX_PLAYER_NAME_LENGTH) {

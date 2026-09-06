@@ -10,6 +10,7 @@ package com.ultikits.plugins.essentials.utils;
 import java.lang.reflect.Field;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Server;
 
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
@@ -71,34 +72,55 @@ public final class MockBukkitHelper {
     }
 
     /**
-     * Clears {@code Bukkit.server} when it is occupied by something MockBukkit
-     * did not install -- most commonly {@code EssentialsTestHelper.setUp()}'s own
-     * raw Mockito {@code mock(Server.class)}, which several test classes in this
-     * repository set via reflection (bypassing {@code Bukkit.setServer()}'s own
-     * "already set" guard) and deliberately never clear afterward.
+     * Leaves {@code Bukkit.server} null, so that a following {@code MockBukkit.mock()} can install
+     * its own {@link ServerMock}. {@code MockBukkit.mock(T)} delegates to
+     * {@code Bukkit.setServer(...)}, which throws {@code UnsupportedOperationException: Cannot
+     * redefine singleton Server} whenever that field is already occupied, from any source
+     * (verified against paper-api 1.21.11: {@code Bukkit.setServer} offsets 0-15).
      *
-     * <p>Call this immediately before {@code MockBukkit.mock()} in a test class
-     * whose fixture (or a fixture that ran earlier in the same forked JVM) may
-     * have left a non-MockBukkit occupant behind -- {@code MockBukkit.mock()}
-     * itself throws {@code UnsupportedOperationException: Cannot redefine
-     * singleton Server} if {@code Bukkit.server} is already non-null, from any
-     * source (14-09).</p>
+     * <p>The usual occupant is {@code EssentialsTestHelper.setUp()}'s raw Mockito
+     * {@code mock(Server.class)}, which several test classes in this repository install via
+     * reflection (bypassing {@code Bukkit.setServer()}'s own "already set" guard) and deliberately
+     * never clear afterward. Call this immediately before {@code MockBukkit.mock()} in any class
+     * that may run after one of those in the same forked JVM (14-09).</p>
      *
-     * <p><b>Deliberately distinct from {@link #ensureCleanState()}'s own "do not
-     * clear Bukkit.server" rule.</b> That rule protects against double-clearing a
-     * server MockBukkit itself owns, which can leave already-memoized
-     * registry/PotionEffectType static caches pointing at a torn-down instance.
-     * This method only acts when {@link MockBukkit#isMocked()} is already
-     * {@code false} -- i.e. the occupant, if any, was never MockBukkit's to begin
-     * with, so no such cache exists yet to corrupt.</p>
+     * <p><b>The occupant is classified by its runtime type, not by {@link MockBukkit#isMocked()}.</b>
+     * An earlier revision guarded on {@code !isMocked()} and argued that a false reading proved the
+     * occupant "was never MockBukkit's to begin with, so no memoized registry/PotionEffectType cache
+     * exists yet to corrupt". That inference does not follow. {@code isMocked()} is exactly
+     * {@code mock != null} (MockBukkit 4.101.0 bytecode), and {@link #ensureCleanState()} nulls that
+     * same holder field <em>unconditionally</em> while deliberately not touching
+     * {@code Bukkit.server}. This repository can reach the resulting split state:
+     * {@code ensureCleanState()} swallows every exception, and {@code MockBukkit.unmock()}'s leading
+     * instructions -- offsets 7-22, {@code mock.getPluginManager()} and {@code disablePlugins()} --
+     * sit outside its own exception table, which covers only 25-34, so a throw there escapes before
+     * {@code setServerInstanceToNull()} ever runs. {@code isMocked()} then reads {@code false} while
+     * {@code Bukkit.server} still holds a live {@code ServerMock}, and the old guard would have torn
+     * that server down through the "foreign" path it was written to avoid.</p>
+     *
+     * <p>So a {@link ServerMock} occupant is handed back to MockBukkit via {@link #safeUnmock()}
+     * first, letting MockBukkit's own teardown bookkeeping run, and is cleared reflectively only if
+     * that leaves the field still occupied -- which is what an orphaned {@code ServerMock} (holder
+     * already nulled, so {@code unmock()} returns immediately) looks like, and is the same clear
+     * MockBukkit's own {@code setServerInstanceToNull()} performs. Anything else is genuinely
+     * foreign and is cleared directly. Either way the postcondition is the one callers need:
+     * {@code Bukkit.server == null}.</p>
      */
     public static void clearForeignServer() {
         try {
-            if (!MockBukkit.isMocked() && Bukkit.getServer() != null) {
-                Field serverField = Bukkit.class.getDeclaredField("server");
-                serverField.setAccessible(true);
-                serverField.set(null, null);
+            Server occupant = Bukkit.getServer();
+            if (occupant == null) {
+                return;
             }
+            if (occupant instanceof ServerMock) {
+                safeUnmock();
+                if (Bukkit.getServer() == null) {
+                    return;
+                }
+            }
+            Field serverField = Bukkit.class.getDeclaredField("server");
+            serverField.setAccessible(true);
+            serverField.set(null, null);
         } catch (Exception ignored) {
         }
     }

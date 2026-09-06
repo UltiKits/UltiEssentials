@@ -56,10 +56,18 @@ public class NamePrefixListener implements Listener {
             return;
         }
         
-        // Delay a bit to ensure player is fully loaded
+        // Delay a bit to ensure player is fully loaded. A player who disconnects during the
+        // delay is already removed by onPlayerQuit (NamePrefixService#removePlayer) by the time
+        // this runs; calling updatePlayer anyway would recreate their playerTeams entry and
+        // re-add their (now offline) name to the main-scoreboard team, and the periodic updater
+        // only iterates online players -- so that entry would never be pruned again.
         Bukkit.getScheduler().runTaskLater(
             bukkitPlugin,
-            () -> namePrefixService.updatePlayer(event.getPlayer()),
+            () -> {
+                if (event.getPlayer().isOnline()) {
+                    namePrefixService.updatePlayer(event.getPlayer());
+                }
+            },
             10L
         );
     }

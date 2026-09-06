@@ -1,6 +1,7 @@
 package com.ultikits.plugins.essentials.commands;
 
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
+import com.ultikits.ultitools.annotations.EventListener;
 import com.ultikits.ultitools.annotations.command.*;
 import com.ultikits.ultitools.annotations.I18n;
 import org.bukkit.Location;
@@ -22,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(alias = {"back"}, permission = "ultiessentials.back", description = "返回上一个传送点")
 @I18n("back.description")
+@EventListener
 public class BackCommand extends BaseEssentialsCommand implements Listener {
 
     /**

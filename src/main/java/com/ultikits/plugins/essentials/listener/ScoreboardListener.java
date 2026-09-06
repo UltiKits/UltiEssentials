@@ -4,12 +4,14 @@ import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.EventListener;
-import org.bukkit.plugin.Plugin;
+import com.ultikits.ultitools.annotations.PostConstruct;
+import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.Plugin;
 
 /**
  * Listener for scoreboard-related events.
@@ -25,16 +27,27 @@ public class ScoreboardListener implements Listener {
     
     @Autowired
     private ScoreboardService scoreboardService;
-    
+
     private Plugin bukkitPlugin;
 
     /**
-     * RED-phase stub (13-11 TDD cycle) -- resolves under the (wrong) artifact name and
-     * performs no null check yet. See the GREEN commit for the real implementation.
+     * Resolves the framework's plugin handle once, under its actual registered name (the
+     * artifact name, {@code "UltiTools-API"}, is not the registered plugin name -- see
+     * {@code ScoreboardService}, {@code NamePrefixService}, {@code TeleportService},
+     * {@code TpaService} and {@code HideCommand} for the same, already-correct lookup). Failing
+     * here, at construction, means a broken lookup stops the server starting instead of throwing
+     * once per player join indefinitely.
+     *
+     * @throws IllegalStateException if the framework plugin cannot be resolved by name
      */
-    @com.ultikits.ultitools.annotations.PostConstruct
+    @PostConstruct
     public void init() {
-        this.bukkitPlugin = org.bukkit.Bukkit.getPluginManager().getPlugin("UltiTools-API");
+        this.bukkitPlugin = Bukkit.getPluginManager().getPlugin("UltiTools");
+        if (this.bukkitPlugin == null) {
+            throw new IllegalStateException(
+                "Could not resolve the UltiTools framework plugin by its registered name "
+                    + "\"UltiTools\" -- scoreboard-on-join scheduling cannot work.");
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -45,8 +58,8 @@ public class ScoreboardListener implements Listener {
         
         if (config.isScoreboardAutoEnable()) {
             // Delay a bit to ensure player is fully loaded
-            org.bukkit.Bukkit.getScheduler().runTaskLater(
-                org.bukkit.Bukkit.getPluginManager().getPlugin("UltiTools-API"),
+            Bukkit.getScheduler().runTaskLater(
+                bukkitPlugin,
                 () -> scoreboardService.enableScoreboard(event.getPlayer()),
                 20L // 1 second delay
             );

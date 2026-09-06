@@ -161,19 +161,33 @@ class WhitelistCommandTest {
         }
 
         @Test
-        @DisplayName("removeRefusesTheSameNamesAsAdd: remove enforces the identical length and emptiness guard as add, not just the handler the issue named")
-        void removeRefusesTheSameNamesAsAdd() {
-            String tooLong = "A2345678901234567"; // 17 chars
-            command.remove(player, tooLong);
-            Server server1 = Bukkit.getServer();
-            verify(server1, never()).getOfflinePlayer(anyString());
-            verify(player).sendMessage(anyString());
+        @DisplayName("removeIsNotBlockedByTheLengthGuardAddUses: add refuses a name over 16 characters before ever resolving it, but remove has no resolution to protect from a name that can never exist, so it is not blocked")
+        void removeIsNotBlockedByTheLengthGuardAddUses() {
+            String tooLong = "A2345678901234567"; // 17 chars -- add() refuses this outright
+            OfflinePlayer target = mock(OfflinePlayer.class);
+            when(target.getName()).thenReturn(tooLong);
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer(tooLong)).thenReturn(target);
 
-            reset(player);
-            command.remove(player, "   ");
-            Server server2 = Bukkit.getServer();
-            verify(server2, never()).getOfflinePlayer(anyString());
-            verify(player).sendMessage(anyString());
+            command.remove(player, tooLong);
+
+            verify(server).getOfflinePlayer(tooLong);
+            verify(target).setWhitelisted(false);
+        }
+
+        @Test
+        @DisplayName("removeIsNotBlockedByTheBlankNameGuardAddUses: add refuses a blank name before ever resolving it, but remove has no resolution to protect from a name that can never exist, so it is not blocked")
+        void removeIsNotBlockedByTheBlankNameGuardAddUses() {
+            String blank = "   "; // add() refuses this outright too
+            OfflinePlayer target = mock(OfflinePlayer.class);
+            when(target.getName()).thenReturn(blank);
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer(blank)).thenReturn(target);
+
+            command.remove(player, blank);
+
+            verify(server).getOfflinePlayer(blank);
+            verify(target).setWhitelisted(false);
         }
     }
 

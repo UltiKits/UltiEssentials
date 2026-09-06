@@ -123,6 +123,35 @@ class BackCommandTest {
             assertThat(map.get(playerUuid)).isEqualTo(from);
         }
 
+        /**
+         * Proves the review round-2 Codex finding on PR#22 (comment 3944429766): every one of
+         * this plugin's own teleport call sites -- {@code TeleportService} (backing /home and
+         * /warp), {@code SpawnCommand}, {@code LobbyCommand} -- calls
+         * {@code Player#teleport(Location)} with no explicit cause, which Bukkit/Paper's
+         * {@code Entity#teleport(Location)} javadoc and source both default to
+         * {@code TeleportCause.PLUGIN}, not {@code COMMAND}. Before this fix, /back after any of
+         * those commands recorded nothing.
+         */
+        @Test
+        @DisplayName("Should record location on plugin-triggered teleport (13-11, review round 2)")
+        @SuppressWarnings("unchecked")
+        void shouldRecordLocationOnPluginTeleport() throws Exception {
+            World world = EssentialsTestHelper.createMockWorld("world");
+            Location from = new Location(world, 100, 64, 200);
+            Location to = new Location(world, 500, 64, 500);
+
+            PlayerTeleportEvent event = new PlayerTeleportEvent(
+                    player, from, to, PlayerTeleportEvent.TeleportCause.PLUGIN);
+
+            backCommand.onPlayerTeleport(event);
+
+            Field field = BackCommand.class.getDeclaredField("LAST_LOCATIONS");
+            field.setAccessible(true); // NOPMD
+            Map<UUID, Location> map = (Map<UUID, Location>) field.get(null);
+            assertThat(map).containsKey(playerUuid);
+            assertThat(map.get(playerUuid)).isEqualTo(from);
+        }
+
         @Test
         @DisplayName("Should not record location for non-command teleport")
         @SuppressWarnings("unchecked")

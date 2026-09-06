@@ -16,6 +16,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.junit.jupiter.api.*;
+import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -176,6 +177,35 @@ class OtherListenersTest {
             listener.onPlayerQuit(event);
 
             verify(namePrefixService).removePlayer(player);
+        }
+
+        /**
+         * Proves the review round-2 Codex finding on PR#22 (comment 3944429769): a player who
+         * disconnects during the 10-tick join delay is removed by {@code onPlayerQuit} (which
+         * calls {@code NamePrefixService#removePlayer}) before this scheduled callback runs.
+         * Without an online check, the callback would call {@code updatePlayer} anyway, which
+         * recreates the player's {@code playerTeams} entry and re-adds their (now offline) name
+         * to the main-scoreboard team -- and since the periodic updater only iterates online
+         * players, that entry is never pruned again.
+         */
+        @Test
+        @DisplayName("Should skip the delayed prefix update if the player quit before it ran (13-11, review round 2)")
+        void shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan() {
+            config.setNamePrefixEnabled(true);
+
+            PlayerJoinEvent event = new PlayerJoinEvent(player, "joined");
+            listener.onPlayerJoin(event);
+
+            ArgumentCaptor<Runnable> runnableCaptor = ArgumentCaptor.forClass(Runnable.class);
+            BukkitScheduler scheduler = Bukkit.getScheduler();
+            verify(scheduler).runTaskLater(any(Plugin.class), runnableCaptor.capture(), eq(10L));
+
+            // Player disconnected during the delay -- simulated the same way onPlayerQuit
+            // observes it, before the captured callback runs.
+            when(player.isOnline()).thenReturn(false);
+            runnableCaptor.getValue().run();
+
+            verify(namePrefixService, never()).updatePlayer(player);
         }
     }
 

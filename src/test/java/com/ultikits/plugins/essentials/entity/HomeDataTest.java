@@ -1,7 +1,7 @@
 package com.ultikits.plugins.essentials.entity;
 
-import be.seeseemelk.mockbukkit.MockBukkit;
-import be.seeseemelk.mockbukkit.ServerMock;
+import org.mockbukkit.mockbukkit.MockBukkit;
+import org.mockbukkit.mockbukkit.ServerMock;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import org.bukkit.Location;
 import org.bukkit.World;

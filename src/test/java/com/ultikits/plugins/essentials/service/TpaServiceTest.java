@@ -8,6 +8,7 @@ import com.ultikits.plugins.essentials.service.TpaService.TpaResult;
 import com.ultikits.plugins.essentials.service.TpaService.TpaRequest;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.junit.jupiter.api.*;
@@ -17,6 +18,9 @@ import org.mockito.MockitoAnnotations;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -29,7 +33,6 @@ import static org.mockito.Mockito.when;
  */
 @DisplayName("TpaService Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class TpaServiceTest {
 
     private ServerMock server;
@@ -43,7 +46,7 @@ class TpaServiceTest {
 
     @BeforeEach
     void setUp() {
-        MockBukkitHelper.ensureCleanState();
+        MockBukkitHelper.clearForeignServer();
         server = MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
         MockitoAnnotations.openMocks(this);
@@ -64,6 +67,15 @@ class TpaServiceTest {
             java.lang.reflect.Field configField = TpaService.class.getDeclaredField("config");
             configField.setAccessible(true);
             configField.set(tpaService, config);
+
+            // acceptRequest()/denyRequest() call plugin.i18n(...) to message both players;
+            // plugin was never wired here, so both NPE'd on "this.plugin is null" (13-04
+            // re-measurement).
+            UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
+            lenient().when(plugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+            java.lang.reflect.Field pluginField = TpaService.class.getDeclaredField("plugin");
+            pluginField.setAccessible(true);
+            pluginField.set(tpaService, plugin);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

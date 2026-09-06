@@ -10,6 +10,7 @@ import com.ultikits.plugins.essentials.service.WarpService.WarpResult;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.interfaces.DataOperator;
+import com.ultikits.ultitools.interfaces.Query;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.junit.jupiter.api.*;
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -35,7 +37,6 @@ import static org.mockito.Mockito.*;
  */
 @DisplayName("WarpService Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class WarpServiceTest {
 
     private ServerMock server;
@@ -49,13 +50,28 @@ class WarpServiceTest {
     @Mock
     private TeleportService teleportService;
 
+    // WarpService.getWarp() was refactored from getAll()-then-filter onto
+    // warpOperator.query().where("name").eq(...).first() at some point after this class was
+    // switched off; per-test when(warpOperator.getAll(...)) stubs are now stale for every path
+    // that calls getWarp (13-04 re-measurement). queryMock mirrors QueryImpl's own real
+    // behaviour (every chainable method `return this;`) rather than relying on Mockito's
+    // RETURNS_DEEP_STUBS -- see HomeServiceTest's field javadoc for the two-hop generic-erasure
+    // failure that made that approach unreliable for a second .where() call; this class only
+    // needs one hop, but the same single mock keeps both classes' fixture shape consistent.
     @Mock
     private DataOperator<WarpData> warpOperator;
 
+    @SuppressWarnings("unchecked")
+    private final Query<WarpData> queryMock = mock(Query.class);
+
     @BeforeEach
     void setUp() {
-        MockBukkitHelper.ensureCleanState();
+        MockBukkitHelper.clearForeignServer();
         server = MockBukkit.mock();
+        // canAccess()'s permission-attachment tests call server.getPluginManager()
+        // .getPlugin("MockPlugin"); MockBukkit only registers a plugin under that name once one
+        // is explicitly created (13-04 re-measurement).
+        MockBukkit.createMockPlugin();
         TestHelper.mockUltiToolsInstance();
         MockitoAnnotations.openMocks(this);
 
@@ -67,6 +83,11 @@ class WarpServiceTest {
         when(config.isWarpEnabled()).thenReturn(true);
         when(config.getWarpTeleportWarmup()).thenReturn(3);
         when(config.isHomeCancelOnMove()).thenReturn(true);
+        // queryMock baseline: "no warp found" (.first() null) unless a test overrides it.
+        lenient().when(queryMock.where(anyString())).thenReturn(queryMock);
+        lenient().when(queryMock.eq(any())).thenReturn(queryMock);
+        lenient().when(queryMock.first()).thenReturn(null);
+        lenient().when(warpOperator.query()).thenReturn(queryMock);
 
         // Create service with mocked dependencies
         warpService = new WarpService();
@@ -124,6 +145,7 @@ class WarpServiceTest {
                 .build();
 
             when(warpOperator.getAll(any())).thenReturn(List.of(existing));
+            when(queryMock.first()).thenReturn(existing);
 
             WarpResult result = warpService.createWarp("spawn", location, player.getUniqueId(), null);
 
@@ -183,6 +205,7 @@ class WarpServiceTest {
                 .build();
 
             when(warpOperator.getAll(any())).thenReturn(List.of(warp));
+            when(queryMock.first()).thenReturn(warp);
 
             boolean result = warpService.deleteWarp("spawn");
 
@@ -240,6 +263,7 @@ class WarpServiceTest {
                 .build();
 
             when(warpOperator.getAll(any())).thenReturn(List.of(warp));
+            when(queryMock.first()).thenReturn(warp);
 
             WarpData result = warpService.getWarp("spawn");
 
@@ -311,6 +335,7 @@ class WarpServiceTest {
                 .build();
 
             when(warpOperator.getAll(any())).thenReturn(List.of(warp));
+            when(queryMock.first()).thenReturn(warp);
             when(teleportService.isTeleporting(any())).thenReturn(false);
             when(teleportService.teleport(any(), any(), anyInt(), anyBoolean()))
                 .thenReturn(TeleportResult.SUCCESS);
@@ -336,6 +361,7 @@ class WarpServiceTest {
                 .build();
 
             when(warpOperator.getAll(any())).thenReturn(List.of(warp));
+            when(queryMock.first()).thenReturn(warp);
             when(teleportService.isTeleporting(any())).thenReturn(false);
 
             TeleportResult result = warpService.teleportToWarp(player, "vip");

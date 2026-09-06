@@ -10,7 +10,6 @@ import com.ultikits.ultitools.annotations.command.*;
 import org.bukkit.command.CommandSender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,7 +26,6 @@ import static org.mockito.Mockito.*;
  * @version 1.0.0
  */
 @DisplayName("BaseEssentialsCommand Tests")
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class BaseEssentialsCommandTest {
 
     private ServerMock server;
@@ -41,7 +39,7 @@ class BaseEssentialsCommandTest {
         // all-tests-phase ensureCleanState() left no matching per-test unmock, so the second
         // test method's MockBukkit.mock() call collided with the first test's still-installed
         // mock (13-04).
-        MockBukkitHelper.ensureCleanState();
+        MockBukkitHelper.clearForeignServer();
         server = MockBukkit.mock();
         player = server.addPlayer("TestPlayer");
         testCommand = new TestCommand();

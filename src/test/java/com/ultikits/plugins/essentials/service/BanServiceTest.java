@@ -11,6 +11,7 @@ import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.interfaces.DataOperator;
 import org.bukkit.World;
 import org.junit.jupiter.api.*;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -33,7 +35,6 @@ import static org.mockito.Mockito.*;
  */
 @DisplayName("BanService Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class BanServiceTest {
 
     private ServerMock server;
@@ -44,12 +45,17 @@ class BanServiceTest {
     @Mock
     private EssentialsConfig config;
 
-    @Mock
+    // RETURNS_DEEP_STUBS: BanService's query-based lookups (getActiveBan/unbanPlayer*) were
+    // refactored from getAll()-then-filter onto banOperator.query().where(...).eq(...).list()
+    // at some point after this class was written and switched off; the fluent chain was never
+    // stubbed, so .query() returned null and every code path through it threw NPE (13-04
+    // re-measurement). This mock's per-test when(banOperator.getAll(...)) stubs are untouched.
+    @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private DataOperator<BanData> banOperator;
 
     @BeforeEach
     void setUp() {
-        MockBukkitHelper.ensureCleanState();
+        MockBukkitHelper.clearForeignServer();
         server = MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
         MockitoAnnotations.openMocks(this);
@@ -59,6 +65,17 @@ class BanServiceTest {
 
         // Setup mocks
         when(config.isBanEnabled()).thenReturn(true);
+        // Deep-stub baseline: RETURNS_DEEP_STUBS caches one child mock per method identity
+        // (query() -> Q1, Q1.where(String) -> Q2, Q2.eq(Object) -> Q3), NOT per argument
+        // value, so a single stub using matchers reaches the exact Q3 node every production
+        // call site lands on (banOperator.query().where("player_uuid"/"player_name"/
+        // "ip_address").eq(...).list()) regardless of which column name is passed. Stubbing
+        // banOperator.query().list() directly (skipping where/eq) reaches a *different*,
+        // never-called node and leaves the real chain answering null (measured, 13-04).
+        // Per-test when(banOperator.getAll(...)) stubs are unaffected; tests that need a
+        // specific query() result override .list() individually below.
+        lenient().when(banOperator.query().where(anyString()).eq(any()).list())
+                .thenReturn(new ArrayList<>());
 
         // Create service with mocked dependencies
         banService = new BanService();
@@ -134,6 +151,7 @@ class BanServiceTest {
                 .build();
 
             when(banOperator.getAll(any())).thenReturn(List.of(existingBan));
+            when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(existingBan));
 
             BanResult result = banService.banPlayer(
                 player.getUniqueId(),
@@ -201,6 +219,7 @@ class BanServiceTest {
                 .build();
 
             when(banOperator.getAll(any())).thenReturn(List.of(ban));
+            when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(ban));
 
             boolean result = banService.unbanPlayer(player.getUniqueId());
 
@@ -234,6 +253,7 @@ class BanServiceTest {
                 .build();
 
             when(banOperator.getAll(any())).thenReturn(List.of(ban));
+            when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(ban));
 
             boolean result = banService.unbanPlayerByName(player.getName());
 
@@ -261,6 +281,7 @@ class BanServiceTest {
                 .build();
 
             when(banOperator.getAll(any())).thenReturn(List.of(ban));
+            when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(ban));
 
             BanData result = banService.getActiveIpBan("127.0.0.1");
 
@@ -284,6 +305,7 @@ class BanServiceTest {
                 .build();
 
             when(banOperator.getAll(any())).thenReturn(List.of(ban));
+            when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(ban));
 
             boolean result = banService.unbanIp("127.0.0.1");
 

@@ -11,6 +11,7 @@ import com.ultikits.plugins.essentials.service.HomeService.SetHomeResult;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.interfaces.DataOperator;
+import com.ultikits.ultitools.interfaces.Query;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.junit.jupiter.api.*;
@@ -24,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -36,7 +38,6 @@ import static org.mockito.Mockito.*;
  */
 @DisplayName("HomeService Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class HomeServiceTest {
 
     private ServerMock server;
@@ -50,16 +51,37 @@ class HomeServiceTest {
     @Mock
     private TeleportService teleportService;
 
+    // HomeService's getHome()/getHomes() were refactored from getAll()-then-filter onto
+    // homeOperator.query().where(...).eq(...).list()/.first() at some point after this class
+    // was switched off; per-test when(homeOperator.getAll(...)) stubs are now stale for every
+    // path that calls getHome/getHomes (13-04 re-measurement). Stubbed alongside them below via
+    // queryMock, a single self-returning Query mock -- Mockito's RETURNS_DEEP_STUBS was tried
+    // first and rejected: getHome()'s chain calls .where(String) TWICE (two conditions), and
+    // deep stubs lost the generic type parameter on the second hop, handing back a mock typed
+    // to the erased BaseDataEntity bound instead of HomeData (a
+    // ClassCastException at the call site, not at stubbing time). queryMock instead mirrors
+    // QueryImpl's own real behaviour (every chainable method literally `return this;`,
+    // confirmed by reading QueryImpl.java this session), which sidesteps the generic-inference
+    // question entirely: there is only ever one mock instance for the whole chain.
     @Mock
     private DataOperator<HomeData> homeOperator;
+
+    @SuppressWarnings("unchecked")
+    private final Query<HomeData> queryMock = mock(Query.class);
 
     @Mock
     private UltiEssentials plugin;
 
     @BeforeEach
     void setUp() {
-        MockBukkitHelper.ensureCleanState();
+        MockBukkitHelper.clearForeignServer();
         server = MockBukkit.mock();
+        // getMaxHomes(player) permission checks call server.getPluginManager()
+        // .getPlugin("MockPlugin") to attach a permission; MockBukkit only registers a plugin
+        // under that name once one is explicitly created (13-04 re-measurement -- previously
+        // absent here, so that lookup returned null and Player#addAttachment threw
+        // IllegalArgumentException: Plugin cannot be null).
+        MockBukkit.createMockPlugin();
         TestHelper.mockUltiToolsInstance();
         MockitoAnnotations.openMocks(this);
 
@@ -72,6 +94,15 @@ class HomeServiceTest {
         when(config.getHomeDefaultMaxHomes()).thenReturn(3);
         when(config.getHomeTeleportWarmup()).thenReturn(3);
         when(config.isHomeCancelOnMove()).thenReturn(true);
+        // queryMock baseline -- see the field javadoc above. Defaults match "nothing found":
+        // .first() null, .list() empty; individual tests override whichever terminal method
+        // their scenario needs.
+        lenient().when(queryMock.where(anyString())).thenReturn(queryMock);
+        lenient().when(queryMock.and(anyString())).thenReturn(queryMock);
+        lenient().when(queryMock.eq(any())).thenReturn(queryMock);
+        lenient().when(queryMock.list()).thenReturn(new ArrayList<>());
+        lenient().when(queryMock.first()).thenReturn(null);
+        lenient().when(homeOperator.query()).thenReturn(queryMock);
 
         // Create service with mocked dependencies
         homeService = new HomeService();
@@ -128,6 +159,7 @@ class HomeServiceTest {
                 .build();
 
             when(homeOperator.getAll(any())).thenReturn(List.of(existingHome));
+            when(queryMock.first()).thenReturn(existingHome);
 
             SetHomeResult result = homeService.setHome(player, "home1");
 
@@ -172,6 +204,7 @@ class HomeServiceTest {
             }
 
             when(homeOperator.getAll(any())).thenReturn(existingHomes).thenReturn(new ArrayList<>());
+            when(queryMock.list()).thenReturn(existingHomes);
 
             SetHomeResult result = homeService.setHome(player, "home4");
 
@@ -209,6 +242,7 @@ class HomeServiceTest {
                 .build();
 
             when(homeOperator.getAll(any())).thenReturn(List.of(home));
+            when(queryMock.first()).thenReturn(home);
 
             boolean result = homeService.deleteHome(player.getUniqueId(), "home1");
 
@@ -243,6 +277,7 @@ class HomeServiceTest {
             );
 
             when(homeOperator.getAll(any())).thenReturn(homes);
+            when(queryMock.list()).thenReturn(homes);
 
             List<HomeData> result = homeService.getHomes(player.getUniqueId());
 
@@ -264,6 +299,7 @@ class HomeServiceTest {
                 .build();
 
             when(homeOperator.getAll(any())).thenReturn(List.of(home));
+            when(queryMock.first()).thenReturn(home);
 
             HomeData result = homeService.getHome(player.getUniqueId(), "home1");
 
@@ -301,6 +337,7 @@ class HomeServiceTest {
                 .build();
 
             when(homeOperator.getAll(any())).thenReturn(List.of(home));
+            when(queryMock.first()).thenReturn(home);
             when(teleportService.isTeleporting(any())).thenReturn(false);
             when(teleportService.teleport(any(), any(), anyInt(), anyBoolean()))
                 .thenReturn(TeleportResult.SUCCESS);

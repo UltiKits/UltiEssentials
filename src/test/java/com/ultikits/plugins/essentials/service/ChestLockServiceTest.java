@@ -10,6 +10,7 @@ import com.ultikits.plugins.essentials.service.ChestLockService.LockResult;
 import com.ultikits.plugins.essentials.service.ChestLockService.UnlockResult;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.interfaces.DataOperator;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -25,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
@@ -37,7 +39,6 @@ import static org.mockito.Mockito.*;
  */
 @DisplayName("ChestLockService Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class ChestLockServiceTest {
 
     private ServerMock server;
@@ -53,7 +54,7 @@ class ChestLockServiceTest {
 
     @BeforeEach
     void setUp() {
-        MockBukkitHelper.ensureCleanState();
+        MockBukkitHelper.clearForeignServer();
         server = MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
         MockitoAnnotations.openMocks(this);
@@ -69,6 +70,19 @@ class ChestLockServiceTest {
             java.lang.reflect.Field configField = ChestLockService.class.getDeclaredField("config");
             configField.setAccessible(true);
             configField.set(lockService, config);
+
+            // init() (@PostConstruct) reassigns this.lockOperator from
+            // plugin.getDataOperator(ChestLockData.class) -- plugin was never wired here, so
+            // init() NPE'd immediately on every test in this class before it ever reached the
+            // operator field set below (13-04 re-measurement). Stubbing getDataOperator() to
+            // return the SAME lockOperator mock makes init()'s reassignment a no-op, so the
+            // field-injection two lines down still holds after init() runs.
+            UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
+            lenient().when(plugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+            lenient().when(plugin.getDataOperator(ChestLockData.class)).thenReturn(lockOperator);
+            java.lang.reflect.Field pluginField = ChestLockService.class.getDeclaredField("plugin");
+            pluginField.setAccessible(true);
+            pluginField.set(lockService, plugin);
 
             java.lang.reflect.Field operatorField = ChestLockService.class.getDeclaredField("lockOperator");
             operatorField.setAccessible(true);

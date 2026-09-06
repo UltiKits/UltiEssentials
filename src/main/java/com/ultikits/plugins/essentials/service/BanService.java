@@ -189,6 +189,18 @@ public class BanService {
      * @param playerName the player name to check
      * @return true if the server's own ban list currently bans this name
      */
+    // BanList.Type.NAME and isBanned(String) are deprecated, but the non-deprecated
+    // isBanned(PlayerProfile) route is worse for this exact use case, not merely differently
+    // spelled: disassembling CraftProfileBanList (paper-1.21.4) shows isBanned(PlayerProfile)
+    // keys the lookup by profile.getId() (UserBanList.getKeyForUser), and
+    // Bukkit.createProfile(name) substitutes the all-zero NIL_UUID for any name that is not the
+    // currently-connected player -- so it would silently return false for every offline banned
+    // player, which is what /unban checks against. isBanned(String) instead resolves via the
+    // server's GameProfileCache and null-checks before ever reaching that keyed lookup. Separately
+    // verified (13-REVIEW-UltiEssentials.md WR-03) that BanList.Type.NAME and .PROFILE both
+    // construct the identical CraftProfileBanList backed by vanilla's UserBanList, so this is not
+    // a disused/separate ban list either way -- kept deliberately, not out of inertia.
+    @SuppressWarnings("deprecation")
     public boolean isBannedInServerBanList(String playerName) {
         return Bukkit.getBanList(BanList.Type.NAME).isBanned(playerName);
     }

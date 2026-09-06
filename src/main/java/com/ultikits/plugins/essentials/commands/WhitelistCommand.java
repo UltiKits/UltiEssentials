@@ -62,13 +62,21 @@ public class WhitelistCommand extends BaseEssentialsCommand {
             return;
         }
 
-        // Deliberately not guarded by rejectInvalidPlayerName: that guard exists to avoid
-        // resolving a name that can never be a real player before *creating* a whitelist entry.
-        // Removal has no such creation step to protect, and a raw whitelist.json entry (manual
-        // edit, historical offline-mode account, file corruption) may legitimately be over 16
-        // characters or blank -- refusing to even attempt removal would foreclose the operator's
-        // only way to clear it via this command.
-        OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
+        // Deliberately not guarded by rejectInvalidPlayerName's length check, and deliberately not
+        // resolved via Bukkit.getOfflinePlayer either: that resolver is the platform call
+        // UltiEssentials#17 measured throwing IllegalArgumentException for a name over 16
+        // characters on a real Paper server. add()'s guard exists to keep such a name away from it
+        // before *creating* a whitelist entry -- but a prior fix here removed remove()'s guard on
+        // the premise that "remove has no resolution step to protect," while leaving this method
+        // still calling that same resolver unconditionally, which reopened the identical crash for
+        // remove(). Matching against Bukkit.getWhitelistedPlayers()'s existing entries instead lets
+        // an administrator clear a malformed/legacy whitelist.json entry (manual edit, historical
+        // offline-mode account, file corruption) of any length or blankness, without ever asking
+        // the platform to resolve a name it could crash on.
+        OfflinePlayer target = Bukkit.getWhitelistedPlayers().stream()
+                .filter(whitelisted -> playerName.equalsIgnoreCase(whitelisted.getName()))
+                .findFirst()
+                .orElse(null);
 
         if (target == null) {
             sender.sendMessage(i18n("玩家不存在"));

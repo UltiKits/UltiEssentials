@@ -22,6 +22,14 @@ public class WhitelistCommand extends BaseEssentialsCommand {
         this.config = config;
     }
 
+    /**
+     * The platform's own player-name length limit. {@code @CmdParam("player") OfflinePlayer}
+     * would run the platform's offline-player resolution inside the framework's parameter
+     * conversion, before either handler body below ever executes -- which is why {@code add}/
+     * {@code remove} declare a raw {@code String} instead and resolve it here, after checking it.
+     */
+    private static final int MAX_PLAYER_NAME_LENGTH = 16;
+
     @CmdMapping(format = "add <player>")
     public void add(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
         if (!config.isWhitelistEnabled()) {
@@ -29,8 +37,12 @@ public class WhitelistCommand extends BaseEssentialsCommand {
             return;
         }
 
-        // RED-phase stub (13-11 TDD cycle): resolves unconditionally, no length/emptiness guard
-        // yet. See the GREEN commit for the real implementation.
+        String rejection = rejectInvalidPlayerName(playerName);
+        if (rejection != null) {
+            sender.sendMessage(rejection);
+            return;
+        }
+
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
 
         if (target == null) {
@@ -49,8 +61,12 @@ public class WhitelistCommand extends BaseEssentialsCommand {
             return;
         }
 
-        // RED-phase stub (13-11 TDD cycle): resolves unconditionally, no length/emptiness guard
-        // yet. See the GREEN commit for the real implementation.
+        String rejection = rejectInvalidPlayerName(playerName);
+        if (rejection != null) {
+            sender.sendMessage(rejection);
+            return;
+        }
+
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
 
         if (target == null) {
@@ -60,6 +76,27 @@ public class WhitelistCommand extends BaseEssentialsCommand {
 
         target.setWhitelisted(false);
         sender.sendMessage(String.format(i18n("已将 %s 从白名单移除"), target.getName()));
+    }
+
+    /**
+     * Checks a whitelist name before it reaches the platform's offline-player resolution.
+     * Deliberately checked ahead of resolution rather than by intercepting a failure from it
+     * afterward: reacting to whichever exception type a platform release happens to throw would
+     * bind this module's correctness to that platform detail, and the check itself is two
+     * conditions.
+     *
+     * @param playerName the raw argument, unresolved
+     * @return an i18n-ready refusal message if the name is empty, blank, or longer than the
+     *         platform allows; {@code null} if the name is fine to resolve
+     */
+    private String rejectInvalidPlayerName(String playerName) {
+        if (playerName == null || playerName.trim().isEmpty()) {
+            return i18n("玩家名不能为空");
+        }
+        if (playerName.length() > MAX_PLAYER_NAME_LENGTH) {
+            return i18n("玩家名过长，最多 16 个字符");
+        }
+        return null;
     }
 
     @CmdMapping(format = "list")

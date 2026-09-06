@@ -61,12 +61,12 @@ public class WhitelistCommand extends BaseEssentialsCommand {
             return;
         }
 
-        String rejection = rejectInvalidPlayerName(playerName);
-        if (rejection != null) {
-            sender.sendMessage(rejection);
-            return;
-        }
-
+        // Deliberately not guarded by rejectInvalidPlayerName: that guard exists to avoid
+        // resolving a name that can never be a real player before *creating* a whitelist entry.
+        // Removal has no such creation step to protect, and a raw whitelist.json entry (manual
+        // edit, historical offline-mode account, file corruption) may legitimately be over 16
+        // characters or blank -- refusing to even attempt removal would foreclose the operator's
+        // only way to clear it via this command.
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
 
         if (target == null) {

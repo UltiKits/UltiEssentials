@@ -23,11 +23,15 @@ public class WhitelistCommand extends BaseEssentialsCommand {
     }
 
     @CmdMapping(format = "add <player>")
-    public void add(@CmdSender CommandSender sender, @CmdParam("player") OfflinePlayer target) {
+    public void add(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
         if (!config.isWhitelistEnabled()) {
             sender.sendMessage(i18n("该功能已禁用"));
             return;
         }
+
+        // RED-phase stub (13-11 TDD cycle): resolves unconditionally, no length/emptiness guard
+        // yet. See the GREEN commit for the real implementation.
+        OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
 
         if (target == null) {
             sender.sendMessage(i18n("玩家不存在"));
@@ -39,11 +43,15 @@ public class WhitelistCommand extends BaseEssentialsCommand {
     }
 
     @CmdMapping(format = "remove <player>")
-    public void remove(@CmdSender CommandSender sender, @CmdParam("player") OfflinePlayer target) {
+    public void remove(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
         if (!config.isWhitelistEnabled()) {
             sender.sendMessage(i18n("该功能已禁用"));
             return;
         }
+
+        // RED-phase stub (13-11 TDD cycle): resolves unconditionally, no length/emptiness guard
+        // yet. See the GREEN commit for the real implementation.
+        OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
 
         if (target == null) {
             sender.sendMessage(i18n("玩家不存在"));

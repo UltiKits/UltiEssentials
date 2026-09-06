@@ -10,6 +10,7 @@ import org.junit.jupiter.api.*;
 
 import java.util.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -43,17 +44,22 @@ class WhitelistCommandTest {
         void shouldAddPlayer() {
             OfflinePlayer target = mock(OfflinePlayer.class);
             when(target.getName()).thenReturn("NewPlayer");
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer("NewPlayer")).thenReturn(target);
 
-            command.add(player, target);
+            command.add(player, "NewPlayer");
 
             verify(target).setWhitelisted(true);
             verify(player).sendMessage(anyString());
         }
 
         @Test
-        @DisplayName("Should handle null player")
-        void shouldHandleNullPlayer() {
-            command.add(player, null);
+        @DisplayName("Should handle unresolved player")
+        void shouldHandleUnresolvedPlayer() {
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer("Unknown")).thenReturn(null);
+
+            command.add(player, "Unknown");
 
             verify(player).sendMessage(anyString());
         }
@@ -64,9 +70,50 @@ class WhitelistCommandTest {
             config.setWhitelistEnabled(false);
 
             OfflinePlayer target = mock(OfflinePlayer.class);
-            command.add(player, target);
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer("SomePlayer")).thenReturn(target);
+
+            command.add(player, "SomePlayer");
 
             verify(target, never()).setWhitelisted(anyBoolean());
+        }
+
+        @Test
+        @DisplayName("aSixteenCharacterNameIsAccepted: the boundary is the platform's own username limit, measured on the argument string's own length")
+        void aSixteenCharacterNameIsAccepted() {
+            String name = "A234567890123456"; // exactly 16 chars, plain ASCII
+            assertThat(name).hasSize(16);
+            OfflinePlayer target = mock(OfflinePlayer.class);
+            when(target.getName()).thenReturn(name);
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer(name)).thenReturn(target);
+
+            command.add(player, name);
+
+            verify(target).setWhitelisted(true);
+        }
+
+        @Test
+        @DisplayName("aSeventeenCharacterNameIsRefusedWithAMessage: one character over the platform's limit produces a message and no exception, and never reaches offline-player resolution")
+        void aSeventeenCharacterNameIsRefusedWithAMessage() {
+            String name = "A2345678901234567"; // 17 chars, plain ASCII -- length, not encoding
+            assertThat(name).hasSize(17);
+
+            command.add(player, name);
+
+            verify(player).sendMessage(anyString());
+            Server server = Bukkit.getServer();
+            verify(server, never()).getOfflinePlayer(anyString());
+        }
+
+        @Test
+        @DisplayName("anEmptyOrBlankNameIsRefusedTheSameWay: an empty or whitespace-only name takes the same refusal path as an over-long one")
+        void anEmptyOrBlankNameIsRefusedTheSameWay() {
+            command.add(player, "   ");
+
+            verify(player).sendMessage(anyString());
+            Server server = Bukkit.getServer();
+            verify(server, never()).getOfflinePlayer(anyString());
         }
     }
 
@@ -79,17 +126,22 @@ class WhitelistCommandTest {
         void shouldRemovePlayer() {
             OfflinePlayer target = mock(OfflinePlayer.class);
             when(target.getName()).thenReturn("OldPlayer");
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer("OldPlayer")).thenReturn(target);
 
-            command.remove(player, target);
+            command.remove(player, "OldPlayer");
 
             verify(target).setWhitelisted(false);
             verify(player).sendMessage(anyString());
         }
 
         @Test
-        @DisplayName("Should handle null player")
-        void shouldHandleNullPlayer() {
-            command.remove(player, null);
+        @DisplayName("Should handle unresolved player")
+        void shouldHandleUnresolvedPlayer() {
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer("Unknown")).thenReturn(null);
+
+            command.remove(player, "Unknown");
 
             verify(player).sendMessage(anyString());
         }
@@ -100,9 +152,28 @@ class WhitelistCommandTest {
             config.setWhitelistEnabled(false);
 
             OfflinePlayer target = mock(OfflinePlayer.class);
-            command.remove(player, target);
+            Server server = Bukkit.getServer();
+            when(server.getOfflinePlayer("SomePlayer")).thenReturn(target);
+
+            command.remove(player, "SomePlayer");
 
             verify(target, never()).setWhitelisted(anyBoolean());
+        }
+
+        @Test
+        @DisplayName("removeRefusesTheSameNamesAsAdd: remove enforces the identical length and emptiness guard as add, not just the handler the issue named")
+        void removeRefusesTheSameNamesAsAdd() {
+            String tooLong = "A2345678901234567"; // 17 chars
+            command.remove(player, tooLong);
+            Server server1 = Bukkit.getServer();
+            verify(server1, never()).getOfflinePlayer(anyString());
+            verify(player).sendMessage(anyString());
+
+            reset(player);
+            command.remove(player, "   ");
+            Server server2 = Bukkit.getServer();
+            verify(server2, never()).getOfflinePlayer(anyString());
+            verify(player).sendMessage(anyString());
         }
     }
 

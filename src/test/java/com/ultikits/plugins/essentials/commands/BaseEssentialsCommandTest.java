@@ -8,9 +8,7 @@ import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.ultitools.annotations.*;
 import com.ultikits.ultitools.annotations.command.*;
 import org.bukkit.command.CommandSender;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -36,21 +34,22 @@ class BaseEssentialsCommandTest {
     private PlayerMock player;
     private TestCommand testCommand;
 
-    @BeforeAll
-    static void setUpMockBukkit() {
-        MockBukkitHelper.ensureCleanState();
-    }
-
-    @AfterAll
-    static void tearDownMockBukkit() {
-        MockBukkitHelper.safeUnmock();
-    }
-
     @BeforeEach
     void setUp() {
+        // ensureCleanState() + MockBukkit.mock() must both run per test, matching the working
+        // reference (framework PluginManagerClassScanningTest): the previous once-only,
+        // all-tests-phase ensureCleanState() left no matching per-test unmock, so the second
+        // test method's MockBukkit.mock() call collided with the first test's still-installed
+        // mock (13-04).
+        MockBukkitHelper.ensureCleanState();
         server = MockBukkit.mock();
         player = server.addPlayer("TestPlayer");
         testCommand = new TestCommand();
+    }
+
+    @AfterEach
+    void tearDown() {
+        MockBukkitHelper.safeUnmock();
     }
 
     @Nested

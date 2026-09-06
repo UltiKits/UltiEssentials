@@ -135,6 +135,17 @@
             <version>3.24.2</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- VaultAPI at test scope: Mockito's inline mock maker resolves UltiTools' entire
+             method-signature closure, which references net.milkbowl.vault.economy.Economy.
+             The framework declares this coordinate at <scope>provided</scope> (not transitive),
+             so it must be declared here too. Mirrors Framework/UltiTools-Reborn/pom.xml exactly. -->
+        <dependency>
+            <groupId>com.github.MilkBowl</groupId>
+            <artifactId>VaultAPI</artifactId>
+            <version>1.7.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

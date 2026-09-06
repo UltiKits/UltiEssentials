@@ -310,5 +310,41 @@ class BackCommandTest {
 
             assertThat(mockBukkitPlayer.getLocation()).isEqualTo(from);
         }
+
+        /**
+         * Proves the review round-3 Codex finding on PR#22 (comment 3944574360): dispatched at
+         * default priority with no {@code ignoreCancelled}, {@code onPlayerTeleport} still
+         * recorded a teleport another listener (or a higher-priority listener acting after this
+         * one) went on to cancel, overwriting a valid previous location with the unchanged
+         * {@code from}. Dispatches through Bukkit's real event bus (not a direct method call) so
+         * the {@code priority}/{@code ignoreCancelled} handler attributes are actually exercised,
+         * not just declared.
+         */
+        @Test
+        @DisplayName("aCancelledTeleportDoesNotOverwriteThePreviousLocation: a teleport cancelled by another listener before this class observes it must not replace a previously recorded valid /back location")
+        void aCancelledTeleportDoesNotOverwriteThePreviousLocation() throws Exception {
+            mockBukkitServer.getPluginManager().registerEvents(liveBackCommand, mockBukkitPlugin);
+
+            World world = mockBukkitServer.addSimpleWorld("registration-world");
+            Location validPrevious = new Location(world, 1, 64, 1);
+            Location cancelledFrom = new Location(world, 100, 64, 200);
+            Location cancelledTo = new Location(world, 500, 64, 500);
+
+            Field field = BackCommand.class.getDeclaredField("LAST_LOCATIONS");
+            field.setAccessible(true); // NOPMD
+            @SuppressWarnings("unchecked")
+            Map<UUID, Location> map = (Map<UUID, Location>) field.get(null);
+            map.put(mockBukkitPlayer.getUniqueId(), validPrevious);
+
+            PlayerTeleportEvent cancelled = new PlayerTeleportEvent(
+                    mockBukkitPlayer, cancelledFrom, cancelledTo, PlayerTeleportEvent.TeleportCause.COMMAND);
+            cancelled.setCancelled(true);
+            mockBukkitServer.getPluginManager().callEvent(cancelled);
+
+            mockBukkitPlayer.setLocation(cancelledTo);
+            liveBackCommand.back(mockBukkitPlayer);
+
+            assertThat(mockBukkitPlayer.getLocation()).isEqualTo(validPrevious);
+        }
     }
 }

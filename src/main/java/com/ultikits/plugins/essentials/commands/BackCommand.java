@@ -69,8 +69,16 @@ public class BackCommand extends BaseEssentialsCommand implements Listener {
         Player player = event.getPlayer();
         Location from = event.getFrom();
 
-        // Only record command-triggered teleports
-        if (event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND) {
+        // Record command-triggered teleports (e.g. a vanilla /tp) and plugin-triggered
+        // teleports. Every one of this plugin's own teleport call sites -- TeleportService
+        // (backing /home and /warp), SpawnCommand, LobbyCommand, WildCommand, TpaService --
+        // calls Player#teleport(Location) with no explicit cause, and Bukkit/Paper's
+        // Entity#teleport(Location) defaults that to TeleportCause.PLUGIN, not COMMAND.
+        // Tracking only COMMAND meant /back after any of this plugin's own teleport commands
+        // recorded nothing.
+        PlayerTeleportEvent.TeleportCause cause = event.getCause();
+        if (cause == PlayerTeleportEvent.TeleportCause.COMMAND
+                || cause == PlayerTeleportEvent.TeleportCause.PLUGIN) {
             LAST_LOCATIONS.put(player.getUniqueId(), from);
         }
     }

@@ -397,6 +397,30 @@ class BanCommandsTest {
                 .contains("服务器封禁名单");
         }
 
+        /**
+         * Proves the review round-2 Codex finding on PR#22 (comment 3944429768): a player who is
+         * simultaneously in this plugin's own active ban records AND the server's own ban list
+         * (e.g. an additional vanilla {@code /ban}) previously fell into the {@code success}
+         * branch alone -- {@code unbanPlayerByName} returns {@code true}, the {@code else if}
+         * checking {@code isBannedInServerBanList} is never reached, and the command told the
+         * sender (and broadcast to everyone) that the ban was fully removed even though the
+         * server still rejects the player's login.
+         */
+        @Test
+        @DisplayName("Should warn about a remaining server ban after removing this plugin's own ban record, without broadcasting a misleading full unban (13-11, review round 2)")
+        void shouldWarnAboutRemainingServerBanAfterPluginUnban() {
+            when(banService.unbanPlayerByName("DoubleBannedPlayer")).thenReturn(true);
+            when(banService.isBannedInServerBanList("DoubleBannedPlayer")).thenReturn(true);
+
+            command.unban(player, "DoubleBannedPlayer");
+
+            ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+            verify(player).sendMessage(messageCaptor.capture());
+            org.assertj.core.api.Assertions.assertThat(messageCaptor.getValue())
+                .contains("服务器封禁名单");
+            verify(EssentialsTestHelper.getMockServer(), never()).broadcastMessage(anyString());
+        }
+
         @Test
         @DisplayName("handleHelp should send usage messages")
         void handleHelpShouldSendUsage() {

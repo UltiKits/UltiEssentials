@@ -58,10 +58,12 @@ class OtherListenersTest {
             EssentialsTestHelper.setField(listener, "config", config);
             EssentialsTestHelper.setField(listener, "scoreboardService", scoreboardService);
 
-            // Mock plugin for scheduler
+            // Mock plugin for scheduler -- resolved under the correct registered name,
+            // "UltiTools" (13-11, UltiEssentials#15), via init() rather than per-join.
             PluginManager pm = Bukkit.getServer().getPluginManager();
             Plugin mockPlugin = mock(Plugin.class);
-            when(pm.getPlugin("UltiTools-API")).thenReturn(mockPlugin);
+            when(pm.getPlugin("UltiTools")).thenReturn(mockPlugin);
+            listener.init();
         }
 
         @Test
@@ -131,10 +133,12 @@ class OtherListenersTest {
             EssentialsTestHelper.setField(listener, "config", config);
             EssentialsTestHelper.setField(listener, "namePrefixService", namePrefixService);
 
-            // Mock plugin for scheduler
+            // Mock plugin for scheduler -- resolved under the correct registered name,
+            // "UltiTools" (13-11, UltiEssentials#15), via init() rather than per-join.
             PluginManager pm = Bukkit.getServer().getPluginManager();
             Plugin mockPlugin = mock(Plugin.class);
-            when(pm.getPlugin("UltiTools-API")).thenReturn(mockPlugin);
+            when(pm.getPlugin("UltiTools")).thenReturn(mockPlugin);
+            listener.init();
         }
 
         @Test

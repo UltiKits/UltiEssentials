@@ -175,6 +175,14 @@ public class BanService {
     }
     
     /**
+     * RED-phase stub (13-11 TDD cycle) -- intentionally does not yet check the server's own ban
+     * list. See the GREEN commit for the real implementation.
+     */
+    public boolean isBannedInServerBanList(String playerName) {
+        return false;
+    }
+
+    /**
      * Unbans an IP address.
      *
      * @param ipAddress the IP address to unban

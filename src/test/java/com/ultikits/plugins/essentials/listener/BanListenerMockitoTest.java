@@ -37,8 +37,8 @@ class BanListenerMockitoTest {
         // No EssentialsTestHelper.setUp() call here, deliberately. It installs a raw,
         // unstubbed Mockito mock(Server.class) into Bukkit.server via reflection and never
         // clears it -- and this class consumed nothing it produced. Every helper member was
-        // checked: only setField (a static reflection helper that needs no fixture) and
-        // tearDown are referenced; getMockPlugin, getMockLogger, getMockServer,
+        // checked: only setField (a static reflection helper that needs no fixture) is
+        // referenced; getMockPlugin, getMockLogger, getMockServer,
         // createDefaultConfig and createMockPlayer are all absent, and both
         // new EssentialsConfig() and mock(BanService.class) below need nothing from it.
         // Its one observable effect was the foreign server that the next line then had to
@@ -63,9 +63,13 @@ class BanListenerMockitoTest {
     }
 
     @AfterEach
-    void tearDown() throws Exception {
+    void tearDown() {
+        // No EssentialsTestHelper.tearDown() call here, deliberately -- it is the pair of a
+        // setUp() this class does not perform. All it does is null the shared statics
+        // mockPlugin and mockLogger, which belong to other classes' fixtures; it never
+        // touches Bukkit.server (its own comment says so). Clearing the server is
+        // safeUnmock()'s job above, and that is the only teardown this class needs.
         MockBukkitHelper.safeUnmock();
-        EssentialsTestHelper.tearDown();
     }
 
     @Nested

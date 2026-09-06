@@ -8,6 +8,7 @@ import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
@@ -57,10 +58,16 @@ public class BackCommand extends BaseEssentialsCommand implements Listener {
 
     /**
      * Listens for teleport events to record the previous location.
+     * <p>
+     * Registered at {@code MONITOR} priority with {@code ignoreCancelled = true} so this only
+     * observes the final outcome of the event, after every other listener has had a chance to
+     * cancel it -- a teleport another listener (permissions, WorldGuard, another plugin) goes on
+     * to cancel must not overwrite a previously recorded valid location with the player's
+     * unchanged {@code from}.
      *
      * @param event the teleport event
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         if (!config.isBackEnabled()) {
             return;

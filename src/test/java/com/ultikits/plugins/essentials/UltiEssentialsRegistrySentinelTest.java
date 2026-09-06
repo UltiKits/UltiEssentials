@@ -7,11 +7,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.mockbukkit.mockbukkit.ServerMock;
+
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
@@ -54,9 +58,22 @@ public class UltiEssentialsRegistrySentinelTest {
         MockBukkitHelper.safeUnmock();
     }
 
+    /**
+     * Asserts the installed server's <em>type</em>, not merely its presence.
+     *
+     * <p>A bare {@code assertNotNull(Bukkit.getServer())} does not establish that this class's
+     * bootstrap ran: it is equally satisfied by the raw Mockito {@code mock(Server.class)} that
+     * {@code EssentialsTestHelper.setUp()} installs and never clears. Measured with the bootstrap
+     * removed and such a mock installed in its place, this class's other three tests failed while
+     * the {@code assertNotNull} form of this one still passed -- a reopen guard that a leaked mock
+     * can satisfy is not guarding the bootstrap.</p>
+     */
     @Test
     void liveServerIsBootstrapped() {
-        assertNotNull(Bukkit.getServer(), "live server bootstrap must be present");
+        assertInstanceOf(ServerMock.class, Bukkit.getServer(),
+            "live server bootstrap must install a MockBukkit ServerMock; a raw Mockito "
+                + "mock(Server.class) leaked by another test class satisfies a bare assertNotNull "
+                + "but is not a live server");
     }
 
     @Test
@@ -70,9 +87,36 @@ public class UltiEssentialsRegistrySentinelTest {
         assertNotNull(profile, "createProfile must not silently return null");
     }
 
+    /**
+     * Guards the registry path, and names the failure it produces.
+     *
+     * <p>Without the bootstrap, {@code new ItemStack(...)} throws MockBukkit's
+     * {@code IncompatiblePaperVersionException}, whose text reads "Version Mismatch!" and advises
+     * recompiling against a matching Paper API. <b>That advice is a dead end here.</b> The versions
+     * already match: MockBukkit 4.101.0 reports itself built against Paper API
+     * 1.21.11-R0.1-SNAPSHOT, and that is exactly what {@code pom.xml} depends on.
+     * {@code RegistryMock.loadIfEmpty} catches {@code ExceptionInInitializerError} and reports
+     * every instance as a version mismatch, so the message describes the catch site rather than the
+     * cause. Both absent-bootstrap shapes were measured, and both bottom out in
+     * {@code Tag.<clinit>} calling {@code Bukkit.getTag(...)} without a live server behind it:
+     * a {@code NullPointerException} on a null {@code Bukkit.server}, or the same on a raw Mockito
+     * {@code mock(Server.class)} returning null from the unstubbed call. Neither is a Paper version
+     * problem.</p>
+     *
+     * <p>The assertion message below carries that so the next maintainer reads it at the point of
+     * failure instead of rediscovering it.</p>
+     */
     @Test
     void itemStackConstructionResolvesRegistry() {
-        ItemStack stack = new ItemStack(Material.DIAMOND);
+        ItemStack stack = assertDoesNotThrow(
+            () -> new ItemStack(Material.DIAMOND),
+            "ItemStack construction must resolve MockBukkit's registry. If this reports "
+                + "IncompatiblePaperVersionException \"Version Mismatch!\", do NOT go looking for a "
+                + "version to correct -- MockBukkit 4.101.0 and this pom both target Paper "
+                + "1.21.11-R0.1-SNAPSHOT. RegistryMock.loadIfEmpty reports any "
+                + "ExceptionInInitializerError under that message; the real cause is Tag.<clinit> "
+                + "calling Bukkit.getTag(...) without a live server behind it (Bukkit.server null, "
+                + "or a raw Mockito mock returning null), i.e. the live server bootstrap is missing");
         assertNotNull(stack);
         assertEquals(Material.DIAMOND, stack.getType());
     }

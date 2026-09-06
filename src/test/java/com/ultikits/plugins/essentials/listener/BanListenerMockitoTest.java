@@ -34,26 +34,24 @@ class BanListenerMockitoTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        EssentialsTestHelper.setUp();
-
-        // EssentialsTestHelper.setUp() above just installed its own raw, unstubbed
-        // Mockito Server mock into Bukkit.server via reflection. That mock never
-        // stubs Server.createProfile(...), so AsyncPlayerPreLoginEvent's 3-arg
-        // constructor -- which delegates to Bukkit.createProfile(uuid, name) --
-        // silently gets back null (Mockito's default return for an unstubbed
-        // Object-returning method), and the NPE only surfaces one call later
-        // inside production code (BanListener.onPlayerLogin -> getUniqueId()).
-        // Give this class its own explicit, live-server bootstrap for that one
-        // call, via the module's shared MockBukkitHelper.bootstrapLiveServer():
-        // clears the raw mock (bypassing Bukkit.setServer()'s "already set"
-        // guard the same way EssentialsTestHelper itself does) and installs a
-        // real MockBukkit ServerMock instead, so createProfile() genuinely
-        // resolves rather than depending on either Mockito's default or on
-        // another class's leftover state (14-09, shape 3). Routed through the
-        // shared helper method (not an inlined MockBukkit.mock() call) so this
-        // class's greenness -- a real production-path test of
-        // BanListener.onPlayerLogin -- is exactly what UltiEssentialsRegistrySentinelTest
-        // is now also standing guard over (14-13).
+        // No EssentialsTestHelper.setUp() call here, deliberately. It installs a raw,
+        // unstubbed Mockito mock(Server.class) into Bukkit.server via reflection and never
+        // clears it -- and this class consumed nothing it produced. Every helper member was
+        // checked: only setField (a static reflection helper that needs no fixture) and
+        // tearDown are referenced; getMockPlugin, getMockLogger, getMockServer,
+        // createDefaultConfig and createMockPlayer are all absent, and both
+        // new EssentialsConfig() and mock(BanService.class) below need nothing from it.
+        // Its one observable effect was the foreign server that the next line then had to
+        // clear again, so the call was removed at the root rather than worked around.
+        //
+        // A genuinely live server is still required: AsyncPlayerPreLoginEvent's 3-arg
+        // constructor delegates to Bukkit.createProfile(uuid, name), and an unstubbed
+        // Mockito Server returns null there (Mockito's default for an Object-returning
+        // method), with the NPE surfacing one call later inside production code at
+        // BanListener.onPlayerLogin -> getUniqueId(). Routed through the module's shared
+        // MockBukkitHelper.bootstrapLiveServer() rather than an inlined MockBukkit.mock()
+        // so this class's greenness -- a real production-path test, not a sentinel -- is
+        // exactly what UltiEssentialsRegistrySentinelTest stands guard over (14-13).
         MockBukkitHelper.bootstrapLiveServer();
 
         config = new EssentialsConfig();

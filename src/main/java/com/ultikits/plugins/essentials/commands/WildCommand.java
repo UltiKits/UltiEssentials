@@ -38,6 +38,14 @@ public class WildCommand extends BaseEssentialsCommand {
         int maxRange = config.getWildMaxRange();
         int minRange = config.getWildMinRange();
 
+        // EssentialsConfig validates each of wildMinRange/wildMaxRange individually (@Range) but
+        // not their relationship, so a misconfigured server could otherwise reach
+        // RANDOM.nextInt(maxRange - minRange) with a non-positive bound and throw.
+        if (minRange >= maxRange) {
+            player.sendMessage(i18n("随机传送范围配置无效，请联系管理员"));
+            return;
+        }
+
         player.sendMessage(i18n("正在寻找安全位置..."));
 
         // Try up to 10 times to find a safe location

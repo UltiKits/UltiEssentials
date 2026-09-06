@@ -30,6 +30,7 @@
   "保存主城失败": "Failed to save lobby",
 
   "正在寻找安全位置...": "Finding a safe location...",
+  "随机传送范围配置无效，请联系管理员": "Wild range is misconfigured, please contact an administrator",
   "已随机传送到 X:%d Y:%d Z:%d": "Randomly teleported to X:%d Y:%d Z:%d",
   "未能找到安全位置，请稍后再试": "Could not find a safe location, please try again later",
 

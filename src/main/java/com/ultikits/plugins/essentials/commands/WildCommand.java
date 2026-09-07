@@ -28,7 +28,6 @@ public class WildCommand extends BaseEssentialsCommand {
 
     @CmdMapping(format = "")
     @CmdCD(60) // 60 seconds cooldown
-    @RunAsync  // World chunk loading can be slow
     public void wildTeleport(@CmdSender Player player) {
         if (!config.isWildEnabled()) {
             player.sendMessage(i18n("该功能已禁用"));
@@ -38,6 +37,14 @@ public class WildCommand extends BaseEssentialsCommand {
         World world = player.getWorld();
         int maxRange = config.getWildMaxRange();
         int minRange = config.getWildMinRange();
+
+        // EssentialsConfig validates each of wildMinRange/wildMaxRange individually (@Range) but
+        // not their relationship, so a misconfigured server could otherwise reach
+        // RANDOM.nextInt(maxRange - minRange) with a non-positive bound and throw.
+        if (minRange >= maxRange) {
+            player.sendMessage(i18n("随机传送范围配置无效，请联系管理员"));
+            return;
+        }
 
         player.sendMessage(i18n("正在寻找安全位置..."));
 

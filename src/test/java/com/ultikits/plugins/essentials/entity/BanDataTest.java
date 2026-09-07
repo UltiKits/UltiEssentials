@@ -1,7 +1,6 @@
 package com.ultikits.plugins.essentials.entity;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @DisplayName("BanData Entity Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class BanDataTest {
 
     private BanData banData;

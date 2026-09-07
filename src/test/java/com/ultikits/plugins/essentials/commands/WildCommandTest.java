@@ -11,6 +11,7 @@ import org.junit.jupiter.api.*;
 
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -78,6 +79,18 @@ class WildCommandTest {
 
         verify(player, never()).teleport(any(Location.class));
         verify(player).sendMessage(anyString());
+    }
+
+    @Test
+    @DisplayName("shouldRefuseWhenRangeIsMisconfigured: min range >= max range must not reach Random.nextInt with a non-positive bound")
+    void shouldRefuseWhenRangeIsMisconfigured() {
+        config.setWildMinRange(100);
+        config.setWildMaxRange(100);
+
+        assertDoesNotThrow(() -> command.wildTeleport(player));
+
+        verify(player, never()).teleport(any(Location.class));
+        verify(player).sendMessage(contains("范围配置"));
     }
 
     @Test

@@ -4,12 +4,14 @@ import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.EventListener;
+import com.ultikits.ultitools.annotations.PostConstruct;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.Plugin;
 
 /**
  * Listener for name prefix events.
@@ -25,17 +27,47 @@ public class NamePrefixListener implements Listener {
     
     @Autowired
     private NamePrefixService namePrefixService;
-    
+
+    private Plugin bukkitPlugin;
+
+    /**
+     * Resolves the framework's plugin handle once, under its actual registered name (the
+     * artifact name, {@code "UltiTools-API"}, is not the registered plugin name -- see
+     * {@code ScoreboardService}, {@code NamePrefixService}, {@code TeleportService},
+     * {@code TpaService} and {@code HideCommand} for the same, already-correct lookup). Failing
+     * here, at construction, means a broken lookup stops the server starting instead of throwing
+     * once per player join indefinitely.
+     *
+     * @throws IllegalStateException if the framework plugin cannot be resolved by name
+     */
+    @PostConstruct
+    public void init() {
+        this.bukkitPlugin = Bukkit.getPluginManager().getPlugin("UltiTools");
+        if (this.bukkitPlugin == null) {
+            throw new IllegalStateException(
+                "Could not resolve the UltiTools framework plugin by its registered name "
+                    + "\"UltiTools\" -- name-prefix-on-join scheduling cannot work.");
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (!config.isNamePrefixEnabled()) {
             return;
         }
         
-        // Delay a bit to ensure player is fully loaded
+        // Delay a bit to ensure player is fully loaded. A player who disconnects during the
+        // delay is already removed by onPlayerQuit (NamePrefixService#removePlayer) by the time
+        // this runs; calling updatePlayer anyway would recreate their playerTeams entry and
+        // re-add their (now offline) name to the main-scoreboard team, and the periodic updater
+        // only iterates online players -- so that entry would never be pruned again.
         Bukkit.getScheduler().runTaskLater(
-            Bukkit.getPluginManager().getPlugin("UltiTools-API"),
-            () -> namePrefixService.updatePlayer(event.getPlayer()),
+            bukkitPlugin,
+            () -> {
+                if (event.getPlayer().isOnline()) {
+                    namePrefixService.updatePlayer(event.getPlayer());
+                }
+            },
             10L
         );
     }

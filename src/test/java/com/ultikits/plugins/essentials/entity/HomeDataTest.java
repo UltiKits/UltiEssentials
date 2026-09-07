@@ -7,7 +7,6 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,14 +27,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @DisplayName("HomeData Entity Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-@Disabled("Requires Bukkit runtime - MockBukkit Registry/PotionEffectType initialization issue")
 class HomeDataTest {
 
     private World world;
 
     @BeforeEach
     void setUp() {
-        MockBukkitHelper.ensureCleanState();
+        MockBukkitHelper.clearForeignServer();
         ServerMock server = MockBukkit.mock();
         world = server.addSimpleWorld("world");
     }

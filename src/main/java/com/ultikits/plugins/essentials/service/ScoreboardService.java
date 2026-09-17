@@ -237,16 +237,30 @@ public class ScoreboardService {
     
     /**
      * Reloads the scoreboard configuration.
+     * <p>
+     * While the scoreboard stays enabled, each online player keeps the sidebar shown or hidden as it
+     * was before the reload, whatever the reloaded {@code auto-enable} says: the only per-player state
+     * this service holds is {@link #enabledPlayers}, in memory, and a {@code /scoreboard} choice is
+     * recorded there in the same way as an automatic enable on join. When the reload turns the
+     * scoreboard on, no player had a sidebar to keep, so online players follow the reloaded
+     * {@code auto-enable}; players joining after any reload follow it through
+     * {@code ScoreboardListener} (UltiKits/UltiEssentials#28).
+     * <p>
+     * 重载时保留每位在线玩家的侧边栏显示/隐藏状态；重载开启计分板时在线玩家按 auto-enable 处理。
      */
     public void reload() {
+        boolean wasRunning = updateTask != null;
+        Set<UUID> shownBeforeReload = new HashSet<>(enabledPlayers);
         shutdown();
         
         if (config.isScoreboardEnabled()) {
             startUpdateTask();
             
-            // Re-enable for all online players if auto-enable is set
-            if (config.isScoreboardAutoEnable()) {
-                for (Player player : Bukkit.getOnlinePlayers()) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                boolean show = wasRunning
+                    ? shownBeforeReload.contains(player.getUniqueId())
+                    : config.isScoreboardAutoEnable();
+                if (show) {
                     enableScoreboard(player);
                 }
             }

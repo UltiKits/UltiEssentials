@@ -97,10 +97,14 @@ public class NamePrefixService {
         try {
             updatePlayer(player);
         } catch (RuntimeException e) {
-            // Drop the cached team: if it was removed (for example with the vanilla team command) the
-            // cached object throws on every use, and the next update must look the team up again or
-            // register a new one for the retry to be able to succeed.
-            playerTeams.remove(uuid);
+            // Drop the cached team only if it is stale: once it was removed (for example with the
+            // vanilla team command) it throws on every use, and the next update must look the team up
+            // again or register a new one. A still-registered team is kept, because quit and shutdown
+            // need it to remove the entry an earlier step of this update may already have added.
+            Team cached = playerTeams.get(uuid);
+            if (cached != null && isStale(uuid, cached)) {
+                playerTeams.remove(uuid);
+            }
             if (updateFailures.firstFailure(uuid)) {
                 failureLog.error("Could not update the name prefix for {}; it will be retried on every update, "
                     + "and this failure is not logged again until an update for that player succeeds",
@@ -126,7 +130,7 @@ public class NamePrefixService {
         // Get or create team
         Team team = playerTeams.get(uuid);
         if (team == null) {
-            String teamName = "up_" + uuid.toString().substring(0, 8);
+            String teamName = teamNameFor(uuid);
             team = scoreboard.getTeam(teamName);
             if (team == null) {
                 team = scoreboard.registerNewTeam(teamName);
@@ -161,6 +165,20 @@ public class NamePrefixService {
         team.setSuffix(suffix);
     }
     
+    private static String teamNameFor(UUID uuid) {
+        return "up_" + uuid.toString().substring(0, 8);
+    }
+
+    /**
+     * Whether a cached team no longer is the team the scoreboard holds under its name. Compared by
+     * the scoreboard's current team rather than by calling the cached object, which throws once its
+     * team was removed; CraftBukkit's {@code CraftTeam#equals} compares the underlying team, so a team
+     * re-registered under the same name is also detected.
+     */
+    private boolean isStale(UUID uuid, Team cached) {
+        return !cached.equals(scoreboard.getTeam(teamNameFor(uuid)));
+    }
+
     /**
      * Removes a player from the system.
      */

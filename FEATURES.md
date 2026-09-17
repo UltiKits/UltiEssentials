@@ -224,9 +224,9 @@ toggle flight for any other online player. Filed as UltiKits/UltiEssentials#25.
 | ultiessentials.gamemode.shortcut-creative | Shortcut to set the sender's own game mode to CREATIVE | command | `/gmc` | ultiessentials.gamemode.self | player | player | none | GmCreativeCommand#creative |
 | ultiessentials.gamemode.shortcut-spectator | Shortcut to set the sender's own game mode to SPECTATOR | command | `/gmsp` | ultiessentials.gamemode.self | player | player | none | GmSpectatorCommand#spectator |
 | ultiessentials.gamemode.shortcut-survival | Shortcut to set the sender's own game mode to SURVIVAL | command | `/gms` | ultiessentials.gamemode.self | player | player | none | GmSurvivalCommand#survival |
-| ultiessentials.scoreboard.toggle | Toggle the sender's own sidebar scoreboard on or off | command | `/scoreboard` (alias `/sb`) | ultiessentials.scoreboard | player | player | brief | ScoreboardCommand#toggle |
+| ultiessentials.scoreboard.toggle | Toggle the sender's own sidebar scoreboard on or off; turning it off returns the sender to the server's main scoreboard | command | `/scoreboard` (alias `/sb`) | ultiessentials.scoreboard | player | player | brief | ScoreboardCommand#toggle |
 | ultiessentials.scoreboard.enable | Explicitly enable the sender's sidebar scoreboard (no-ops with a distinct message if already on) | command | `/scoreboard on` | ultiessentials.scoreboard | player | player | none | ScoreboardCommand#enable |
-| ultiessentials.scoreboard.disable | Explicitly disable the sender's sidebar scoreboard (no-ops with a distinct message if already off) | command | `/scoreboard off` | ultiessentials.scoreboard | player | player | none | ScoreboardCommand#disable |
+| ultiessentials.scoreboard.disable | Explicitly disable the sender's sidebar scoreboard and return the sender to the server's main scoreboard, where name-prefix teams are (no-ops with a distinct message if already off) | command | `/scoreboard off` | ultiessentials.scoreboard | player | player | none | ScoreboardCommand#disable |
 | ultiessentials.scoreboard.auto-enable-on-join | 1 second after join (`runTaskLater(20L)`, re-checking the player is still online), auto-enable the sidebar scoreboard when `scoreboard.auto-enable` is true | event | join the server with `features.scoreboard.enabled` and `scoreboard.auto-enable` both true | n/a | n/a | player | brief | ScoreboardListener#onPlayerJoin |
 | ultiessentials.scoreboard.disable-on-quit | Remove the quitting player from the enabled-scoreboard set unconditionally (independent of whether `scoreboard.enabled` is currently true) | event | quit the server with an active scoreboard | n/a | n/a | internal | none | ScoreboardListener#onPlayerQuit |
 | ultiessentials.commandalias.rewrite | Rewrite the leading command token of a chat-typed command per the `commandalias.aliases` map (e.g. `/gmc` -> `/gamemode creative`) before Bukkit dispatches it, evaluated at `LOWEST` priority | event | type a command whose first token matches a configured alias key | n/a | n/a | player | brief | CommandAliasListener#onPlayerCommand |
@@ -344,12 +344,14 @@ per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, wh
 (see `## Configuration` for what each restart does).
 `ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
 container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
-observable the first row below uses. The second row turns name prefixes on through a reload.
+observable the first row below uses. The second row turns name prefixes on through a reload, and
+the third turns the scoreboard off through a reload.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module prints no reload line of its own. On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
 | ultiessentials.lifecycle.reload-nameprefix | After `features.nameprefix.enabled` is changed from `false` to `true`, `/ul reload UltiEssentials` restarts `NamePrefixService` with the main scoreboard, so the restarted update task applies the configured prefix to every online player about 1 second after the reload and a player who joins afterwards gets it 0.5 seconds after joining, with no exception from `NamePrefixService#updatePlayer` (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.nameprefix.enabled` to `true` in `config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#onReload, NamePrefixService#reload |
+| ultiessentials.lifecycle.reload-scoreboard-off | After `features.scoreboard.enabled` is changed from `true` to `false`, `/ul reload UltiEssentials` cancels the sidebar update task and returns every player who had a sidebar to the server's main scoreboard, so the sidebar disappears and name prefixes (and any other team on the main scoreboard) become visible to those players without rejoining (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.scoreboard.enabled` to `false` in `config/essentials.yml` | n/a | n/a | admin | brief | ScoreboardService#reload, ScoreboardService#shutdown |
 
 ## Data Persistence
 
@@ -426,18 +428,26 @@ cancels the repeating tasks it owns and, only if its feature is still enabled, s
 against the re-read values, so an edit to `features.scheduled-commands.enabled`,
 `features.scheduled-commands.commands`, `features.scoreboard.enabled`,
 `features.scoreboard.update-interval`, `features.nameprefix.enabled`, or
-`features.nameprefix.update-interval` takes effect on reload. Turning name prefixes on by reload
-gives `NamePrefixService` the main scoreboard before its update task first runs, 1 second after the
-reload (`ultiessentials.lifecycle.reload-nameprefix`); turning them off cancels that task and
-removes every player from their prefix team. Two effects of a reload match a restart rather than
-preserving running state: every scheduled command's interval starts counting again from the reload,
-and `NamePrefixService#reload()` removes every player from their prefix team and, if name prefixes
-stay enabled, the restarted task adds online players back 1 second later. A reload keeps each online
-player's sidebar shown or hidden as it was, including a `/scoreboard` choice (the only per-player
-scoreboard state is `ScoreboardService`'s in-memory `enabledPlayers` set, which `/scoreboard` and the
-automatic enable on join both write); only a reload that turns the scoreboard on applies
-`features.scoreboard.auto-enable` to players already online, and players who join after a reload
-follow the reloaded `auto-enable` through `ScoreboardListener#onPlayerJoin`.
+`features.nameprefix.update-interval` takes effect on reload. Each service is reloaded on its own:
+if one service's reload throws, the failure is logged at SEVERE with the service name and the other
+two are still reloaded. Turning name prefixes on by reload gives `NamePrefixService` the main
+scoreboard before its update task first runs, 1 second after the reload
+(`ultiessentials.lifecycle.reload-nameprefix`); turning them off cancels that task and removes from
+their prefix team every player this service has assigned since the server started (an entry left
+on the saved main scoreboard by an earlier session is not removed). Two effects of a reload match a
+restart rather than preserving running state: every scheduled command's interval starts counting
+again from the reload, so reloading more often than a command's interval keeps postponing that
+command; and `NamePrefixService#reload()` removes those players from their prefix team and, if
+name prefixes stay enabled, the restarted task adds online players back 1 second later. While the
+scoreboard stays enabled across a reload, each online player's sidebar stays shown or hidden as it
+was, including a `/scoreboard` choice (the only per-player scoreboard state is `ScoreboardService`'s
+in-memory `enabledPlayers` set, which `/scoreboard` and the automatic enable on join both write). A
+reload that turns the scoreboard off removes every sidebar and returns those players to the
+server's main scoreboard, so name prefixes become visible to them without rejoining
+(`ultiessentials.lifecycle.reload-scoreboard-off`); a reload that turns it on applies
+`features.scoreboard.auto-enable` to players already online. Players who join after a reload follow
+the reloaded `auto-enable` through `ScoreboardListener#onPlayerJoin`, which re-checks it when its
+delayed enable runs.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|

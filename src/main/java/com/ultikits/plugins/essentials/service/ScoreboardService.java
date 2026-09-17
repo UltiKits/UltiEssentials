@@ -244,7 +244,8 @@ public class ScoreboardService {
      * recorded there in the same way as an automatic enable on join. When the reload turns the
      * scoreboard on, no player had a sidebar to keep, so online players follow the reloaded
      * {@code auto-enable}; players joining after any reload follow it through
-     * {@code ScoreboardListener} (UltiKits/UltiEssentials#28).
+     * {@code ScoreboardListener} (UltiKits/UltiEssentials#28). A player whose sidebar cannot be
+     * rebuilt is logged and skipped, so the players after them are still restored.
      * <p>
      * 重载时保留每位在线玩家的侧边栏显示/隐藏状态；重载开启计分板时在线玩家按 auto-enable 处理。
      */
@@ -261,7 +262,12 @@ public class ScoreboardService {
                     ? shownBeforeReload.contains(player.getUniqueId())
                     : config.isScoreboardAutoEnable();
                 if (show) {
-                    enableScoreboard(player);
+                    try {
+                        enableScoreboard(player);
+                    } catch (RuntimeException e) {
+                        log.error("Could not restore the sidebar for {} after a reload; the other players were still restored",
+                            player.getName(), e);
+                    }
                 }
             }
         }

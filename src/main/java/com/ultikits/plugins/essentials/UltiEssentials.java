@@ -6,6 +6,8 @@ import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.UltiToolsModule;
 
+import java.util.function.Consumer;
+
 /**
  * UltiEssentials - Essential commands and features for Minecraft servers.
  * <p>
@@ -45,21 +47,29 @@ public class UltiEssentials extends UltiToolsPlugin {
      * if its feature is still enabled, so turning a feature on, off, or changing its interval or
      * command list all take effect (UltiKits/UltiEssentials#28).
      * <p>
-     * 按重新读取的配置重启定时命令、计分板与头顶称号服务。
+     * Each service is reloaded on its own: a service whose {@code reload()} throws is logged at
+     * SEVERE with its name and the other services are still reloaded. The framework's
+     * {@code reloadSelf()} does not isolate this hook (UltiKits/UltiTools-Reborn#509).
+     * <p>
+     * 按重新读取的配置重启定时命令、计分板与头顶称号服务；任一服务重载失败只记录日志，不影响其他服务。
      */
     @Override
     protected void onReload() {
-        ScheduledCommandService scheduledCommandService = getContext().getBean(ScheduledCommandService.class);
-        if (scheduledCommandService != null) {
-            scheduledCommandService.reload();
+        reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
+        reloadService(ScoreboardService.class, ScoreboardService::reload);
+        reloadService(NamePrefixService.class, NamePrefixService::reload);
+    }
+
+    private <T> void reloadService(Class<T> type, Consumer<T> reload) {
+        T service = getContext().getBean(type);
+        if (service == null) {
+            return;
         }
-        ScoreboardService scoreboardService = getContext().getBean(ScoreboardService.class);
-        if (scoreboardService != null) {
-            scoreboardService.reload();
-        }
-        NamePrefixService namePrefixService = getContext().getBean(NamePrefixService.class);
-        if (namePrefixService != null) {
-            namePrefixService.reload();
+        try {
+            reload.accept(service);
+        } catch (RuntimeException e) {
+            getLogger().error(e, "Reload of " + type.getSimpleName()
+                    + " failed; the other services were still reloaded");
         }
     }
 }

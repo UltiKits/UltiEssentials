@@ -30,6 +30,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   server's main scoreboard, so name prefixes and other teams on it become visible to that player.
   Previously the player was given an empty scoreboard and saw none of them until they rejoined
   (UltiKits/UltiEssentials#44).
+- One player whose sidebar or name prefix cannot be refreshed (for example because a PlaceholderAPI
+  expansion throws for that player) no longer stops the scoreboard and name-prefix refreshes for
+  every other player. That player is retried on every update, and the failure is logged once and
+  again only after a refresh for that player has succeeded in between (UltiKits/UltiEssentials#44).
 - Unloading this module (`/upm uninstall UltiEssentials`) now runs the framework's command
   unregistration and then its listener unregistration, so the module's commands are really removed
   and its listeners stop firing. Previously this module's unload method replaced the framework's, so
@@ -53,6 +57,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 通过 `/scoreboard off` 或 `/scoreboard` 关闭侧边栏后，玩家现在会回到服务器的主计分板，头顶称号及主计分板上的
   其他队伍对该玩家变为可见。此前玩家会被分配一个空计分板，重新进入服务器前看不到这些内容
   （UltiKits/UltiEssentials#44）。
+- 某位玩家的侧边栏或头顶称号无法刷新时（例如某个 PlaceholderAPI 扩展对该玩家抛出异常），不再会导致其他所有
+  玩家的计分板和头顶称号停止刷新。该玩家会在每次更新时重试，失败只记录一次日志，直到该玩家刷新成功后再次失败
+  才会重新记录（UltiKits/UltiEssentials#44）。
 - 卸载本模块（`/upm uninstall UltiEssentials`）现在会由框架先注销命令、再注销监听器，本模块的命令会被
   真正移除，其监听器也不再触发。此前本模块的卸载方法替换了框架的卸载方法，因此执行
   `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。在不重启服务器的情况下卸载本模块时，定时命令、计分板和头顶称号的后台

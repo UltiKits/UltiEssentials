@@ -450,6 +450,14 @@ server's main scoreboard, so name prefixes become visible to them without rejoin
 the reloaded `auto-enable` through `ScoreboardListener#onPlayerJoin`, which re-checks it when its
 delayed enable runs.
 
+**One failing player does not stop a refresh.** The scoreboard and name-prefix update tasks refresh
+each player on their own: a player whose sidebar or prefix cannot be refreshed (for example because
+a PlaceholderAPI expansion throws for that player) is logged once at error level and retried on every
+update, while the other players are refreshed as usual; the failure is logged again only after a
+refresh for that player has succeeded in between, and is forgotten when the player quits or turns
+the sidebar off. Each scheduled command already runs as its own task, so a command that throws
+affects only itself.
+
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.config.essentials.features.back.enabled | Enable `/back` | config | `config/essentials.yml: features.back.enabled (default: true)` | n/a | n/a | admin | brief | BackCommand#back |

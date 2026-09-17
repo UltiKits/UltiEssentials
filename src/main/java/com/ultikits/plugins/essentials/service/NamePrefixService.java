@@ -97,6 +97,10 @@ public class NamePrefixService {
         try {
             updatePlayer(player);
         } catch (RuntimeException e) {
+            // Drop the cached team: if it was removed (for example with the vanilla team command) the
+            // cached object throws on every use, and the next update must look the team up again or
+            // register a new one for the retry to be able to succeed.
+            playerTeams.remove(uuid);
             if (updateFailures.firstFailure(uuid)) {
                 failureLog.error("Could not update the name prefix for {}; it will be retried on every update, "
                     + "and this failure is not logged again until an update for that player succeeds",
@@ -206,8 +210,11 @@ public class NamePrefixService {
                     team.removeEntry(entry);
                 }
             } catch (RuntimeException e) {
+                // Name the player when they are online; only the UUID is known otherwise.
+                Player player = Bukkit.getPlayer(recorded.getKey());
+                Object who = player != null ? player.getName() : recorded.getKey();
                 failureLog.error("Could not clear the name-prefix team of player {}; the other teams were still cleared",
-                    recorded.getKey(), e);
+                    who, e);
             }
         }
         playerTeams.clear();

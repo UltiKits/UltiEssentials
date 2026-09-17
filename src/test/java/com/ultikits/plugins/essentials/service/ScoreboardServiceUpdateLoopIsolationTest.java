@@ -97,6 +97,7 @@ class ScoreboardServiceUpdateLoopIsolationTest {
         UUID[] ids = idsInIterationOrder();
         first = onlinePlayer(server, "First", ids[0]);
         second = onlinePlayer(server, "Second", ids[1]);
+        doReturn(java.util.Arrays.asList(first, second)).when(server).getOnlinePlayers(); // reload() restores online players
         firstWorld = first.getWorld();
         service.enableScoreboard(first);
         service.enableScoreboard(second);
@@ -133,6 +134,21 @@ class ScoreboardServiceUpdateLoopIsolationTest {
         runUpdate();
         doThrow(failure).when(first).getWorld();
         runUpdate();
+        runUpdate();
+
+        verify(failureLog, times(2)).error(anyString(), eq("First"), same(failure));
+        verify(failureLog, times(1)).info(anyString(), eq("First"));
+    }
+
+    @Test
+    @DisplayName("reload (shutdown) forgets a suppressed failure, so a failure that persists is reported again")
+    void shutdownForgetsSuppressedFailures() {
+        doThrow(failure).when(first).getWorld();
+        runUpdate();
+
+        doReturn(firstWorld).when(first).getWorld(); // the reload's own restore succeeds and logs nothing
+        service.reload();
+        doThrow(failure).when(first).getWorld();
         runUpdate();
 
         verify(failureLog, times(2)).error(anyString(), eq("First"), same(failure));

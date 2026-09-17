@@ -61,21 +61,25 @@ class NamePrefixServiceUpdateLoopIsolationTest {
     private Player second;
     private Team firstTeam;
     private Team secondTeam;
+    private Map<String, Team> teams;
+    private Server server;
 
     @BeforeEach
     void setUp() throws Exception {
         EssentialsTestHelper.setUp();
-        Server server = EssentialsTestHelper.getMockServer();
+        server = EssentialsTestHelper.getMockServer();
         when(server.getPluginManager().getPlugin("UltiTools")).thenReturn(mock(Plugin.class));
 
         UUID[] ids = idsInIterationOrder();
         first = EssentialsTestHelper.createMockPlayer("First", ids[0]);
         second = EssentialsTestHelper.createMockPlayer("Second", ids[1]);
+        lenient().when(server.getPlayer(ids[0])).thenReturn(first);
+        lenient().when(server.getPlayer(ids[1])).thenReturn(second);
         doReturn(Arrays.asList(first, second)).when(server).getOnlinePlayers();
 
         firstTeam = teamFor("First");
         secondTeam = teamFor("Second");
-        Map<String, Team> teams = new HashMap<>();
+        teams = new HashMap<>();
         teams.put("up_" + ids[0].toString().substring(0, 8), firstTeam);
         teams.put("up_" + ids[1].toString().substring(0, 8), secondTeam);
         Scoreboard mainScoreboard = mock(Scoreboard.class);
@@ -134,6 +138,41 @@ class NamePrefixServiceUpdateLoopIsolationTest {
         runUpdate();
 
         verify(failureLog, times(2)).error(anyString(), eq("First"), same(failure));
+        verify(failureLog, times(1)).info(anyString(), eq("First"));
+    }
+
+    @Test
+    @DisplayName("a team removed with the Bukkit API between updates is re-resolved, so the prefix comes back")
+    void removedTeamIsResolvedAgain() {
+        runUpdate();
+        verify(firstTeam).setPrefix("[P] ");
+        UUID firstId = first.getUniqueId();
+        String teamName = "up_" + firstId.toString().substring(0, 8);
+        IllegalStateException unregistered = new IllegalStateException("Unregistered scoreboard component");
+        // Team#unregister(): the old object now throws, and the scoreboard no longer knows the name,
+        // so a new team with that name is what getTeam/registerNewTeam hand out.
+        doThrow(unregistered).when(firstTeam).hasEntry(anyString());
+        Team recreated = teamFor("First");
+        teams.put(teamName, recreated);
+
+        runUpdate();
+        runUpdate();
+
+        verify(failureLog, times(1)).error(anyString(), eq("First"), same(unregistered));
+        verify(recreated).setPrefix("[P] ");
+        verify(failureLog).info(anyString(), eq("First"));
+    }
+
+    @Test
+    @DisplayName("reload (shutdown) forgets a suppressed failure, so a failure that persists is reported again")
+    void shutdownForgetsSuppressedFailures() {
+        doThrow(failure).when(firstTeam).setPrefix(anyString());
+        runUpdate();
+
+        service.reload();
+        runUpdate();
+
+        verify(failureLog, times(2)).error(anyString(), eq("First"), same(failure));
     }
 
     @Test
@@ -158,7 +197,20 @@ class NamePrefixServiceUpdateLoopIsolationTest {
         assertThatCode(service::shutdown).doesNotThrowAnyException();
 
         verify(secondTeam).removeEntry("Second");
+        verify(failureLog).error(anyString(), eq("First"), same(unregistered));
+    }
+
+    @Test
+    @DisplayName("shutdown names a player who is offline by UUID, since no name is at hand")
+    void shutdownNamesOfflinePlayerByUuid() {
+        runUpdate();
+        IllegalStateException unregistered = new IllegalStateException("Unregistered scoreboard component");
+        doThrow(unregistered).when(firstTeam).getEntries();
         UUID firstId = first.getUniqueId(); // resolved before verify: a mock call inside verify breaks the matchers
+        when(server.getPlayer(firstId)).thenReturn(null);
+
+        assertThatCode(service::shutdown).doesNotThrowAnyException();
+
         verify(failureLog).error(anyString(), eq(firstId), same(unregistered));
     }
 

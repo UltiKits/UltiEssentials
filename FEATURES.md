@@ -429,14 +429,15 @@ against the re-read values, so an edit to `features.scheduled-commands.enabled`,
 `features.nameprefix.update-interval` takes effect on reload. Turning name prefixes on by reload
 gives `NamePrefixService` the main scoreboard before its update task first runs, 1 second after the
 reload (`ultiessentials.lifecycle.reload-nameprefix`); turning them off cancels that task and
-removes every player from their prefix team. Three effects of a reload match a restart rather than
-preserving running state: every scheduled command's interval starts counting again from the reload;
-`NamePrefixService#reload()` removes every player from their prefix team and, if name prefixes stay
-enabled, the restarted task adds online players back 1 second later; and `ScoreboardService#reload()`
-clears every player's `/scoreboard` on/off choice — with `features.scoreboard.enabled` and
-`features.scoreboard.auto-enable` both true every online player gets the sidebar back, otherwise every
-sidebar is removed until the player runs `/scoreboard` again (or, with the scoreboard enabled, rejoins
-with `auto-enable` true).
+removes every player from their prefix team. Two effects of a reload match a restart rather than
+preserving running state: every scheduled command's interval starts counting again from the reload,
+and `NamePrefixService#reload()` removes every player from their prefix team and, if name prefixes
+stay enabled, the restarted task adds online players back 1 second later. A reload keeps each online
+player's sidebar shown or hidden as it was, including a `/scoreboard` choice (the only per-player
+scoreboard state is `ScoreboardService`'s in-memory `enabledPlayers` set, which `/scoreboard` and the
+automatic enable on join both write); only a reload that turns the scoreboard on applies
+`features.scoreboard.auto-enable` to players already online, and players who join after a reload
+follow the reloaded `auto-enable` through `ScoreboardListener#onPlayerJoin`.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|

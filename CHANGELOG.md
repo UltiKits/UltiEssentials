@@ -21,9 +21,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `features.nameprefix.enabled` and `features.nameprefix.update-interval` apply without a restart,
   and turning name prefixes on by reload applies them without an error on player join
   (UltiKits/UltiEssentials#28). As on a restart, a reload starts each scheduled command's interval
-  again, and it resets every player's `/scoreboard` choice: with `features.scoreboard.enabled` and
-  `features.scoreboard.auto-enable` both true every online player gets the sidebar, otherwise every
-  sidebar is removed.
+  again. A reload keeps each online player's sidebar shown or hidden as it was, including a
+  `/scoreboard` choice; only a reload that turns the scoreboard on applies
+  `features.scoreboard.auto-enable` to players already online.
 - Unloading this module (`/upm uninstall UltiEssentials`) now runs the framework's command
   unregistration and then its listener unregistration, so the module's commands are really removed
   and its listeners stop firing. Previously this module's unload method replaced the framework's, so
@@ -40,8 +40,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `features.scoreboard.enabled`、`features.scoreboard.update-interval`、
   `features.nameprefix.enabled` 与 `features.nameprefix.update-interval` 后无需重启即可生效，通过重载开启
   头顶称号也会正常应用称号，玩家加入时不会报错（UltiKits/UltiEssentials#28）。与重启一样，重载会让每条
-  定时命令的间隔重新开始计时，并重置每位玩家通过 `/scoreboard` 做出的选择：`features.scoreboard.enabled` 与
-  `features.scoreboard.auto-enable` 均为 true 时所有在线玩家都会显示侧边栏，否则所有侧边栏都会被移除。
+  定时命令的间隔重新开始计时。重载会保留每位在线玩家侧边栏的显示或隐藏状态，包括其通过 `/scoreboard` 做出的
+  选择；只有开启计分板的重载才会对已在线的玩家应用 `features.scoreboard.auto-enable`。
 - 卸载本模块（`/upm uninstall UltiEssentials`）现在会由框架先注销命令、再注销监听器，本模块的命令会被
   真正移除，其监听器也不再触发。此前本模块的卸载方法替换了框架的卸载方法，因此执行
   `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。在不重启服务器的情况下卸载本模块时，定时命令、计分板和头顶称号的后台

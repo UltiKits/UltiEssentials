@@ -25,12 +25,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   restart. Turning name prefixes off by reload freezes the existing prefixes; turning the scoreboard
   on by reload shows a sidebar that never refreshes; scheduled commands do not start, stop or
   change.
-- Unloading this module (`/upm uninstall UltiEssentials`, server shutdown, or a newer copy of the
-  module replacing an older one at load) now runs the framework's command unregistration and then
-  its listener unregistration. Previously this module's unload method replaced the framework's, so
-  its commands were never unregistered on any unload path, its listeners were not unregistered on
-  `/upm uninstall`, and neither was unregistered when a newer copy replaced an older one at load
-  (UltiKits/UltiEssentials#23). The scheduled-command, scoreboard and name-prefix background tasks
+- Unloading this module (`/upm uninstall UltiEssentials`, or server shutdown) now runs the
+  framework's command unregistration and then its listener unregistration. Previously this module's
+  unload method replaced the framework's, so its commands were never unregistered on any unload
+  path, and its listeners were not unregistered on `/upm uninstall` (UltiKits/UltiEssentials#23). The scheduled-command, scoreboard and name-prefix background tasks
   are still not cancelled when the module is uninstalled without a server restart: configured
   scheduled commands keep running (UltiKits/UltiEssentials#43).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
@@ -44,10 +42,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `features.nameprefix.enabled` 从 `false` 改为 `true` 时，头顶称号服务没有计分板对象，之后每位玩家加入都会
   在 `NamePrefixService.updatePlayer` 抛出 `NullPointerException`，重启前不会应用任何称号。通过重载关闭
   头顶称号会使现有称号冻结；通过重载开启计分板会显示一个不再刷新的侧边栏；定时命令不会启动、停止或改变。
-- 卸载本模块（`/upm uninstall UltiEssentials`、关闭服务器，或加载时由较新的模块副本替换较旧的副本）
-  现在会由框架先注销命令、再注销监听器。此前本模块的卸载方法替换了框架的卸载方法，因此任何卸载途径都
-  不会注销其命令，`/upm uninstall` 不会注销其监听器，较新副本替换较旧副本时两者都不会注销
-  （UltiKits/UltiEssentials#23）。在不重启服务器的情况下卸载本模块时，定时命令、计分板和头顶称号的后台
+- 卸载本模块（`/upm uninstall UltiEssentials` 或关闭服务器）现在会由框架先注销命令、再注销监听器。
+  此前本模块的卸载方法替换了框架的卸载方法，因此任何卸载途径都不会注销其命令，`/upm uninstall` 也不会
+  注销其监听器（UltiKits/UltiEssentials#23）。在不重启服务器的情况下卸载本模块时，定时命令、计分板和头顶称号的后台
   任务仍不会被取消，已配置的定时命令会继续执行（UltiKits/UltiEssentials#43）。
 
 ### Removed

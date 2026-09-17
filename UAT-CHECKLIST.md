@@ -239,6 +239,23 @@ for real-machine verification, not user-facing documentation.
 | ultiessentials.scheduledcommands.run | `features.scheduled-commands.enabled: true` (NOT the shipped `false` — flip it on); `scheduled-commands.commands` at its shipped default (`300:say Server is online!`, `600:broadcast &cReminder: follow server rules!`); restart the server after changing the config so the new value is read at boot (see `## Configuration`'s note on `/ul reload` not refreshing this service, UltiKits/UltiEssentials#28) | Wait 300 seconds after server start | The console/chat shows the `say Server is online!` output; at 600 seconds the `&c`-colored broadcast reminder also appears; both then repeat on the same intervals indefinitely | server | |
 | ultiessentials.scheduledcommands.run.neg-malformed-entry | Same base preconditions as `ultiessentials.scheduledcommands.run`, except `features.scheduled-commands.commands` includes one additional malformed entry with no colon (e.g. `"broadcast oops"`) | Restart the server and check the startup log | A warning naming the malformed entry is logged (`ScheduledCommandService#startTasks`'s own `log.warn`); the OTHER, well-formed entries still schedule and run normally — one bad entry does not abort the whole list | server | |
 
+## Lifecycle
+
+The row below exercises UltiKits/UltiEssentials#23's lifecycle migration (see `FEATURES.md`'s
+`## Lifecycle`). `/ul reload <name>` matches `<name>` case-insensitively against each loaded
+module's runtime name (the `name:` key of the module's own `plugin.yml`, `UltiEssentials` here),
+calls that module's `reloadSelf()`, which as of UltiTools 6.3.0 re-reads the module's config files
+into the running beans and logs the framework's own line `Module '<name>' reloaded.`, then replies
+to the sender. This module's main config file on a server is
+`plugins/UltiTools/pluginConfig/UltiEssentials/config/essentials.yml`. The row changes
+`features.speed.max-speed`, which `SpeedCommand#setSpeed` reads on every call; it does not use the
+scheduled-command, scoreboard or name-prefix keys, whose tasks a reload does not restart
+(UltiKits/UltiEssentials#28).
+
+| ID | Preconditions | Steps | Expected | Layer | Covers |
+|---|---|---|---|---|---|
+| ultiessentials.lifecycle.reload | `language: en` in `plugins/UltiTools/config.yml` (every quoted line below is translated under it: the three `/speed` lines by this module's `lang/en.json`, the two reload lines by the framework); `UltiEssentials` loaded; `features.speed.enabled: true` and `features.speed.max-speed: 10` (both shipped defaults) in `plugins/UltiTools/pluginConfig/UltiEssentials/config/essentials.yml`; an online player holding `ultiessentials.speed`; `/ul` runs from the server console (it requires op) | 1. As the player, run `/speed 7`. 2. As the player, run `/speed reset`. 3. Edit `features.speed.max-speed` to `5` in that `essentials.yml` and save the file; from the server console, on the SAME running server (no restart), run `ul reload UltiEssentials`. 4. As the player, run `/speed 7` again. 5. Cleanup: set `features.speed.max-speed` back to `10`, save, run `ul reload UltiEssentials` from the console, and as the player run `/speed reset`. | Step 1: chat shows `Speed set to 7` — this proves 7 is within the starting limit; if it shows `Speed must be between 0-<n>` instead, the starting value is not 10: record the row `blocked`, never `pass`. Step 2: chat shows `Speed reset to default`. Step 3: the console shows `Module 'UltiEssentials' reloaded.` and the console command reply `Module UltiEssentials has been reloaded`, with no reload line from the module itself. Step 4: chat shows `Speed must be between 0-5` and no `Speed set to` line — the edited `features.speed.max-speed` took effect without a restart. On the pre-migration module the configuration was never re-read on `/ul reload`, so step 4 would show `Speed set to 7` instead | server | |
+
 ## Data Persistence
 
 | ID | Preconditions | Steps | Expected | Layer | Covers |

@@ -12,6 +12,13 @@ import com.ultikits.ultitools.annotations.UltiToolsModule;
  * <p>
  * All services are automatically initialized by the IoC container via {@code @PostConstruct}.
  * </p>
+ * <p>
+ * Reload and unload are performed by the framework's final {@code reloadSelf()} and
+ * {@code unregisterSelf()}; this module adds no {@code onReload()} or {@code onUnregister()} work,
+ * so {@code /ul reload UltiEssentials} re-reads this module's configuration files (for example
+ * {@code config/essentials.yml}) into the running configuration beans, but does not yet restart
+ * the scheduled-command, scoreboard or name-prefix tasks (UltiKits/UltiEssentials#28).
+ * </p>
  *
  * @author wisdommen
  * @author UltiKits Team
@@ -25,16 +32,6 @@ public class UltiEssentials extends UltiToolsPlugin {
         // All services are automatically initialized by IoC container via @PostConstruct
         getLogger().info(i18n("UltiEssentials 已启用！"));
         return true;
-    }
-
-    @Override
-    public void unregisterSelf() {
-        getLogger().info(i18n("UltiEssentials 已禁用！"));
-    }
-
-    @Override
-    public void reloadSelf() {
-        getLogger().info(i18n("UltiEssentials 配置已重载！"));
     }
 }
 

@@ -25,7 +25,11 @@ for UAT execution and issue reconciliation — the public description of these f
   `PlaceholderAPI#setPlaceholders`, they do not register their own expansion) and no `gate` rows
   (0 `@ConditionalOnConfig` sites) — all three Kinds stay in the vocabulary for cross-repository
   consistency even though none appears below. This module's one `scheduled` row is NOT backed by
-  the framework's `@Scheduled` annotation (0 sites) — see that row's own note.
+  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The one row under
+  `## Lifecycle` is an `event` row with no `@EventHandler` site behind it, so the 21
+  `@EventHandler` sites in the positive control below match the other 21 `event` rows, not all
+  22: `/ul reload` is a framework-invoked lifecycle step, not a command this repository maps or a
+  config read, so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
   from whether it carries a permission string — most command executors in this repository carry
   one, so judging by the string alone would make nearly everything `admin`. This module's core
@@ -324,6 +328,23 @@ framework's declarative annotation.
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.scheduledcommands.run | Run each configured console command on its own fixed interval, indefinitely, for as long as the server is up | scheduled | runs automatically, every `interval_seconds` per configured entry, while `features.scheduled-commands.enabled` is true | n/a | n/a | admin | brief | ScheduledCommandService#startTasks |
 
+## Lifecycle
+
+UltiTools 6.3.0 makes `UltiToolsPlugin#reloadSelf()` and `#unregisterSelf()` `final` template
+methods. Before UltiKits/UltiEssentials#23's lifecycle migration this module overrode both with a
+body that only logged a line, replacing the framework's own steps; both overrides were deleted
+rather than renamed, so this module has no `onReload()` or `onUnregister()` hook and prints no
+reload or unload line of its own. `/ul reload UltiEssentials` now runs only the framework's reload
+steps (configuration reload, language refresh, `@ConditionalOnConfig` drift report — this module has
+0 sites — and the framework's per-module `Module 'UltiEssentials' reloaded.` INFO line).
+`ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
+container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
+observable the row below uses.
+
+| ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
+|---|---|---|---|---|---|---|---|---|
+| ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module adds no reload work of its own and prints no reload line of its own, and the scheduled-command, scoreboard and name-prefix tasks are not restarted (UltiKits/UltiEssentials#28). Before UltiKits/UltiEssentials#23 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
+
 ## Data Persistence
 
 Homes, warps, bans, and chest locks are stored via `DataOperator<T>` against `@Table`-annotated
@@ -343,7 +364,9 @@ non-default-path status messages in `BanCommand`/`TempBanCommand`/`UnbanCommand`
 `BanService#formatDuration`, `ChestLockListener`'s two lock-refusal lines, and
 `DeathPunishListener`'s punishment summary — passes a Chinese literal string as the i18n lookup
 key, but that exact key exists in NEITHER `lang/en.json` NOR `lang/zh.json` (both files hold only
-90 keys total, an identical key set, confirmed by a full diff). `Language#getLocalizedText`'s only
+88 keys total, an identical key set, confirmed by a full diff; measured after
+UltiKits/UltiEssentials#23's lifecycle migration removed the two keys of the module's own unload
+and reload console lines). `Language#getLocalizedText`'s only
 fallback for an unmatched key is to return the key itself unchanged — so `language: en` has
 literally no effect on any of this text; it renders in Chinese on an English-configured server
 exactly as it would on a Chinese-configured one. A minority of messages (all of
@@ -386,15 +409,19 @@ key's value), `features.ban.broadcast-ban`, and `features.ban.broadcast-unban` (
 unban command calls `Bukkit.broadcastMessage(...)` unconditionally; these two keys' values are
 never consulted).
 
-**`/ul reload` does not actually refresh this module's scheduled-command, scoreboard, or
-name-prefix background tasks.** `UltiEssentials#reloadSelf()` logs a "config reloaded" message but
-calls none of `ScheduledCommandService#reload()`, `ScoreboardService#reload()`, or
-`NamePrefixService#reload()` — all three exist specifically to restart their respective background
-tasks against fresh config values, and none is ever invoked from anywhere in this module. This
-compounds the separately-filed UltiKits/UltiEssentials#23 (`reloadSelf()` not calling
-`super.reloadSelf()`, so even the underlying `@ConfigEntry` values are not re-read from disk):
-fixing #23 alone would still leave these three services running against their boot-time state.
-Filed as UltiKits/UltiEssentials#28.
+**`/ul reload UltiEssentials` re-reads configuration values but does not restart this module's
+scheduled-command, scoreboard, or name-prefix background tasks.** Since
+UltiKits/UltiEssentials#23's lifecycle migration this module no longer overrides `reloadSelf()`, so
+UltiTools 6.3.0's `final` `reloadSelf()` re-initialises every configuration bean in place and code
+that reads a getter at call time sees the edited value (`ultiessentials.lifecycle.reload`). The
+module has no `onReload()` hook, and none of `ScheduledCommandService#reload()`,
+`ScoreboardService#reload()`, or `NamePrefixService#reload()` — all three exist specifically to
+restart their respective background tasks against fresh config values — is invoked from anywhere in
+this module. The repeating tasks each service started at boot are therefore not re-derived: an
+edit to `features.scheduled-commands.enabled`, `features.scheduled-commands.commands`,
+`features.scoreboard.enabled`, `features.scoreboard.update-interval`,
+`features.nameprefix.enabled`, or `features.nameprefix.update-interval` does not start, stop or
+reschedule any of those tasks until a restart. Filed as UltiKits/UltiEssentials#28.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|

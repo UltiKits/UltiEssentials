@@ -296,7 +296,6 @@ class UltiEssentialsServiceReloadTest {
 
         assertThat(scoreboardService.isEnabled(player)).isFalse();
         assertThat(lastScoreboard(player)).isSameAs(mainScoreboard);
-        assertThat(teamEntries).containsExactly("Steve");
     }
 
     @Test
@@ -399,13 +398,37 @@ class UltiEssentialsServiceReloadTest {
         boot(yaml(false, 5, true, false, 1, false, Collections.<String>emptyList()));
         scoreboardService.enableScoreboard(player);
         scoreboardService.enableScoreboard(other);
-        when(player.getWorld()).thenThrow(new IllegalStateException("world unavailable"));
+        IllegalStateException worldUnavailable = new IllegalStateException("world unavailable");
+        when(player.getWorld()).thenThrow(worldUnavailable);
+        org.slf4j.Logger reloadFailureLog = mock(org.slf4j.Logger.class);
+        EssentialsTestHelper.setField(scoreboardService, "reloadFailureLog", reloadFailureLog);
 
         assertThatCode(() -> rewriteAndReload(yaml(false, 6, true, false, 1, false, Collections.<String>emptyList())))
                 .doesNotThrowAnyException();
 
+        verify(reloadFailureLog).error(anyString(), eq("Steve"), same(worldUnavailable));
         assertThat(scoreboardService.isEnabled(other)).isTrue();
         assertShowsSidebar(lastScoreboard(other));
+    }
+
+    @Test
+    @DisplayName("a throwing service in the middle is logged and the services before and after it still reload")
+    void throwingMiddleServiceDoesNotStopTheOthers() throws Exception {
+        boot(yaml(false, 5, false, 1, false, Collections.<String>emptyList()));
+        IllegalStateException boom = new IllegalStateException("boom");
+        ScoreboardService throwing = spy(scoreboardService);
+        doThrow(boom).when(throwing).reload();
+        registerServices(scheduledCommandService, throwing, namePrefixService);
+        PluginLogger logger = mock(PluginLogger.class);
+        doReturn(logger).when(plugin).getLogger();
+
+        assertThatCode(() -> rewriteAndReload(yaml(true, 5, false, 1, true, Collections.singletonList("60:say after"))))
+                .doesNotThrowAnyException();
+
+        verify(logger).error(same(boom), contains("ScoreboardService"));
+        assertThat(periods()).containsExactly(1200L, 100L);
+        assertThatCode(() -> namePrefixService.updatePlayer(player)).doesNotThrowAnyException();
+        assertThat(teamEntries).containsExactly("Steve");
     }
 
     // ---------------------------------------------------------------------------------------------

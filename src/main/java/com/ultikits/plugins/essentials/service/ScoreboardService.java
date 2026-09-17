@@ -106,9 +106,10 @@ public class ScoreboardService {
     public void disableScoreboard(Player player) {
         enabledPlayers.remove(player.getUniqueId());
         
-        // Reset to default scoreboard
+        // Give back the server's main scoreboard, not a fresh empty one: name-prefix teams and any
+        // other main-scoreboard content are only visible on the main scoreboard.
         if (manager != null) {
-            player.setScoreboard(manager.getNewScoreboard());
+            player.setScoreboard(manager.getMainScoreboard());
         }
     }
     
@@ -224,11 +225,11 @@ public class ScoreboardService {
             updateTask = null;
         }
         
-        // Reset all player scoreboards
+        // Return every player who had a sidebar to the main scoreboard
         for (UUID uuid : enabledPlayers) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && manager != null) {
-                player.setScoreboard(manager.getNewScoreboard());
+                player.setScoreboard(manager.getMainScoreboard());
             }
         }
         

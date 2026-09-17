@@ -3,7 +3,9 @@ package com.ultikits.plugins.essentials.commands;
 import com.ultikits.plugins.essentials.UltiEssentials;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
+import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
+import com.ultikits.ultitools.manager.ConfigManager;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +18,7 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,10 +31,16 @@ import static org.mockito.Mockito.verify;
 
 /**
  * UltiKits/UltiEssentials#23: {@code /ul reload UltiEssentials} re-reads
- * {@code config/essentials.yml} through {@code ConfigManager#reloadConfigs}, which calls
- * {@code init(plugin)} again on the SAME {@link EssentialsConfig} instance the container injected
- * into {@link SpeedCommand}. This test proves the command observes such an in-place re-init on its
- * very next invocation, i.e. it does not cache {@code features.speed.max-speed} when it is created.
+ * {@code config/essentials.yml} through {@link ConfigManager#reloadConfigs}, which calls
+ * {@code init(plugin)} again on the SAME {@link EssentialsConfig} instance that was registered at
+ * load and that the container injected into {@link SpeedCommand}. This test drives a real
+ * {@link ConfigManager} through {@code register} and {@code reloadConfigs} and proves the command
+ * observes the reload on its very next invocation, i.e. it does not cache
+ * {@code features.speed.max-speed} when it is created.
+ * <p>
+ * A regression guard, not a reproduction of the #23 defect: that defect was the module's override
+ * never reaching {@code reloadConfigs}, which a unit test cannot exercise without the framework's
+ * managers; the real-machine row {@code ultiessentials.lifecycle.reload} covers it end to end.
  * <p>
  * 验证 /speed 在配置对象被原地重新加载后，下一次调用即使用新的 max-speed。
  */
@@ -54,7 +63,7 @@ class SpeedCommandConfigReloadTest {
     }
 
     @Test
-    @DisplayName("lowering features.speed.max-speed and re-initialising the same config refuses the next /speed 7")
+    @DisplayName("lowering features.speed.max-speed and reloading through ConfigManager refuses the next /speed 7")
     void inPlaceReloadOfMaxSpeedIsObserved() throws Exception {
         File configFile = moduleFolder.resolve("config").resolve("essentials.yml").toFile();
         assertThat(configFile.getParentFile().mkdirs()).isTrue();
@@ -64,7 +73,10 @@ class SpeedCommandConfigReloadTest {
         setResourceFolderPath(plugin, moduleFolder.toString());
 
         EssentialsConfig config = new EssentialsConfig();
-        config.init(plugin);
+        ConfigManager configManager = new ConfigManager();
+        configManager.register(plugin, config);
+        Map<String, AbstractConfigEntity> registered = configManager.getAllConfigEntities(plugin);
+        assertThat(registered.values()).singleElement().isSameAs(config);
         assertThat(config.getSpeedMaxSpeed()).isEqualTo(10);
 
         SpeedCommand command = new SpeedCommand(config);
@@ -77,7 +89,7 @@ class SpeedCommandConfigReloadTest {
         clearInvocations(player);
 
         write(configFile, "features:\n  speed:\n    enabled: true\n    max-speed: 5\n");
-        config.init(plugin);
+        configManager.reloadConfigs(plugin);
 
         command.setSpeed(player, 7);
         verify(player, never()).setWalkSpeed(anyFloat());
@@ -88,6 +100,8 @@ class SpeedCommandConfigReloadTest {
         Files.write(file.toPath(), content.getBytes(StandardCharsets.UTF_8));
     }
 
+    // No supported setter exists: the field is private, its accessors are protected final, and the
+    // only public constructor that takes the path also builds the language catalogue from disk.
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration") // points the module's config folder at a temp directory
     private static void setResourceFolderPath(UltiToolsPlugin plugin, String path) throws Exception {
         Field field = UltiToolsPlugin.class.getDeclaredField("resourceFolderPath");

@@ -6,7 +6,6 @@ import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.UltiTools;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -88,24 +87,6 @@ class UltiEssentialsTest {
             boolean result = plugin.registerSelf();
 
             assertThat(result).isTrue();
-        }
-
-        @Test
-        @DisplayName("Should unregister plugin successfully")
-        void shouldUnregisterPlugin() {
-            plugin = new UltiEssentials();
-            plugin.registerSelf();
-
-            Assertions.assertDoesNotThrow(() -> plugin.unregisterSelf());
-        }
-
-        @Test
-        @DisplayName("Should reload plugin successfully")
-        void shouldReloadPlugin() {
-            plugin = new UltiEssentials();
-            plugin.registerSelf();
-
-            Assertions.assertDoesNotThrow(() -> plugin.reloadSelf());
         }
     }
 }

@@ -430,7 +430,8 @@ against the re-read values, so an edit to `features.scheduled-commands.enabled`,
 `features.scoreboard.update-interval`, `features.nameprefix.enabled`, or
 `features.nameprefix.update-interval` takes effect on reload. Each service is reloaded on its own:
 if one service's reload throws, the failure is logged at SEVERE with the service name and the other
-two are still reloaded. Turning name prefixes on by reload gives `NamePrefixService` the main
+two are still reloaded. That failure is reported only on the server console; the reply to whoever
+ran `/ul reload` does not reflect it (UltiKits/UltiTools-Reborn#509). Turning name prefixes on by reload gives `NamePrefixService` the main
 scoreboard before its update task first runs, 1 second after the reload
 (`ultiessentials.lifecycle.reload-nameprefix`); turning them off cancels that task and removes from
 their prefix team every player this service has assigned since the server started (an entry left

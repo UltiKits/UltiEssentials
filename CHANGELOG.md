@@ -27,7 +27,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `features.scoreboard.auto-enable` to players already online. If one of the three services fails
   to reload, the failure is logged and the other two are still reloaded.
 - Turning the sidebar off with `/scoreboard off` or `/scoreboard` now returns the player to the
-  server's main scoreboard, so name prefixes and other teams on it stay visible to that player.
+  server's main scoreboard, so name prefixes and other teams on it become visible to that player.
   Previously the player was given an empty scoreboard and saw none of them until they rejoined
   (UltiKits/UltiEssentials#44).
 - Unloading this module (`/upm uninstall UltiEssentials`) now runs the framework's command
@@ -51,7 +51,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   重载会对已在线的玩家应用 `features.scoreboard.auto-enable`。三个服务中任一服务重载失败时会记录日志，另外两个
   服务仍会重载。
 - 通过 `/scoreboard off` 或 `/scoreboard` 关闭侧边栏后，玩家现在会回到服务器的主计分板，头顶称号及主计分板上的
-  其他队伍对该玩家保持可见。此前玩家会被分配一个空计分板，重新进入服务器前看不到这些内容
+  其他队伍对该玩家变为可见。此前玩家会被分配一个空计分板，重新进入服务器前看不到这些内容
   （UltiKits/UltiEssentials#44）。
 - 卸载本模块（`/upm uninstall UltiEssentials`）现在会由框架先注销命令、再注销监听器，本模块的命令会被
   真正移除，其监听器也不再触发。此前本模块的卸载方法替换了框架的卸载方法，因此执行

@@ -158,7 +158,8 @@ class NamePrefixServiceUpdateLoopIsolationTest {
         assertThatCode(service::shutdown).doesNotThrowAnyException();
 
         verify(secondTeam).removeEntry("Second");
-        verify(failureLog).error(anyString(), eq(first.getUniqueId()), same(unregistered));
+        UUID firstId = first.getUniqueId(); // resolved before verify: a mock call inside verify breaks the matchers
+        verify(failureLog).error(anyString(), eq(firstId), same(unregistered));
     }
 
     private void runUpdate() {

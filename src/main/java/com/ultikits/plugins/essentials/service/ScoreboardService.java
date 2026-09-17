@@ -42,6 +42,10 @@ public class ScoreboardService {
 
     // Scoreboard manager
     private ScoreboardManager manager;
+
+    // Instance reference to the class logger, so a test can observe the per-player reload failure
+    // report (the module's test classpath has no slf4j binding to capture it otherwise).
+    private org.slf4j.Logger reloadFailureLog = log;
     
     /**
      * Initializes the scoreboard service.
@@ -246,7 +250,8 @@ public class ScoreboardService {
      * scoreboard on, no player had a sidebar to keep, so online players follow the reloaded
      * {@code auto-enable}; players joining after any reload follow it through
      * {@code ScoreboardListener} (UltiKits/UltiEssentials#28). A player whose sidebar cannot be
-     * rebuilt is logged and skipped, so the players after them are still restored.
+     * rebuilt is logged and stays marked as shown, so the update task retries it every interval,
+     * and the players after them are still restored.
      * <p>
      * 重载时保留每位在线玩家的侧边栏显示/隐藏状态；重载开启计分板时在线玩家按 auto-enable 处理。
      */
@@ -266,7 +271,10 @@ public class ScoreboardService {
                     try {
                         enableScoreboard(player);
                     } catch (RuntimeException e) {
-                        log.error("Could not restore the sidebar for {} after a reload; the other players were still restored",
+                        // enableScoreboard has already marked the player as shown, so the update
+                        // task retries the sidebar every interval; the other players are unaffected.
+                        reloadFailureLog.error("Could not rebuild the sidebar for {} after a reload; it will be "
+                            + "retried on the next scoreboard update, and the other players were still restored",
                             player.getName(), e);
                     }
                 }

@@ -333,20 +333,23 @@ framework's declarative annotation.
 UltiTools 6.3.0 makes `UltiToolsPlugin#reloadSelf()` and `#unregisterSelf()` `final` template
 methods. Before UltiKits/UltiEssentials#23's lifecycle migration this module overrode both with a
 body that only logged a line, replacing the framework's own steps; both overrides were deleted
-rather than renamed, so this module has no `onReload()` or `onUnregister()` hook and prints no
-reload or unload line of its own. Having no `onUnregister()` hook also means `/upm uninstall
+rather than renamed, and it prints no reload or unload line of its own. It declares one hook,
+`onReload()` (UltiKits/UltiEssentials#28), and no `onUnregister()` hook, so `/upm uninstall
 UltiEssentials` does not cancel the scheduled-command, scoreboard or name-prefix repeating tasks —
 configured scheduled commands keep executing until a restart (UltiKits/UltiEssentials#43).
-`/ul reload UltiEssentials` now runs only the framework's reload
-steps (configuration reload, language refresh, `@ConditionalOnConfig` drift report — this module has
-0 sites — and the framework's per-module `Module 'UltiEssentials' reloaded.` INFO line).
+`/ul reload UltiEssentials` runs the framework's reload steps (configuration reload, language
+refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
+per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
+`reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
+(see `## Configuration` for what each restart does).
 `ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
 container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
-observable the row below uses.
+observable the first row below uses. The second row turns name prefixes on through a reload.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
-| ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module adds no reload work of its own and prints no reload line of its own, and the scheduled-command, scoreboard and name-prefix tasks are not started, stopped or rescheduled, so those services' enable flags, intervals and command list still need a restart — turning `features.nameprefix.enabled` on by reload makes every later join throw (UltiKits/UltiEssentials#28, see `## Configuration`). On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
+| ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module prints no reload line of its own. On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
+| ultiessentials.lifecycle.reload-nameprefix | After `features.nameprefix.enabled` is changed from `false` to `true`, `/ul reload UltiEssentials` restarts `NamePrefixService` with the main scoreboard, so the restarted update task applies the configured prefix to every online player about 1 second after the reload and a player who joins afterwards gets it 0.5 seconds after joining, with no exception from `NamePrefixService#updatePlayer` (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.nameprefix.enabled` to `true` in `config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#onReload, NamePrefixService#reload |
 
 ## Data Persistence
 
@@ -412,27 +415,28 @@ key's value), `features.ban.broadcast-ban`, and `features.ban.broadcast-unban` (
 unban command calls `Bukkit.broadcastMessage(...)` unconditionally; these two keys' values are
 never consulted).
 
-**`/ul reload UltiEssentials` re-reads configuration values but does not restart this module's
-scheduled-command, scoreboard, or name-prefix background tasks.** Since
+**`/ul reload UltiEssentials` re-reads configuration values and restarts this module's
+scheduled-command, scoreboard and name-prefix background tasks.** Since
 UltiKits/UltiEssentials#23's lifecycle migration this module no longer overrides `reloadSelf()`, so
 UltiTools 6.3.0's `final` `reloadSelf()` re-initialises every configuration bean in place and code
 that reads a getter at call time sees the edited value (`ultiessentials.lifecycle.reload`). The
-module has no `onReload()` hook, and none of `ScheduledCommandService#reload()`,
-`ScoreboardService#reload()`, or `NamePrefixService#reload()` — all three exist specifically to
-restart their respective background tasks against fresh config values — is invoked from anywhere in
-this module. The repeating tasks each service started at boot are therefore not re-derived: an
-edit to `features.scheduled-commands.enabled`, `features.scheduled-commands.commands`,
-`features.scoreboard.enabled`, `features.scoreboard.update-interval`,
-`features.nameprefix.enabled`, or `features.nameprefix.update-interval` does not start, stop or
-reschedule any of those tasks until a restart, so **these keys need a server restart, not a
-reload**. The failure is not only a missing effect: `NamePrefixService#init` assigns its
-`scoreboard` field only when `features.nameprefix.enabled` is true at boot, and
-`NamePrefixListener#onPlayerJoin` reads the flag on every join, so a reload that turns it from
-`false` to `true` makes every later join throw a `NullPointerException` from
-`NamePrefixService#updatePlayer` (no prefix is applied) until a restart. Turning name prefixes off by
-reload freezes the existing prefixes (`updatePlayer` returns early while the update task keeps
-running); turning the scoreboard on by reload shows a sidebar on join (with `auto-enable`) and via
-`/scoreboard` that never refreshes (no update task). Filed as UltiKits/UltiEssentials#28.
+module's `onReload()` hook then calls `ScheduledCommandService#reload()`,
+`ScoreboardService#reload()` and `NamePrefixService#reload()` (UltiKits/UltiEssentials#28). Each
+cancels the repeating tasks it owns and, only if its feature is still enabled, starts them again
+against the re-read values, so an edit to `features.scheduled-commands.enabled`,
+`features.scheduled-commands.commands`, `features.scoreboard.enabled`,
+`features.scoreboard.update-interval`, `features.nameprefix.enabled`, or
+`features.nameprefix.update-interval` takes effect on reload. Turning name prefixes on by reload
+gives `NamePrefixService` the main scoreboard before its update task first runs, 1 second after the
+reload (`ultiessentials.lifecycle.reload-nameprefix`); turning them off cancels that task and
+removes every player from their prefix team. Three effects of a reload match a restart rather than
+preserving running state: every scheduled command's interval starts counting again from the reload;
+`NamePrefixService#reload()` removes every player from their prefix team and, if name prefixes stay
+enabled, the restarted task adds online players back 1 second later; and `ScoreboardService#reload()`
+clears every player's `/scoreboard` on/off choice — with `features.scoreboard.enabled` and
+`features.scoreboard.auto-enable` both true every online player gets the sidebar back, otherwise every
+sidebar is removed until the player runs `/scoreboard` again (or, with the scoreboard enabled, rejoins
+with `auto-enable` true).
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|

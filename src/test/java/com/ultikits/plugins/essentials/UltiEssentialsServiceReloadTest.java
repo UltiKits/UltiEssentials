@@ -7,6 +7,7 @@ import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.context.SimpleContainer;
+import com.ultikits.ultitools.interfaces.impl.logger.PluginLogger;
 import com.ultikits.ultitools.manager.ConfigManager;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -30,8 +32,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,13 +46,20 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -74,6 +88,7 @@ class UltiEssentialsServiceReloadTest {
         private final Runnable runnable;
         private final long period;
         private final BukkitTask task;
+        private boolean cancelled;
 
         private ScheduledTimer(Runnable runnable, long period, BukkitTask task) {
             this.runnable = runnable;
@@ -96,6 +111,7 @@ class UltiEssentialsServiceReloadTest {
     private final List<ScheduledTimer> timers = new ArrayList<>();
     private Scoreboard mainScoreboard;
     private Team team;
+    private final Set<String> teamEntries = new HashSet<>();
     private ScoreboardManager scoreboardManager;
     private Player player;
 
@@ -107,7 +123,12 @@ class UltiEssentialsServiceReloadTest {
         lenient().when(scheduler.runTaskTimer(any(Plugin.class), any(Runnable.class), anyLong(), anyLong()))
                 .thenAnswer(inv -> {
                     BukkitTask task = mock(BukkitTask.class);
-                    timers.add(new ScheduledTimer(inv.getArgument(1), inv.getArgument(3), task));
+                    ScheduledTimer timer = new ScheduledTimer(inv.getArgument(1), inv.getArgument(3), task);
+                    lenient().doAnswer(cancel -> {
+                        timer.cancelled = true;
+                        return null;
+                    }).when(task).cancel();
+                    timers.add(timer);
                     return task;
                 });
         lenient().when(EssentialsTestHelper.getMockServer().getPluginManager().getPlugin("UltiTools"))
@@ -117,8 +138,18 @@ class UltiEssentialsServiceReloadTest {
         mainScoreboard = mock(Scoreboard.class);
         team = mock(Team.class);
         lenient().when(scoreboardManager.getMainScoreboard()).thenReturn(mainScoreboard);
-        lenient().when(mainScoreboard.getTeam(anyString())).thenReturn(null);
-        lenient().when(mainScoreboard.registerNewTeam(anyString())).thenReturn(team);
+        // The main scoreboard and its team keep state, so repeated reloads can be checked for
+        // duplicate teams or entries.
+        Map<String, Team> teams = new HashMap<>();
+        lenient().when(mainScoreboard.getTeam(anyString())).thenAnswer(inv -> teams.get(inv.<String>getArgument(0)));
+        lenient().when(mainScoreboard.registerNewTeam(anyString())).thenAnswer(inv -> {
+            teams.put(inv.getArgument(0), team);
+            return team;
+        });
+        lenient().doAnswer(inv -> teamEntries.add(inv.getArgument(0))).when(team).addEntry(anyString());
+        lenient().when(team.removeEntry(anyString())).thenAnswer(inv -> teamEntries.remove(inv.<String>getArgument(0)));
+        lenient().when(team.hasEntry(anyString())).thenAnswer(inv -> teamEntries.contains(inv.<String>getArgument(0)));
+        lenient().when(team.getEntries()).thenAnswer(inv -> new HashSet<>(teamEntries));
         lenient().when(scoreboardManager.getNewScoreboard()).thenAnswer(inv -> newSidebarScoreboard());
         lenient().when(EssentialsTestHelper.getMockServer().getScoreboardManager()).thenReturn(scoreboardManager);
 
@@ -147,7 +178,7 @@ class UltiEssentialsServiceReloadTest {
         assertThat(config.isNamePrefixEnabled()).isTrue();
 
         assertThatCode(() -> namePrefixService.updatePlayer(player)).doesNotThrowAnyException();
-        verify(team).addEntry("Steve");
+        assertThat(teamEntries).containsExactly("Steve");
         assertThat(periods()).containsExactly(100L);
     }
 
@@ -156,13 +187,13 @@ class UltiEssentialsServiceReloadTest {
     void namePrefixTurnedOffByReloadCancelsTaskAndClearsTeam() throws Exception {
         boot(yaml(true, 5, false, 1, false, Collections.<String>emptyList()));
         namePrefixService.updatePlayer(player);
-        lenient().when(team.getEntries()).thenReturn(Collections.singleton("Steve"));
+        assertThat(teamEntries).containsExactly("Steve");
         ScheduledTimer bootTimer = onlyTimer(100L);
 
         rewriteAndReload(yaml(false, 5, false, 1, false, Collections.<String>emptyList()));
 
         verify(bootTimer.task).cancel();
-        verify(team).removeEntry("Steve");
+        assertThat(teamEntries).isEmpty();
         assertThat(timers).hasSize(1);
     }
 
@@ -232,7 +263,149 @@ class UltiEssentialsServiceReloadTest {
         rewriteAndReload(yaml(false, 6, true, false, 1, false, Collections.<String>emptyList()));
 
         assertThat(scoreboardService.isEnabled(player)).isTrue();
-        verify(player, atLeastOnce()).setScoreboard(any(Scoreboard.class));
+        assertShowsSidebar(lastScoreboard(player));
+    }
+
+    @Test
+    @DisplayName("scoreboard turned off by reload: the task is cancelled, no task restarts, and the player is back on the main scoreboard with its name-prefix team")
+    void scoreboardTurnedOffByReloadReturnsPlayerToMainScoreboard() throws Exception {
+        boot(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
+        scoreboardService.enableScoreboard(player);
+        namePrefixService.updatePlayer(player);
+        ScheduledTimer sidebarTimer = onlyTimer(20L);
+
+        rewriteAndReload(yaml(true, 5, false, 1, false, Collections.<String>emptyList()));
+
+        verify(sidebarTimer.task).cancel();
+        assertThat(periods()).containsExactly(100L, 20L, 100L);
+        assertThat(scoreboardService.isEnabled(player)).isFalse();
+        assertThat(lastScoreboard(player)).isSameAs(mainScoreboard);
+        lastTimer(100L).runnable.run();
+        assertThat(teamEntries).containsExactly("Steve");
+    }
+
+    @Test
+    @DisplayName("/scoreboard off puts the player back on the main scoreboard, where the name-prefix team stays")
+    void scoreboardOffReturnsPlayerToMainScoreboard() throws Exception {
+        boot(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
+        scoreboardService.enableScoreboard(player);
+        namePrefixService.updatePlayer(player);
+        assertThat(lastScoreboard(player)).isNotSameAs(mainScoreboard);
+
+        scoreboardService.disableScoreboard(player); // ScoreboardCommand#disable, and #toggle when shown
+
+        assertThat(scoreboardService.isEnabled(player)).isFalse();
+        assertThat(lastScoreboard(player)).isSameAs(mainScoreboard);
+        assertThat(teamEntries).containsExactly("Steve");
+    }
+
+    @Test
+    @DisplayName("scoreboard turned on by reload with auto-enable false: the task starts but no online player gets a sidebar")
+    void scoreboardTurnedOnByReloadWithoutAutoEnableShowsNoSidebar() throws Exception {
+        boot(yaml(false, 5, false, false, 1, false, Collections.<String>emptyList()));
+
+        rewriteAndReload(yaml(false, 5, true, false, 1, false, Collections.<String>emptyList()));
+
+        assertThat(periods()).containsExactly(20L);
+        assertThat(scoreboardService.isEnabled(player)).isFalse();
+        verify(player, never()).setScoreboard(any(Scoreboard.class));
+    }
+
+    @Test
+    @DisplayName("auto-enable turned off by reload while the scoreboard stays enabled: a shown sidebar stays shown")
+    void autoEnableTurnedOffKeepsShownSidebar() throws Exception {
+        boot(yaml(false, 5, true, true, 1, false, Collections.<String>emptyList()));
+        scoreboardService.enableScoreboard(player);
+
+        rewriteAndReload(yaml(false, 5, true, false, 1, false, Collections.<String>emptyList()));
+
+        assertThat(scoreboardService.isEnabled(player)).isTrue();
+        assertShowsSidebar(lastScoreboard(player));
+    }
+
+    @Test
+    @DisplayName("scheduled commands turned off by reload: every task is cancelled and none is scheduled again")
+    void scheduledCommandsTurnedOffByReloadCancelsEverything() throws Exception {
+        boot(yaml(false, 5, false, 1, true, Arrays.asList("60:say one", "120:say two")));
+        assertThat(periods()).containsExactly(1200L, 2400L);
+
+        rewriteAndReload(yaml(false, 5, false, 1, false, Arrays.asList("60:say one", "120:say two")));
+
+        assertThat(timers).hasSize(2).allSatisfy(timer -> assertThat(timer.cancelled).isTrue());
+        verify(EssentialsTestHelper.getMockServer(), never()).dispatchCommand(any(), anyString());
+    }
+
+    @Test
+    @DisplayName("three reloads in a row leave exactly one live task per service, one team and one team entry")
+    void threeReloadsLeaveNoDuplicates() throws Exception {
+        String all = yaml(true, 5, true, 1, true, Collections.singletonList("60:say once"));
+        boot(all);
+        scoreboardService.enableScoreboard(player);
+        namePrefixService.updatePlayer(player);
+
+        rewriteAndReload(all);
+        rewriteAndReload(all);
+        rewriteAndReload(all);
+
+        for (long period : new long[]{100L, 20L, 1200L}) {
+            List<ScheduledTimer> live = new ArrayList<>();
+            int total = 0;
+            for (ScheduledTimer timer : timers) {
+                if (timer.period == period) {
+                    total++;
+                    if (!timer.cancelled) {
+                        live.add(timer);
+                    }
+                }
+            }
+            assertThat(total).as("tasks started with period %d", period).isEqualTo(4);
+            assertThat(live).as("live tasks with period %d", period).hasSize(1);
+            live.get(0).runnable.run();
+        }
+        verify(mainScoreboard, times(1)).registerNewTeam(anyString());
+        assertThat(teamEntries).containsExactly("Steve");
+        assertThat(scoreboardService.isEnabled(player)).isTrue();
+        verify(EssentialsTestHelper.getMockServer(), times(1)).dispatchCommand(any(), eq("say once"));
+    }
+
+    @Test
+    @DisplayName("a service whose reload throws is logged and does not stop the other services from reloading")
+    void throwingServiceDoesNotStopTheOthers() throws Exception {
+        boot(yaml(false, 5, false, 1, false, Collections.<String>emptyList()));
+        IllegalStateException boom = new IllegalStateException("boom");
+        ScheduledCommandService throwing = spy(scheduledCommandService);
+        doThrow(boom).when(throwing).reload();
+        registerServices(throwing, scoreboardService, namePrefixService);
+        PluginLogger logger = mock(PluginLogger.class);
+        doReturn(logger).when(plugin).getLogger();
+
+        assertThatCode(() -> rewriteAndReload(yaml(true, 5, true, 1, false, Collections.<String>emptyList())))
+                .doesNotThrowAnyException();
+
+        verify(logger).error(same(boom), contains("ScheduledCommandService"));
+        assertThat(periods()).containsExactly(20L, 100L);
+        assertThat(scoreboardService.isEnabled(player)).isTrue();
+        assertThatCode(() -> namePrefixService.updatePlayer(player)).doesNotThrowAnyException();
+        assertThat(teamEntries).containsExactly("Steve");
+    }
+
+    @Test
+    @DisplayName("a player whose sidebar cannot be rebuilt does not stop the carry-over for the next player")
+    void throwingPlayerDoesNotStopTheCarryOver() throws Exception {
+        Player other = EssentialsTestHelper.createMockPlayer("Alex", UUID.randomUUID());
+        lenient().when(other.isOnline()).thenReturn(true);
+        doReturn(Arrays.asList(player, other)).when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
+        lenient().when(EssentialsTestHelper.getMockServer().getPlayer(other.getUniqueId())).thenReturn(other);
+        boot(yaml(false, 5, true, false, 1, false, Collections.<String>emptyList()));
+        scoreboardService.enableScoreboard(player);
+        scoreboardService.enableScoreboard(other);
+        when(player.getWorld()).thenThrow(new IllegalStateException("world unavailable"));
+
+        assertThatCode(() -> rewriteAndReload(yaml(false, 6, true, false, 1, false, Collections.<String>emptyList())))
+                .doesNotThrowAnyException();
+
+        assertThat(scoreboardService.isEnabled(other)).isTrue();
+        assertShowsSidebar(lastScoreboard(other));
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -256,11 +429,38 @@ class UltiEssentialsServiceReloadTest {
         scoreboardService.init();
         scheduledCommandService.init();
 
+        registerServices(scheduledCommandService, scoreboardService, namePrefixService);
+    }
+
+    private void registerServices(ScheduledCommandService scheduled, ScoreboardService scoreboard,
+                                  NamePrefixService namePrefix) {
         SimpleContainer container = new SimpleContainer();
-        container.registerType(NamePrefixService.class, namePrefixService);
-        container.registerType(ScoreboardService.class, scoreboardService);
-        container.registerType(ScheduledCommandService.class, scheduledCommandService);
+        container.registerType(ScheduledCommandService.class, scheduled);
+        container.registerType(ScoreboardService.class, scoreboard);
+        container.registerType(NamePrefixService.class, namePrefix);
         plugin.setContext(container);
+    }
+
+    private static Scoreboard lastScoreboard(Player target) {
+        ArgumentCaptor<Scoreboard> assigned = ArgumentCaptor.forClass(Scoreboard.class);
+        verify(target, atLeastOnce()).setScoreboard(assigned.capture());
+        return assigned.getValue();
+    }
+
+    private void assertShowsSidebar(Scoreboard scoreboard) {
+        assertThat(scoreboard).isNotSameAs(mainScoreboard);
+        verify(scoreboard).registerNewObjective(anyString(), anyString(), anyString());
+    }
+
+    private ScheduledTimer lastTimer(long period) {
+        ScheduledTimer last = null;
+        for (ScheduledTimer timer : timers) {
+            if (timer.period == period) {
+                last = timer;
+            }
+        }
+        assertThat(last).as("a timer with period %d", period).isNotNull();
+        return last;
     }
 
     private void rewriteAndReload(String yaml) throws Exception {

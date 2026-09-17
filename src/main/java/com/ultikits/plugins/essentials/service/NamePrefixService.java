@@ -39,6 +39,9 @@ public class NamePrefixService {
     // Instance reference to the class logger, so a test can observe the per-player failure reports
     // (the module's test classpath has no slf4j binding to capture them otherwise).
     private org.slf4j.Logger failureLog = log;
+
+    // Players whose prefix update is currently failing, so the update task logs each failure once.
+    private final RepeatedFailureFilter<UUID> updateFailures = new RepeatedFailureFilter<>();
     
     // Player teams
     private final Map<UUID, Team> playerTeams = new HashMap<>();
@@ -80,7 +83,29 @@ public class NamePrefixService {
      */
     private void updateAllPlayers() {
         for (Player player : Bukkit.getOnlinePlayers()) {
+            updateIsolated(player);
+        }
+    }
+
+    /**
+     * Updates one player's prefix for the update task. A failure stays with that player: it is logged
+     * at error level the first time, suppressed while it repeats, and retried on the next update; the
+     * other players are updated regardless.
+     */
+    private void updateIsolated(Player player) {
+        UUID uuid = player.getUniqueId();
+        try {
             updatePlayer(player);
+        } catch (RuntimeException e) {
+            if (updateFailures.firstFailure(uuid)) {
+                failureLog.error("Could not update the name prefix for {}; it will be retried on every update, "
+                    + "and this failure is not logged again until an update for that player succeeds",
+                    player.getName(), e);
+            }
+            return;
+        }
+        if (updateFailures.recovered(uuid)) {
+            failureLog.info("The name prefix for {} updates again", player.getName());
         }
     }
     
@@ -137,6 +162,7 @@ public class NamePrefixService {
      */
     public void removePlayer(Player player) {
         UUID uuid = player.getUniqueId();
+        updateFailures.forget(uuid);
         Team team = playerTeams.remove(uuid);
         
         if (team != null) {
@@ -171,13 +197,21 @@ public class NamePrefixService {
             updateTask = null;
         }
         
-        // Clean up teams
-        for (Team team : playerTeams.values()) {
-            for (String entry : team.getEntries()) {
-                team.removeEntry(entry);
+        // Clean up teams, one at a time: a team that can no longer be cleared (for example removed with
+        // the vanilla team command) must not keep the others populated.
+        for (Map.Entry<UUID, Team> recorded : playerTeams.entrySet()) {
+            try {
+                Team team = recorded.getValue();
+                for (String entry : team.getEntries()) {
+                    team.removeEntry(entry);
+                }
+            } catch (RuntimeException e) {
+                failureLog.error("Could not clear the name-prefix team of player {}; the other teams were still cleared",
+                    recorded.getKey(), e);
             }
         }
         playerTeams.clear();
+        updateFailures.clear();
     }
     
     /**

@@ -46,6 +46,9 @@ public class ScoreboardService {
     // Instance reference to the class logger, so a test can observe the per-player failure reports
     // (the module's test classpath has no slf4j binding to capture them otherwise).
     private org.slf4j.Logger failureLog = log;
+
+    // Players whose sidebar update is currently failing, so the update task logs each failure once.
+    private final RepeatedFailureFilter<UUID> updateFailures = new RepeatedFailureFilter<>();
     
     /**
      * Initializes the scoreboard service.
@@ -83,15 +86,37 @@ public class ScoreboardService {
                 for (UUID uuid : enabledPlayers) {
                     Player player = Bukkit.getPlayer(uuid);
                     if (player != null && player.isOnline()) {
-                        updateScoreboard(player);
+                        refreshIsolated(uuid, player);
                     } else {
                         enabledPlayers.remove(uuid);
+                        updateFailures.forget(uuid);
                     }
                 }
             }
         }.runTaskTimer(bukkitPlugin, 20L, updateInterval * 20L);
     }
     
+    /**
+     * Refreshes one player's sidebar for the update task. A failure stays with that player: it is
+     * logged at error level the first time, suppressed while it repeats, and the player stays shown
+     * and is retried on the next update; the other players are refreshed regardless.
+     */
+    private void refreshIsolated(UUID uuid, Player player) {
+        try {
+            updateScoreboard(player);
+        } catch (RuntimeException e) {
+            if (updateFailures.firstFailure(uuid)) {
+                failureLog.error("Could not update the sidebar for {}; it will be retried on every scoreboard update, "
+                    + "and this failure is not logged again until an update for that player succeeds",
+                    player.getName(), e);
+            }
+            return;
+        }
+        if (updateFailures.recovered(uuid)) {
+            failureLog.info("The sidebar for {} updates again", player.getName());
+        }
+    }
+
     /**
      * Enables scoreboard for a player.
      */
@@ -109,6 +134,7 @@ public class ScoreboardService {
      */
     public void disableScoreboard(Player player) {
         enabledPlayers.remove(player.getUniqueId());
+        updateFailures.forget(player.getUniqueId());
         
         // Give back the server's main scoreboard, not a fresh empty one: name-prefix teams and any
         // other main-scoreboard content are only visible on the main scoreboard.
@@ -233,11 +259,17 @@ public class ScoreboardService {
         for (UUID uuid : enabledPlayers) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && manager != null) {
-                player.setScoreboard(manager.getMainScoreboard());
+                try {
+                    player.setScoreboard(manager.getMainScoreboard());
+                } catch (RuntimeException e) {
+                    failureLog.error("Could not return {} to the main scoreboard; the other players were still reset",
+                        player.getName(), e);
+                }
             }
         }
         
         enabledPlayers.clear();
+        updateFailures.clear();
     }
     
     /**

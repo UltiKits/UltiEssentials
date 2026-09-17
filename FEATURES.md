@@ -455,7 +455,8 @@ each player on their own: a player whose sidebar or prefix cannot be refreshed (
 a PlaceholderAPI expansion throws for that player) is logged once at error level and retried on every
 update, while the other players are refreshed as usual; the failure is logged again only after a
 refresh for that player has succeeded in between, and is forgotten when the player quits or turns
-the sidebar off. Each scheduled command already runs as its own task, so a command that throws
+the sidebar off. A player's name-prefix team that was removed (for example with the vanilla
+`team remove` command) is looked up again or re-created on the next update, so the prefix comes back. Each scheduled command already runs as its own task, so a command that throws
 affects only itself.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |

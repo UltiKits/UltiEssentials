@@ -40,6 +40,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -206,6 +208,33 @@ class UltiEssentialsServiceReloadTest {
         assertThat(periods()).containsExactly(20L, 60L);
     }
 
+    @Test
+    @DisplayName("a player who hid the sidebar keeps it hidden across a reload that changes an unrelated key")
+    void hiddenSidebarChoiceSurvivesUnrelatedReload() throws Exception {
+        boot(yaml(false, 5, true, true, 1, false, Collections.<String>emptyList()));
+        scoreboardService.enableScoreboard(player); // what ScoreboardListener does on join with auto-enable
+        assertThat(scoreboardService.toggleScoreboard(player)).isFalse(); // the player runs /scoreboard
+        clearInvocations(player);
+
+        rewriteAndReload(yaml(false, 6, true, true, 1, false, Collections.<String>emptyList()));
+
+        assertThat(scoreboardService.isEnabled(player)).isFalse();
+        verify(player, never()).setScoreboard(any(Scoreboard.class));
+    }
+
+    @Test
+    @DisplayName("with auto-enable off, a player who showed the sidebar keeps it shown across a reload that changes an unrelated key")
+    void shownSidebarChoiceSurvivesUnrelatedReloadWithoutAutoEnable() throws Exception {
+        boot(yaml(false, 5, true, false, 1, false, Collections.<String>emptyList()));
+        assertThat(scoreboardService.toggleScoreboard(player)).isTrue(); // the player runs /scoreboard
+        clearInvocations(player);
+
+        rewriteAndReload(yaml(false, 6, true, false, 1, false, Collections.<String>emptyList()));
+
+        assertThat(scoreboardService.isEnabled(player)).isTrue();
+        verify(player, atLeastOnce()).setScoreboard(any(Scoreboard.class));
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     private void boot(String yaml) throws Exception {
@@ -279,6 +308,11 @@ class UltiEssentialsServiceReloadTest {
 
     private static String yaml(boolean namePrefix, int namePrefixInterval, boolean scoreboard,
                                int scoreboardInterval, boolean scheduled, List<String> commands) {
+        return yaml(namePrefix, namePrefixInterval, scoreboard, true, scoreboardInterval, scheduled, commands);
+    }
+
+    private static String yaml(boolean namePrefix, int namePrefixInterval, boolean scoreboard, boolean autoEnable,
+                               int scoreboardInterval, boolean scheduled, List<String> commands) {
         StringBuilder sb = new StringBuilder()
                 .append("features:\n")
                 .append("  nameprefix:\n")
@@ -288,7 +322,7 @@ class UltiEssentialsServiceReloadTest {
                 .append("    suffix-format: ''\n")
                 .append("  scoreboard:\n")
                 .append("    enabled: ").append(scoreboard).append('\n')
-                .append("    auto-enable: true\n")
+                .append("    auto-enable: ").append(autoEnable).append('\n')
                 .append("    update-interval: ").append(scoreboardInterval).append('\n')
                 .append("    title: 'Title'\n")
                 .append("    lines:\n")

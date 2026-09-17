@@ -164,6 +164,28 @@ class NamePrefixServiceUpdateLoopIsolationTest {
     }
 
     @Test
+    @DisplayName("an ordinary failure keeps the still-registered team, so quit still removes the player's entry")
+    void ordinaryFailureKeepsTeamForQuitCleanup() {
+        doThrow(failure).when(firstTeam).setPrefix(anyString()); // thrown after the entry was added
+        runUpdate();
+
+        service.removePlayer(first); // NamePrefixListener#onPlayerQuit
+
+        verify(firstTeam).removeEntry("First");
+    }
+
+    @Test
+    @DisplayName("an ordinary failure keeps the still-registered team, so turning name prefixes off still clears it")
+    void ordinaryFailureKeepsTeamForShutdownCleanup() {
+        doThrow(failure).when(firstTeam).setPrefix(anyString());
+        runUpdate();
+
+        service.shutdown();
+
+        verify(firstTeam).removeEntry("First");
+    }
+
+    @Test
     @DisplayName("reload (shutdown) forgets a suppressed failure, so a failure that persists is reported again")
     void shutdownForgetsSuppressedFailures() {
         doThrow(failure).when(firstTeam).setPrefix(anyString());

@@ -35,6 +35,10 @@ public class NamePrefixService {
     private Plugin bukkitPlugin;
     private BukkitTask updateTask;
     private Scoreboard scoreboard;
+
+    // Instance reference to the class logger, so a test can observe the per-player failure reports
+    // (the module's test classpath has no slf4j binding to capture them otherwise).
+    private org.slf4j.Logger failureLog = log;
     
     // Player teams
     private final Map<UUID, Team> playerTeams = new HashMap<>();

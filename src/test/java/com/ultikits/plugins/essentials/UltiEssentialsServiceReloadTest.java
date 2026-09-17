@@ -401,7 +401,7 @@ class UltiEssentialsServiceReloadTest {
         IllegalStateException worldUnavailable = new IllegalStateException("world unavailable");
         when(player.getWorld()).thenThrow(worldUnavailable);
         org.slf4j.Logger reloadFailureLog = mock(org.slf4j.Logger.class);
-        EssentialsTestHelper.setField(scoreboardService, "reloadFailureLog", reloadFailureLog);
+        EssentialsTestHelper.setField(scoreboardService, "failureLog", reloadFailureLog);
 
         assertThatCode(() -> rewriteAndReload(yaml(false, 6, true, false, 1, false, Collections.<String>emptyList())))
                 .doesNotThrowAnyException();

@@ -43,9 +43,9 @@ public class ScoreboardService {
     // Scoreboard manager
     private ScoreboardManager manager;
 
-    // Instance reference to the class logger, so a test can observe the per-player reload failure
-    // report (the module's test classpath has no slf4j binding to capture it otherwise).
-    private org.slf4j.Logger reloadFailureLog = log;
+    // Instance reference to the class logger, so a test can observe the per-player failure reports
+    // (the module's test classpath has no slf4j binding to capture them otherwise).
+    private org.slf4j.Logger failureLog = log;
     
     /**
      * Initializes the scoreboard service.
@@ -273,7 +273,7 @@ public class ScoreboardService {
                     } catch (RuntimeException e) {
                         // enableScoreboard has already marked the player as shown, so the update
                         // task retries the sidebar every interval; the other players are unaffected.
-                        reloadFailureLog.error("Could not rebuild the sidebar for {} after a reload; it will be "
+                        failureLog.error("Could not rebuild the sidebar for {} after a reload; it will be "
                             + "retried on the next scoreboard update, and the other players were still restored",
                             player.getName(), e);
                     }

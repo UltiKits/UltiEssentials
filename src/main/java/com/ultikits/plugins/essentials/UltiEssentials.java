@@ -1,5 +1,8 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.service.NamePrefixService;
+import com.ultikits.plugins.essentials.service.ScheduledCommandService;
+import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.UltiToolsModule;
 
@@ -14,16 +17,12 @@ import com.ultikits.ultitools.annotations.UltiToolsModule;
  * </p>
  * <p>
  * Reload and unload are performed by the framework's final {@code reloadSelf()} and
- * {@code unregisterSelf()}; this module adds no {@code onReload()} or {@code onUnregister()} work,
- * so {@code /ul reload UltiEssentials} re-reads this module's configuration files (for example
- * {@code config/essentials.yml}) into the running configuration beans, but does not yet start,
- * stop or reschedule the scheduled-command, scoreboard or name-prefix tasks
- * (UltiKits/UltiEssentials#28). Changing those services' enable flags, intervals or command list
- * therefore needs a server restart, not a reload: a reload that turns
- * {@code features.nameprefix.enabled} on leaves {@code NamePrefixService} without a scoreboard, so
- * every later player join throws a {@code NullPointerException} from
- * {@code NamePrefixService#updatePlayer}. Unload does not yet cancel those tasks either
- * (UltiKits/UltiEssentials#43).
+ * {@code unregisterSelf()}. {@code /ul reload UltiEssentials} re-reads this module's configuration
+ * files (for example {@code config/essentials.yml}) into the running configuration beans, then
+ * {@link #onReload()} restarts the scheduled-command, scoreboard and name-prefix services against
+ * the re-read values, so their enable flags, intervals and command list apply without a restart
+ * (UltiKits/UltiEssentials#28). This module adds no {@code onUnregister()} work: unload does not yet
+ * cancel those services' tasks (UltiKits/UltiEssentials#43).
  * </p>
  *
  * @author wisdommen
@@ -39,5 +38,28 @@ public class UltiEssentials extends UltiToolsPlugin {
         getLogger().info(i18n("UltiEssentials 已启用！"));
         return true;
     }
-}
 
+    /**
+     * Restarts the three task-owning services against the configuration the framework has just
+     * re-read. Each service's {@code reload()} cancels its running tasks and starts them again only
+     * if its feature is still enabled, so turning a feature on, off, or changing its interval or
+     * command list all take effect (UltiKits/UltiEssentials#28).
+     * <p>
+     * 按重新读取的配置重启定时命令、计分板与头顶称号服务。
+     */
+    @Override
+    protected void onReload() {
+        ScheduledCommandService scheduledCommandService = getContext().getBean(ScheduledCommandService.class);
+        if (scheduledCommandService != null) {
+            scheduledCommandService.reload();
+        }
+        ScoreboardService scoreboardService = getContext().getBean(ScoreboardService.class);
+        if (scoreboardService != null) {
+            scoreboardService.reload();
+        }
+        NamePrefixService namePrefixService = getContext().getBean(NamePrefixService.class);
+        if (namePrefixService != null) {
+            namePrefixService.reload();
+        }
+    }
+}

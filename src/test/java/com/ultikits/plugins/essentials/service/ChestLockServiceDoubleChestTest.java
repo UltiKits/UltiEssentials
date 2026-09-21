@@ -228,18 +228,19 @@ class ChestLockServiceDoubleChestTest {
         }
 
         @Test
-        @DisplayName("locking a double chest whose other half is already locked does not create a duplicate lock")
+        @DisplayName("locking a double chest whose other half is already yours writes only the missing half")
         void doesNotDuplicateLockWhenOtherHalfAlreadyLocked() throws Exception {
             World world = EssentialsTestHelper.createMockWorld("world");
             Location rightLoc = new Location(world, 2, 64, 1);
             Block leftBlock = createDoubleChestBlock(world, 1, 64, 1, true, rightLoc);
-            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+            UUID steve = UUID.randomUUID();
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", steve);
 
             ChestLockData existingOtherLock = ChestLockData.builder()
                     .uuid(UUID.randomUUID())
                     .world("world").x(2).y(64).z(1)
-                    .ownerUuid(UUID.randomUUID().toString())
-                    .ownerName("Other")
+                    .ownerUuid(steve.toString())
+                    .ownerName("Steve")
                     .build();
             cache().put(existingOtherLock.getLocationKey(), existingOtherLock);
 
@@ -247,8 +248,35 @@ class ChestLockServiceDoubleChestTest {
 
             assertThat(result).isEqualTo(ChestLockService.LockResult.SUCCESS);
             // Exactly one insert -- for the block actually locked. The already-locked other
-            // half must not receive a second, duplicate insert.
+            // half must not receive a second, duplicate insert. This is also the repair route for
+            // a container whose second insert never landed: re-locking restores full coverage.
             verify(lockOperator, times(1)).insert(any(ChestLockData.class));
+        }
+
+        @Test
+        @DisplayName("locking a double chest whose other half belongs to someone else is refused outright")
+        void refusesWhenOtherHalfBelongsToSomeoneElse() throws Exception {
+            World world = EssentialsTestHelper.createMockWorld("world");
+            Location rightLoc = new Location(world, 2, 64, 1);
+            Block leftBlock = createDoubleChestBlock(world, 1, 64, 1, true, rightLoc);
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+
+            ChestLockData othersLock = ChestLockData.builder()
+                    .uuid(UUID.randomUUID())
+                    .world("world").x(2).y(64).z(1)
+                    .ownerUuid(UUID.randomUUID().toString())
+                    .ownerName("Other")
+                    .build();
+            cache().put(othersLock.getLocationKey(), othersLock);
+
+            ChestLockService.LockResult result = service.lockBlock(leftBlock, player);
+
+            // Allowing this was a bypass, not a convenience: it produced one container protected by
+            // two records with two owners, and unlockBlock then removed BOTH on the say-so of
+            // whichever one the caller owned -- so a stranger could unlock and open the container by
+            // placing a chest against it (gate 2 round 3).
+            assertThat(result).isEqualTo(ChestLockService.LockResult.ALREADY_LOCKED);
+            verify(lockOperator, never()).insert(any(ChestLockData.class));
         }
     }
 

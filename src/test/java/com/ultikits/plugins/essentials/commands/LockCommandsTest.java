@@ -9,6 +9,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.*;
 
+import java.util.Collections;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -203,7 +204,11 @@ class LockCommandsTest {
                     .world("world")
                     .x(100).y(64).z(200)
                     .build();
-            when(chestLockService.getLock(loc)).thenReturn(lockData);
+            // Container-scoped: asked about the unrecorded half of a partly-recorded double chest,
+            // the per-location read answered "not locked" about a container the interact check
+            // refuses to open (gate 2 round 3).
+            when(chestLockService.locksProtecting(block))
+                    .thenReturn(Collections.singletonList(lockData));
 
             command.info(player);
 
@@ -219,7 +224,7 @@ class LockCommandsTest {
             when(block.getLocation()).thenReturn(loc);
             when(player.getTargetBlockExact(5)).thenReturn(block);
 
-            when(chestLockService.getLock(loc)).thenReturn(null);
+            when(chestLockService.locksProtecting(block)).thenReturn(Collections.emptyList());
 
             command.info(player);
 

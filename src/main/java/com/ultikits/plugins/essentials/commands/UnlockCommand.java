@@ -8,6 +8,8 @@ import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+
 /**
  * Command for unlocking containers.
  * <p>
@@ -65,15 +67,22 @@ public class UnlockCommand extends BaseEssentialsCommand {
             return;
         }
         
-        ChestLockData lock = chestLockService.getLock(target.getLocation());
-        
-        if (lock == null) {
+        // Container-scoped, like every other lock question in the module. Asking about the looked-at
+        // block alone reported "not locked" on the unrecorded half of a partly-recorded double chest
+        // -- the same block the interact check refuses to open, so the command contradicted the
+        // protection a player was standing in front of. Every protecting record is printed rather
+        // than the first: legacy data can hold one half per owner (gate 2 round 3).
+        List<ChestLockData> locks = chestLockService.locksProtecting(target);
+
+        if (locks.isEmpty()) {
             player.sendMessage(i18n("§7该容器未被锁定"));
         } else {
             player.sendMessage(i18n("§6=== 容器锁定信息 ==="));
-            player.sendMessage(i18n("§7主人: §f") + lock.getOwnerName());
-            player.sendMessage(i18n("§7位置: §f") + 
-                lock.getWorld() + " (" + lock.getX() + ", " + lock.getY() + ", " + lock.getZ() + ")");
+            for (ChestLockData lock : locks) {
+                player.sendMessage(i18n("§7主人: §f") + lock.getOwnerName());
+                player.sendMessage(i18n("§7位置: §f") +
+                    lock.getWorld() + " (" + lock.getX() + ", " + lock.getY() + ", " + lock.getZ() + ")");
+            }
         }
     }
     

@@ -348,7 +348,15 @@ refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and
 per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
 `reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
 (see `## Configuration` for what each restart does), warning by name for any it cannot resolve
-rather than skipping it silently.
+rather than skipping it silently. That warning, and the unload's matching failure, cannot be
+produced on a stock install and are not checklist material: all four services are unconditional
+`@Service` beans and this module declares no `@ConditionalOnConfig`, so `getBean` returns null
+only after a source change — a renamed service, one moved out of `scanBasePackages`, or one
+registered under an interface type. They are guards against that, not states an operator can
+configure into, and what holds them instead is `UltiEssentialsServiceUnloadTest` (three tests)
+and `UltiEssentialsServiceReloadTest#unresolvableServiceIsReportedOnReload`, each pinned by its
+own mutation pair. Note also that `/ul reload <name>` replies success unconditionally, so the
+reload warning reaches the console and never the sender (UltiKits/UltiTools-Reborn#529).
 `/upm uninstall UltiEssentials` runs `onUnregister()` first — it calls `shutdown()` on
 `ScheduledCommandService`, `ScoreboardService`, `NamePrefixService` and `TeleportService`, each on
 its own and each even when an earlier one fails, then reports the first failure — and only then the

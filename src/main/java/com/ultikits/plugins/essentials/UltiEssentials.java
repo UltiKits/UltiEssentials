@@ -159,7 +159,9 @@ public class UltiEssentials extends UltiToolsPlugin {
      * noticing -- renaming a service, moving it out of {@code @UltiToolsModule}'s
      * {@code scanBasePackages}, or registering it under an interface type all leave the module
      * loading and its tasks starting from {@code @PostConstruct} while this hook silently stops
-     * covering it.
+     * covering it. On a stock install it cannot fire: all four services are unconditional
+     * {@code @Service} beans and this module declares no {@code @ConditionalOnConfig}, so this is a
+     * guard against a future source change rather than a state an operator can configure into.
      * <p>
      * No container at all is different, and is not a failure: a module that never went through
      * {@code PluginManager#register} has no container, so no service bean was ever built and no
@@ -229,8 +231,25 @@ public class UltiEssentials extends UltiToolsPlugin {
      * found by sweeping this repository for it. It is reported rather than thrown because
      * {@code reloadSelf()} does not isolate {@link #onReload()}
      * (UltiKits/UltiTools-Reborn#509), so throwing here would stop the services after it from
-     * reloading at all; a warning that names the service is what this hook can give without that
-     * cost, and it matches {@link #repairStoredPrimaryKeys()}'s precedent in this same class.
+     * reloading at all -- and, because {@code PluginManager#reload()} loops the modules with no
+     * per-module guard either, it would stop every module <em>after</em> this one from reloading
+     * too. A warning that names the service is what this hook can give without that cost, and it
+     * matches {@link #repairStoredPrimaryKeys()}'s precedent in this same class. Note that
+     * {@code /ul reload <name>} replies success unconditionally, so this warning reaches the console
+     * and not the sender (UltiKits/UltiTools-Reborn#529).
+     * <p>
+     * No {@code getContext() == null} guard here, unlike {@link #shutdownService}, and the asymmetry
+     * is deliberate: {@code pluginList.add} has one call site, inside
+     * {@code PluginManager#onPluginRegistered}, reached only after the container is assembled, so
+     * every instance the framework reloads has one. {@code unregisterSelf()} is different -- it is
+     * also reachable with a directly constructed instance (UltiKits/UltiTools-Reborn#338), which is
+     * why only the unload twin guards.
+     * <p>
+     * On a stock install this warning cannot fire: all four services are unconditional
+     * {@code @Service} beans and this module declares no {@code @ConditionalOnConfig}, so
+     * {@code getBean} returns null only after a source change -- a renamed service, one moved out of
+     * {@code scanBasePackages}, or one registered under an interface type. It is a guard against
+     * that, not a state an operator can configure into.
      *
      * @param type   the service's bean type
      * @param reload the service's own reload

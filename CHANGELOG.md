@@ -60,7 +60,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `/ul reload UltiEssentials` now names, as a warning in the console, any of those services it could
   not reach — previously it reloaded the ones it found and reported success either way, so a feature
   left running on its old configuration looked identical to one that had been reloaded. The other
-  services are still reloaded (UltiKits/UltiEssentials#43).
+  services are still reloaded. On a stock install nothing can make this warning appear, and likewise
+  nothing can make the uninstall above report a service it could not reach: both are guards against a
+  future change to this module's own source, not settings you can reach from a configuration file
+  (UltiKits/UltiEssentials#43).
 - `/delhome <name>`, `/delwarp <name>`, `/unban <player>`, `/unlock`, re-running
   `/sethome <name>` on an existing home, and breaking your own locked container now actually change
   what is stored. Every record this module writes — homes, warps, bans and container locks — was
@@ -141,8 +144,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   某个服务停止失败或根本无法找到，其余服务仍会停止，并且卸载会如实报告该失败，而不是报告卸载干净
   （UltiKits/UltiEssentials#43）。
 - `/ul reload UltiEssentials` 现在会在控制台以警告形式指出重载时找不到的服务——此前它只重载能找到的服务
-  并一律报告成功，因此仍按旧配置运行的功能与已重载的功能在日志上无法区分。其余服务仍会正常重载
-  （UltiKits/UltiEssentials#43）。
+  并一律报告成功，因此仍按旧配置运行的功能与已重载的功能在日志上无法区分。其余服务仍会正常重载。在未修改
+  源码的正式版本上，这条警告不可能出现，上面卸载时“找不到某个服务”的报错同样不可能出现：两者都是针对本模块
+  源码未来改动的防护，而不是可以通过配置文件进入的状态（UltiKits/UltiEssentials#43）。
 - `/delhome <名称>`、`/delwarp <名称>`、`/unban <玩家>`、`/unlock`、对已存在的家再次执行
   `/sethome <名称>`，以及破坏自己上锁的容器，现在都会真正改变已保存的数据。本模块写入的每条记录——家、地标点、
   封禁和容器锁——此前保存时主键为空，之后的删除或更新语句匹配不到任何行，已保存的记录原样保留：被删除的家仍会

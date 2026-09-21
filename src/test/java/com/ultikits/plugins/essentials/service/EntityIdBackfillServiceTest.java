@@ -9,9 +9,12 @@ import com.ultikits.plugins.essentials.entity.WarpData;
 import com.ultikits.plugins.essentials.entity.base.UuidKeyedDataEntity;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService.Outcome;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
+import java.util.Arrays;
 import com.ultikits.plugins.essentials.utils.SilentlyFailingStore;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.abstracts.data.BaseDataEntity;
+import com.ultikits.ultitools.interfaces.Cached;
+import com.ultikits.ultitools.interfaces.DataOperator;
 import com.ultikits.ultitools.interfaces.impl.data.json.SimpleJsonDataOperator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -138,33 +141,49 @@ class EntityIdBackfillServiceTest {
         }
 
         @Test
-        @DisplayName("the un-keyed record is deleted, not merely written over")
-        void theUnKeyedRecordIsDeleted() throws Exception {
-            // Asserted as a call on the store rather than as a state difference, because the two
-            // backends hide it differently and only one of them is reachable from a test here.
-            // The JSON operator hands out the instances in its own cache and its insert is a
-            // putIfAbsent, so onCreate() writes the key onto the cached instance whether or not the
-            // old entry was removed first -- the repair appears to work either way. A relational
-            // operator materialises every row afresh and its insert is a real INSERT, so without the
-            // delete the un-keyed row would survive ALONGSIDE a new keyed one: one home listed
-            // twice, and the older row still undeletable. Measured: removing the delete leaves every
-            // other assertion in this class green (revert-proofs/w1,
-            // UltiEssentials-34-MUTATION-repair-delete), which is why this assertion exists.
+        @DisplayName("a cache-backed store is not asked to delete, because the key is written in place")
+        void aCacheBackedStoreIsNotAskedToDelete() throws Exception {
+            // A cache-backed operator hands out the instances it holds, so insert's onCreate() writes
+            // the key onto the stored record itself. The delete would remove and re-add the same
+            // entry while costing a full-cache Gson pass, which was the second superlinear term
+            // behind gate 1 MAJOR-05 -- measured 11.64 s for 800 records before, 0.20 s after.
             HomeData legacy = home("farm");
             writeLegacyRecord("homes", legacy);
             SilentlyFailingStore<HomeData> store = countingOperatorOver("homes", HomeData.class);
 
             Outcome outcome = backfill.repair(store, "HomeData");
 
+            assertThat(outcome.repaired()).as("the record is still repaired").isEqualTo(1);
+            assertThat(store.getAll().get(0).getPersistedId()).isEqualTo(legacy.getId());
+            assertThat(store.deleteAttempts()).as("no delete was needed").isZero();
+        }
+
+        @Test
+        @DisplayName("a store that is not cache-backed IS asked to delete before the record is written back")
+        void aRowBackedStoreIsAskedToDelete() throws Exception {
+            // The relational backend materialises every row afresh and its insert is a real INSERT,
+            // so without the delete the un-keyed row would survive ALONGSIDE a new keyed one: one
+            // home listed twice, the older row still undeletable. No JDBC driver is on this module's
+            // test classpath (framework issue filed), so the shape is pinned through an operator that
+            // is deliberately NOT Cached -- which is the property the repair actually branches on --
+            // rather than against a real database. Gate 3 is what executes the relational round trip.
+            HomeData legacy = home("farm");
+            writeLegacyRecord("homes", legacy);
+            RowBackedStore<HomeData> store = new RowBackedStore<>(
+                new SilentlyFailingStore<>(tempDir.resolve("homes").toFile().getAbsolutePath(),
+                    HomeData.class));
+
+            Outcome outcome = backfill.repair(store, "HomeData");
+
             assertThat(outcome.repaired()).isEqualTo(1);
-            assertThat(store.deleteAttempts())
+            assertThat(store.deletes())
                 .as("one delete of the un-keyed record, before it is written back")
                 .isEqualTo(1);
         }
 
         @Test
-        @DisplayName("a record that needs no repair is not deleted")
-        void anAlreadyCorrectRecordIsNotDeleted() throws Exception {
+        @DisplayName("a record that needs no repair is neither deleted nor written")
+        void anAlreadyCorrectRecordIsNotTouched() throws Exception {
             SilentlyFailingStore<HomeData> store = countingOperatorOver("homes", HomeData.class);
             store.insert(home("farm"));
 
@@ -373,6 +392,111 @@ class EntityIdBackfillServiceTest {
     }
 
     @Nested
+    @DisplayName("One transaction for the whole type (gate 1 MAJOR-05)")
+    class TransactionShapeTests {
+
+        @Test
+        @DisplayName("repairing many records opens one transaction, not one per record")
+        void oneTransactionForTheWholeType() throws Exception {
+            // The cost this pins is the JSON operator's per-transaction full-cache Gson deep copy:
+            // one per record made the repair superlinear on the main thread inside onEnable
+            // (measured 0.66/0.73/2.32/11.64 s for 100/200/400/800 records). Asserted as the number
+            // of transactions rather than as wall time, because a timing assertion on a shared
+            // machine is a flaky test that proves nothing on the day it passes.
+            for (int i = 0; i < 25; i++) {
+                writeLegacyRecord("homes", home("home" + i));
+            }
+            CountingTransactionStore<HomeData> store = new CountingTransactionStore<>(
+                tempDir.resolve("homes").toFile().getAbsolutePath(), HomeData.class);
+
+            Outcome outcome = backfill.repair(store, "HomeData");
+
+            assertThat(outcome.repaired()).as("records repaired").isEqualTo(25);
+            assertThat(store.transactions()).as("transactions opened for 25 records").isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("a store with nothing to repair opens no transaction at all")
+        void nothingToRepairOpensNoTransaction() throws Exception {
+            CountingTransactionStore<HomeData> store = new CountingTransactionStore<>(
+                tempDir.resolve("homes").toFile().getAbsolutePath(), HomeData.class);
+            store.insert(home("farm"));
+
+            backfill.repair(store, "HomeData");
+
+            assertThat(store.transactions()).isZero();
+        }
+    }
+
+    @Nested
+    @DisplayName("A key another record already holds (gate 1 MAJOR-05 pre-check)")
+    class CollisionTests {
+
+        @Test
+        @DisplayName("a record whose identity is another record's key is left untouched, and the rest are repaired")
+        void aCollidingIdentityIsSkipped() throws Exception {
+            HomeData collides = home("farm");
+            HomeData holder = home("shop");
+            // holder already carries `collides`'s identity as its own primary key, so writing that
+            // key for `collides` would collide on it. Before this pre-check the attempt was made and
+            // rolled back -- which, with one transaction for the whole type, would take every other
+            // record's repair down with it.
+            writeRecordWithKey("homes", holder, collides.getId());
+            writeLegacyRecord("homes", collides);
+            writeLegacyRecord("homes", home("mine"));
+            SimpleJsonDataOperator<HomeData> operator = operatorOver("homes", HomeData.class);
+
+            Outcome outcome = backfill.repair(operator, "HomeData");
+
+            assertThat(outcome.repaired()).as("the record that could be keyed safely").isEqualTo(1);
+            assertThat(outcome.skipped()).as("the colliding record, plus the holder itself").isEqualTo(2);
+            assertThat(operator.getAll()).as("nothing was lost").hasSize(3);
+        }
+    }
+
+    @Nested
+    @DisplayName("Recovery description (gate 1 MAJOR-06)")
+    class RecoveryDescriptionTests {
+
+        @Test
+        @DisplayName("every stored column of every entity appears, named, including inherited ones")
+        void everyStoredColumnIsNamed() throws Exception {
+            for (UuidKeyedDataEntity record : Arrays.asList(home("farm"), warp("shop"), ban(), lock())) {
+                String description = record.describeForRecovery();
+                int columns = 0;
+                for (java.lang.reflect.Field field
+                        : com.ultikits.ultitools.utils.ReflectionUtil.getFields(record.getClass())) {
+                    com.ultikits.ultitools.annotations.Column column =
+                        field.getAnnotation(com.ultikits.ultitools.annotations.Column.class);
+                    if (column == null) {
+                        continue;
+                    }
+                    columns++;
+                    assertThat(description)
+                        .as(record.getClass().getSimpleName() + " recovery line names " + column.value())
+                        .contains(column.value() + "=");
+                }
+                assertThat(columns)
+                    .as(record.getClass().getSimpleName() + " columns examined (positive control)")
+                    .isGreaterThan(4);
+            }
+        }
+
+        @Test
+        @DisplayName("a home's line carries the coordinates and identity its toString omits")
+        void aHomeLineCarriesWhatToStringOmits() throws Exception {
+            HomeData home = home("farm");
+
+            String description = home.describeForRecovery();
+
+            // The exact omissions gate 1 measured: @Data's toString is callSuper = false, so the
+            // inherited world, coordinates and uuid are absent from it.
+            assertThat(home.toString()).doesNotContain("world");
+            assertThat(description).contains("world=", "x=", "y=", "z=", "yaw=", "pitch=", "uuid=");
+        }
+    }
+
+    @Nested
     @DisplayName("Coverage")
     class CoverageTests {
 
@@ -392,6 +516,72 @@ class EntityIdBackfillServiceTest {
             assertThat(covered)
                 .as("a persisted entity absent from REPAIRED_TYPES would never be repaired")
                 .isEqualTo(persisted);
+        }
+    }
+
+    /**
+     * A {@link DataOperator} that is deliberately <strong>not</strong> {@link Cached}, delegating
+     * everything to a real operator and counting the deletes it is asked for.
+     * <p>
+     * The repair branches on {@code instanceof Cached} — "can a stored row exist independently of the
+     * object representing it" — so that is the property this pins, rather than pretending to be
+     * SQLite. Needed because no JDBC driver is on this module's test classpath and the pom must not
+     * change in this phase.
+     */
+    private static final class RowBackedStore<T extends BaseDataEntity<String>> implements DataOperator<T> {
+        private final DataOperator<T> delegate;
+        private int deletes;
+
+        RowBackedStore(DataOperator<T> delegate) {
+            this.delegate = delegate;
+        }
+
+        int deletes() {
+            return deletes;
+        }
+
+        @Override
+        public void del(com.ultikits.ultitools.entities.WhereCondition... whereConditions) {
+            deletes++;
+            delegate.del(whereConditions);
+        }
+
+        @Override public boolean exist(T object) { return delegate.exist(object); }
+        @Override public boolean exist(com.ultikits.ultitools.entities.WhereCondition... c) { return delegate.exist(c); }
+        @Override public T getById(Object id) { return delegate.getById(id); }
+        @Override public List<T> getAll() { return delegate.getAll(); }
+        @Override public List<T> getAll(com.ultikits.ultitools.entities.WhereCondition... c) { return delegate.getAll(c); }
+        @Override public List<T> getLike(String column, String value, LikeType likeType) {
+            return delegate.getLike(column, value, likeType);
+        }
+        @Override public List<T> page(int page, int size,
+                com.ultikits.ultitools.entities.WhereCondition... c) { return delegate.page(page, size, c); }
+        @Override public void insert(T obj) { delegate.insert(obj); }
+        @Override public void delById(Object id) { deletes++; delegate.delById(id); }
+        @Override public void update(String column, Object value, Object id) { delegate.update(column, value, id); }
+        @Override public void update(T obj) throws IllegalAccessException { delegate.update(obj); }
+    }
+
+    /**
+     * A real operator that counts the transactions opened on it. Declared on the outer class because
+     * a {@code @Nested} class is an inner class and cannot hold a static member.
+     */
+    private static final class CountingTransactionStore<T extends BaseDataEntity<String>>
+            extends SimpleJsonDataOperator<T> {
+        private int transactions;
+
+        CountingTransactionStore(String storeLocation, Class<T> type) {
+            super(storeLocation, type);
+        }
+
+        int transactions() {
+            return transactions;
+        }
+
+        @Override
+        public synchronized <R> R transaction(java.util.concurrent.Callable<R> action) throws Exception {
+            transactions++;
+            return super.transaction(action);
         }
     }
 

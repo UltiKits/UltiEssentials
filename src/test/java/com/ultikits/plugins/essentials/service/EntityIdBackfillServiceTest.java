@@ -452,6 +452,7 @@ class EntityIdBackfillServiceTest {
 
             assertThat(outcome.repaired()).as("nothing reached the store").isZero();
             assertThat(outcome.skipped()).as("all four are reported as untouched").isEqualTo(4);
+            assertThat(store.getAll()).as("and none of them was destroyed in the attempt").hasSize(4);
             for (HomeData record : store.getAll()) {
                 assertThat(record.getPersistedId()).as("still un-keyed, and reported as such").isNull();
             }
@@ -605,12 +606,16 @@ class EntityIdBackfillServiceTest {
     }
 
     /**
-     * An operator that returns a fresh copy of every entity it is read for, the way the relational
-     * operator materialises rows -- and the shape a cache-backed operator would take if the framework
-     * ever detached its reads. Its insert cannot write a key onto anything the store keeps, so a
-     * repair through it changes nothing.
+     * A <strong>cache-backed</strong> operator that returns a fresh copy of every entity it is read
+     * for: the shape {@code SimpleJsonDataOperator} would take if the framework ever detached its
+     * reads, which UltiKits/UltiTools-Reborn#522 asks about.
+     * <p>
+     * It must be {@link Cached}, or the repair takes its row-backed branch, deletes each record and
+     * then cannot write it back -- which destroys the records and makes every assertion here pass for
+     * the wrong reason. Measured: that is exactly what happened on the first attempt at this test.
      */
-    private static final class DetachedReadStore<T extends BaseDataEntity<String>> implements DataOperator<T> {
+    private static final class DetachedReadStore<T extends BaseDataEntity<String>>
+            implements DataOperator<T>, Cached {
         private static final Gson COPY = new Gson();
         private final DataOperator<T> delegate;
         private final Class<T> type;
@@ -639,6 +644,8 @@ class EntityIdBackfillServiceTest {
         @Override public List<T> getLike(String column, String value, LikeType likeType) { return detach(delegate.getLike(column, value, likeType)); }
         @Override public List<T> page(int page, int size, com.ultikits.ultitools.entities.WhereCondition... c) { return detach(delegate.page(page, size, c)); }
         @Override public void insert(T obj) { /* a detached entity reaches nothing the store keeps */ }
+        @Override public void flush() { /* nothing of its own to write */ }
+        @Override public void gc() { /* nothing of its own to collect */ }
         @Override public void del(com.ultikits.ultitools.entities.WhereCondition... c) { delegate.del(c); }
         @Override public void delById(Object id) { delegate.delById(id); }
         @Override public void update(String column, Object value, Object id) { delegate.update(column, value, id); }

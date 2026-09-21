@@ -152,21 +152,21 @@ public class WarpService {
      * warp that was not deleted.
      *
      * @param name the warp name
-     * @return true if the warp existed and is now gone, false if there was none or it survived
+     * @return what happened: removed, no such warp, or the record survived
      */
-    public boolean deleteWarp(String name) {
+    public DeleteResult deleteWarp(String name) {
         String normalizedName = name.toLowerCase().trim();
         WarpData warp = getWarp(normalizedName);
         if (warp == null) {
-            return false;
+            return DeleteResult.NOT_FOUND;
         }
         warpOperator.delById(warp.getId());
         if (getWarp(normalizedName) != null) {
             log.error("Warp '{}' is still stored after a delete of record {}; "
                     + "reporting the deletion as failed", normalizedName, warp.getId());
-            return false;
+            return DeleteResult.FAILED;
         }
-        return true;
+        return DeleteResult.REMOVED;
     }
     
     /**
@@ -236,5 +236,21 @@ public class WarpService {
         ALREADY_EXISTS,
         INVALID_NAME,
         DISABLED
+    }
+
+    /**
+     * What a deletion did, so the caller can tell a record that was never there from one the store
+     * would not give up.
+     * <p>
+     * Three values rather than a boolean because the two failures are not the same thing to the
+     * person reading the message: "there is no such record" ends the matter, while "the record is
+     * still there" means the thing they asked for did not happen and they need to look. Collapsing
+     * them told an operator a home did not exist while {@code /homes} still listed it (gate 1
+     * MAJOR-03). Matches {@link ChestLockService.UnlockResult}, which already had this shape.
+     */
+    public enum DeleteResult {
+        REMOVED,
+        NOT_FOUND,
+        FAILED
     }
 }

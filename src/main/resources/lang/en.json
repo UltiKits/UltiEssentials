@@ -105,5 +105,10 @@
   "§e已解除本插件对 ": "§eRemoved this plugin's ban on ",
   " 的封禁，但服务器封禁名单仍封禁该玩家": ", but the server's ban list still bans this player",
 
-  "§c解锁失败，该容器的锁定记录无法移除，请联系管理员": "§cUnlock failed: this container's lock record could not be removed. Please contact an administrator"
+  "§c解锁失败，该容器的锁定记录无法移除，请联系管理员": "§cUnlock failed: this container's lock record could not be removed. Please contact an administrator",
+
+  "§c删除失败，该家的记录无法从存储中移除，请联系管理员": "§cDeletion failed: this home's record could not be removed from storage. Please contact an administrator",
+  "§c删除失败，该地标点的记录无法从存储中移除，请联系管理员": "§cDeletion failed: this warp's record could not be removed from storage. Please contact an administrator",
+  "§c解禁失败，该玩家的封禁记录无法更新，该玩家仍处于封禁状态，请联系管理员": "§cUnban failed: this player's ban record could not be updated and the player is still banned. Please contact an administrator",
+  "§c设置失败，家的新位置无法写入存储，仍将传送到旧位置，请联系管理员": "§cSet failed: the home's new location could not be written to storage and you will still be teleported to the old one. Please contact an administrator"
 }

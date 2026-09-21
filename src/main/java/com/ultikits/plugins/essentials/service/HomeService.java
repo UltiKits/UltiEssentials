@@ -126,12 +126,25 @@ public class HomeService {
         HomeData existingHome = getHome(playerUuid, normalizedName);
         
         if (existingHome != null) {
-            // Update existing home
-            updateHomeLocation(existingHome, player.getLocation());
+            // Update existing home, then confirm the store really holds the new location. The
+            // framework's update(T) returns void and addresses its row by WHERE id = ?, so an update
+            // that matched nothing is indistinguishable from one that moved the home -- which is
+            // UltiKits/UltiEssentials#34's symptom on the trigger this module's CHANGELOG claims
+            // fixed (gate 1 MAJOR-01). The re-query compares coordinates rather than merely finding
+            // the record, because the record was always going to still be there.
+            Location target = player.getLocation();
+            updateHomeLocation(existingHome, target);
             try {
                 homeOperator.update(existingHome);
             } catch (IllegalAccessException e) {
                 log.error("Failed to update home", e);
+            }
+            HomeData stored = getHome(playerUuid, normalizedName);
+            if (stored == null || !isAt(stored, target)) {
+                log.error("Home '{}' of player {} still reads as {} after moving it to {}; "
+                        + "reporting the move as failed", normalizedName, playerUuid,
+                        stored == null ? "absent" : describe(stored), describe(target));
+                return SetHomeResult.FAILED;
             }
             return SetHomeResult.UPDATED;
         }
@@ -176,21 +189,38 @@ public class HomeService {
      *
      * @param playerUuid the player's UUID
      * @param name       the home name
-     * @return true if the home existed and is now gone, false if there was none or it survived
+     * @return what happened: removed, no such home, or the record survived
      */
-    public boolean deleteHome(UUID playerUuid, String name) {
+    public DeleteResult deleteHome(UUID playerUuid, String name) {
         String normalizedName = name.toLowerCase().trim();
         HomeData home = getHome(playerUuid, normalizedName);
         if (home == null) {
-            return false;
+            return DeleteResult.NOT_FOUND;
         }
         homeOperator.delById(home.getId());
         if (getHome(playerUuid, normalizedName) != null) {
             log.error("Home '{}' of player {} is still stored after a delete of record {}; "
                     + "reporting the deletion as failed", normalizedName, playerUuid, home.getId());
-            return false;
+            return DeleteResult.FAILED;
         }
-        return true;
+        return DeleteResult.REMOVED;
+    }
+
+    private static boolean isAt(HomeData home, Location location) {
+        return location.getWorld() != null
+                && location.getWorld().getName().equals(home.getWorld())
+                && Double.compare(home.getX(), location.getX()) == 0
+                && Double.compare(home.getY(), location.getY()) == 0
+                && Double.compare(home.getZ(), location.getZ()) == 0;
+    }
+
+    private static String describe(HomeData home) {
+        return home.getWorld() + " " + home.getX() + "/" + home.getY() + "/" + home.getZ();
+    }
+
+    private static String describe(Location location) {
+        return (location.getWorld() == null ? "?" : location.getWorld().getName())
+                + " " + location.getX() + "/" + location.getY() + "/" + location.getZ();
     }
     
     /**
@@ -259,6 +289,27 @@ public class HomeService {
         UPDATED,
         LIMIT_REACHED,
         INVALID_NAME,
-        DISABLED
+        DISABLED,
+        /**
+         * The home existed and the move did not reach the store, so the player would still be
+         * teleported to the old location (gate 1 MAJOR-01).
+         */
+        FAILED
+    }
+
+    /**
+     * What a deletion did, so the caller can tell a record that was never there from one the store
+     * would not give up.
+     * <p>
+     * Three values rather than a boolean because the two failures are not the same thing to the
+     * person reading the message: "there is no such record" ends the matter, while "the record is
+     * still there" means the thing they asked for did not happen and they need to look. Collapsing
+     * them told an operator a home did not exist while {@code /homes} still listed it (gate 1
+     * MAJOR-03). Matches {@link ChestLockService.UnlockResult}, which already had this shape.
+     */
+    public enum DeleteResult {
+        REMOVED,
+        NOT_FOUND,
+        FAILED
     }
 }

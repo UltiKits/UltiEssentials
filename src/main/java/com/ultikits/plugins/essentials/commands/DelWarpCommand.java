@@ -31,12 +31,18 @@ public class DelWarpCommand extends BaseEssentialsCommand {
     
     @CmdMapping(format = "<name>")
     public void delWarp(@CmdSender Player player, @CmdParam("name") String name) {
-        boolean deleted = warpService.deleteWarp(name);
-        
-        if (deleted) {
-            player.sendMessage(i18n("已删除地标点: ") + name);
-        } else {
-            player.sendMessage(i18n("地标点不存在: ") + name);
+        switch (warpService.deleteWarp(name)) {
+            case REMOVED:
+                player.sendMessage(i18n("已删除地标点: ") + name);
+                break;
+            case NOT_FOUND:
+                player.sendMessage(i18n("地标点不存在: ") + name);
+                break;
+            case FAILED:
+                // Distinct from NOT_FOUND: the warp is still there and still usable by everyone
+                // (gate 1 MAJOR-03).
+                player.sendMessage(i18n("§c删除失败，该地标点的记录无法从存储中移除，请联系管理员") + " (" + name + ")");
+                break;
         }
     }
     

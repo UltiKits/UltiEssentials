@@ -119,9 +119,9 @@ public class BanService {
      * Unbans a player, reporting success only once no active ban record remains for them.
      *
      * @param targetUuid the UUID of the player to unban
-     * @return true if an active ban existed and none remains, false if there was none or one survived
+     * @return what happened: the ban was lifted, there was none, or one survived
      */
-    public boolean unbanPlayer(UUID targetUuid) {
+    public UnbanResult unbanPlayer(UUID targetUuid) {
         return deactivateActiveBans("player_uuid", targetUuid.toString(), "player " + targetUuid);
     }
     
@@ -137,9 +137,9 @@ public class BanService {
      * (UltiKits/UltiEssentials#35).
      *
      * @param playerName the name of the player
-     * @return true if an active ban existed and none remains, false if there was none or one survived
+     * @return what happened: the ban was lifted, there was none, or one survived
      */
-    public boolean unbanPlayerByName(String playerName) {
+    public UnbanResult unbanPlayerByName(String playerName) {
         return deactivateActiveBans("player_name", playerName, "player name '" + playerName + "'");
     }
     
@@ -179,7 +179,7 @@ public class BanService {
      * @param ipAddress the IP address to unban
      * @return true if unbanned, false if not banned
      */
-    public boolean unbanIp(String ipAddress) {
+    public UnbanResult unbanIp(String ipAddress) {
         return deactivateActiveBans("ip_address", ipAddress, "IP address " + ipAddress);
     }
 
@@ -195,12 +195,12 @@ public class BanService {
      * @param column  the {@code @Column} name to match on
      * @param value   the value to match
      * @param subject how to name the unban's subject in a diagnostic
-     * @return true if at least one active ban existed and none remains active
+     * @return what happened: the ban was lifted, there was none, or one survived
      */
-    private boolean deactivateActiveBans(String column, String value, String subject) {
+    private UnbanResult deactivateActiveBans(String column, String value, String subject) {
         List<BanData> activeBans = activeBansMatching(column, value);
         if (activeBans.isEmpty()) {
-            return false;
+            return UnbanResult.NOT_BANNED;
         }
 
         for (BanData ban : activeBans) {
@@ -216,9 +216,9 @@ public class BanService {
         if (!stillActive.isEmpty()) {
             log.error("{} still has {} active ban record(s) after an unban of {} record(s); "
                     + "reporting the unban as failed", subject, stillActive.size(), activeBans.size());
-            return false;
+            return UnbanResult.FAILED;
         }
-        return true;
+        return UnbanResult.REMOVED;
     }
 
     private List<BanData> activeBansMatching(String column, String value) {
@@ -379,5 +379,19 @@ public class BanService {
         SUCCESS,
         ALREADY_BANNED,
         DISABLED
+    }
+
+    /**
+     * What an unban did, so the caller can tell a name that was never banned from one whose ban
+     * record is still in force.
+     * <p>
+     * Three values rather than a boolean because reporting "not banned" for a ban that survived
+     * tells the operator to stop looking while {@code /banlist} still lists the player and the
+     * player is still rejected at login -- the same harm the false success had (gate 1 MAJOR-03).
+     */
+    public enum UnbanResult {
+        REMOVED,
+        NOT_BANNED,
+        FAILED
     }
 }

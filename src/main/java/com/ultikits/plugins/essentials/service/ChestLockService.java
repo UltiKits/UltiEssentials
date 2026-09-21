@@ -221,8 +221,13 @@ public class ChestLockService {
             return UnlockResult.FAILED;
         }
         
-        // If it's a double chest, unlock the other half too
-        unlockDoubleChestOther(block);
+        // A double chest is two lock records, and the container is only unlocked when both are gone.
+        // Discarding this result reported success while the other half's record survived and
+        // re-locked the container on the next restart -- UltiKits/UltiEssentials#37's own symptom,
+        // inside the method that fixed it (gate 1 MAJOR-02).
+        if (!unlockDoubleChestOther(block)) {
+            return UnlockResult.FAILED;
+        }
         
         return UnlockResult.SUCCESS;
     }
@@ -260,22 +265,27 @@ public class ChestLockService {
     }
     
     /**
-     * Unlocks the other half of a double chest.
+     * Unlocks the other half of a double chest, reporting whether nothing is left for the caller to
+     * worry about.
+     *
+     * @param block the half that was just unlocked
+     * @return true when this block is not a double chest, when the other half holds no lock, or when
+     *         the other half's record is confirmed gone; false only when a record survived
      */
-    private void unlockDoubleChestOther(Block block) {
+    private boolean unlockDoubleChestOther(Block block) {
         if (block.getType() != Material.CHEST && block.getType() != Material.TRAPPED_CHEST) {
-            return;
+            return true;
         }
         
         if (!(block.getState() instanceof Chest)) {
-            return;
+            return true;
         }
         
         Chest chest = (Chest) block.getState();
         InventoryHolder holder = chest.getInventory().getHolder();
         
         if (!(holder instanceof DoubleChest)) {
-            return;
+            return true;
         }
         
         DoubleChest doubleChest = (DoubleChest) holder;
@@ -285,9 +295,7 @@ public class ChestLockService {
         Location other = block.getLocation().equals(left) ? right : left;
         
         ChestLockData otherLock = getLock(other);
-        if (otherLock != null) {
-            removeStoredLock(otherLock);
-        }
+        return otherLock == null || removeStoredLock(otherLock);
     }
     
     /**

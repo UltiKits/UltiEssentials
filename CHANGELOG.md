@@ -72,6 +72,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   backup yet. One log line then names the key, no records are written, and deleting or updating those
   records keeps failing until you turn it back on. There is no dry-run setting
   (UltiKits/UltiEssentials#34).
+- A deletion, unban or unlock that could not change what is stored now says so, instead of saying the
+  record does not exist. `/delhome`, `/delwarp` and `/unban` previously reported a surviving record
+  the same way they report one that was never there, which told an operator to stop looking while
+  `/homes` or `/banlist` still listed it. Each now has its own message for that case, as `/unlock`
+  already did. Re-running `/sethome <name>` on an existing home checks the stored coordinates
+  afterwards and reports a failure rather than confirming a move that would still teleport you to the
+  old location. Unlocking a double chest reports success only when BOTH halves' records are gone; a
+  surviving half is reported as a failure and stays locked (UltiKits/UltiEssentials#34,
+  UltiKits/UltiEssentials#35, UltiKits/UltiEssentials#37).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -113,6 +122,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `config/essentials.yml` 新增配置项 `features.data-repair.enabled`，默认 `true`：控制上述启动修复是否执行。
   设为 `false` 会让修复前写入的记录保持原样——在数据迁移进行中或尚未备份时很有用。此时日志会输出一行指明该配置项，
   不写入任何记录，这些记录的删除与更新在重新开启前仍会失败。本项没有“试运行”模式（UltiKits/UltiEssentials#34）。
+- 删除、解禁或解锁未能改变已保存的数据时，现在会明确说明，而不再报告该记录不存在。`/delhome`、`/delwarp`、
+  `/unban` 此前会把"记录仍然存在"与"记录从未存在"报告为同一种结果，导致管理员在 `/homes` 或 `/banlist`
+  仍列出该记录时就不再排查。现在三者各有专门的提示，与 `/unlock` 原有的做法一致。对已存在的家再次执行
+  `/sethome <名称>` 会在之后核对已保存的坐标，若新位置未写入存储则报告失败，而不再确认一次仍会把玩家传送到
+  旧位置的"移动"。解锁大箱子时，只有两半的记录都被移除才报告成功；任一半的记录仍然存在即报告失败并保持上锁
+  （UltiKits/UltiEssentials#34、UltiKits/UltiEssentials#35、UltiKits/UltiEssentials#37）。
 
 ### Removed
 

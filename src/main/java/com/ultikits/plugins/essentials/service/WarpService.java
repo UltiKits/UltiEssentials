@@ -141,17 +141,31 @@ public class WarpService {
     }
     
     /**
-     * Deletes a warp.
+     * Deletes a warp, reporting success only once the record is confirmed gone from the store.
+     * <p>
+     * The confirmation is a re-query, not the delete call returning: the framework's
+     * {@code delById} returns {@code void} and discards the affected-row count, so a delete that
+     * matched no row is indistinguishable from one that removed the record at the call site. That
+     * is what let {@code /delwarp shop} report success while {@code /warps} kept listing
+     * {@code shop} (UltiKits/UltiEssentials#34). The re-query is by name rather than by id, because
+     * that is what the player observes: a duplicate record under the same name surviving is still a
+     * warp that was not deleted.
      *
      * @param name the warp name
-     * @return true if deleted, false if not found
+     * @return true if the warp existed and is now gone, false if there was none or it survived
      */
     public boolean deleteWarp(String name) {
-        WarpData warp = getWarp(name.toLowerCase().trim());
+        String normalizedName = name.toLowerCase().trim();
+        WarpData warp = getWarp(normalizedName);
         if (warp == null) {
             return false;
         }
         warpOperator.delById(warp.getId());
+        if (getWarp(normalizedName) != null) {
+            log.error("Warp '{}' is still stored after a delete of record {}; "
+                    + "reporting the deletion as failed", normalizedName, warp.getId());
+            return false;
+        }
         return true;
     }
     

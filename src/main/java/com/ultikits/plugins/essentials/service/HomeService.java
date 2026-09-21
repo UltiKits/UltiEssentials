@@ -164,18 +164,32 @@ public class HomeService {
     }
     
     /**
-     * Deletes a home.
+     * Deletes a home, reporting success only once the record is confirmed gone from the store.
+     * <p>
+     * The confirmation is a re-query, not the delete call returning: the framework's
+     * {@code delById} returns {@code void} and discards the affected-row count, so a delete that
+     * matched no row is indistinguishable from one that removed the record at the call site. That
+     * is what let {@code /delhome farm} report success while {@code /homes} kept listing
+     * {@code farm} (UltiKits/UltiEssentials#34). The re-query is by player and name rather than by
+     * id, because that is what the player observes: a duplicate record under the same name
+     * surviving is still a home that was not deleted.
      *
      * @param playerUuid the player's UUID
      * @param name       the home name
-     * @return true if deleted, false if not found
+     * @return true if the home existed and is now gone, false if there was none or it survived
      */
     public boolean deleteHome(UUID playerUuid, String name) {
-        HomeData home = getHome(playerUuid, name.toLowerCase().trim());
+        String normalizedName = name.toLowerCase().trim();
+        HomeData home = getHome(playerUuid, normalizedName);
         if (home == null) {
             return false;
         }
         homeOperator.delById(home.getId());
+        if (getHome(playerUuid, normalizedName) != null) {
+            log.error("Home '{}' of player {} is still stored after a delete of record {}; "
+                    + "reporting the deletion as failed", normalizedName, playerUuid, home.getId());
+            return false;
+        }
         return true;
     }
     

@@ -1,6 +1,7 @@
 package com.ultikits.plugins.essentials.service;
 
 import com.google.gson.Gson;
+import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
 import com.ultikits.plugins.essentials.entity.ChestLockData;
 import com.ultikits.plugins.essentials.entity.HomeData;
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockbukkit.mockbukkit.MockBukkit;
 
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -37,6 +40,8 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 
 /**
  * The start-up repair for records written before UltiKits/UltiEssentials#34 was fixed.
@@ -291,6 +296,79 @@ class EntityIdBackfillServiceTest {
 
             assertThat(outcome.repaired()).isEqualTo(2);
             assertThat(outcome.skipped()).isEqualTo(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("run(), and the key that can hold it off")
+    class ConfigurationGateTests {
+
+        @Test
+        @DisplayName("with the key enabled, run() repairs every covered entity type")
+        void enabledRepairsEverything() throws Exception {
+            HomeData legacyHome = home("farm");
+            WarpData legacyWarp = warp("shop");
+            writeLegacyRecord("homes", legacyHome);
+            writeLegacyRecord("warps", legacyWarp);
+            wire(true);
+
+            EntityIdBackfillService.Report report = backfill.run();
+
+            assertThat(report.totalRepaired()).isEqualTo(2);
+            assertThat(operatorOver("homes", HomeData.class).getAll().get(0).getPersistedId())
+                .isEqualTo(legacyHome.getId());
+            assertThat(operatorOver("warps", WarpData.class).getAll().get(0).getPersistedId())
+                .isEqualTo(legacyWarp.getId());
+        }
+
+        @Test
+        @DisplayName("with the key disabled, run() writes nothing and the records keep no key")
+        void disabledRepairsNothing() throws Exception {
+            writeLegacyRecord("homes", home("farm"));
+            writeLegacyRecord("warps", warp("shop"));
+            List<String> homesBefore = storeContents("homes");
+            List<String> warpsBefore = storeContents("warps");
+            wire(false);
+
+            EntityIdBackfillService.Report report = backfill.run();
+
+            assertThat(report.totalRepaired()).isZero();
+            assertThat(report.totalSkipped()).isZero();
+            assertThat(storeContents("homes")).as("stored bytes").isEqualTo(homesBefore);
+            assertThat(storeContents("warps")).as("stored bytes").isEqualTo(warpsBefore);
+            assertThat(operatorOver("homes", HomeData.class).getAll().get(0).getPersistedId())
+                .as("still un-keyed, which is what the operator asked for")
+                .isNull();
+        }
+
+        /**
+         * A plugin handing out one real store per covered entity type, plus a config whose repair
+         * key answers {@code enabled}. Stores are created once and reused, so a second lookup
+         * during the same run sees what the first one wrote.
+         */
+        private void wire(boolean enabled) throws Exception {
+            EssentialsConfig config = mock(EssentialsConfig.class);
+            lenient().when(config.isDataRepairEnabled()).thenReturn(enabled);
+
+            UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
+            lenient().when(plugin.getDataOperator(HomeData.class))
+                .thenReturn(operatorOver("homes", HomeData.class));
+            lenient().when(plugin.getDataOperator(WarpData.class))
+                .thenReturn(operatorOver("warps", WarpData.class));
+            lenient().when(plugin.getDataOperator(BanData.class))
+                .thenReturn(operatorOver("bans", BanData.class));
+            lenient().when(plugin.getDataOperator(ChestLockData.class))
+                .thenReturn(operatorOver("locks", ChestLockData.class));
+
+            setBackfillField("plugin", plugin);
+            setBackfillField("config", config);
+        }
+
+        @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+        private void setBackfillField(String name, Object value) throws Exception {
+            java.lang.reflect.Field field = EntityIdBackfillService.class.getDeclaredField(name);
+            field.setAccessible(true);
+            field.set(backfill, value);
         }
     }
 

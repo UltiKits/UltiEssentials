@@ -105,10 +105,23 @@ public class UltiEssentials extends UltiToolsPlugin {
      * writing scoreboards and teams, and a teleport warmup already counting down still teleported
      * the player.
      * <p>
-     * The hook is the extension point rather than {@code @PreDestroy} for two reasons: it runs while
-     * this module's beans, commands and listeners are all still alive, and its failure is reported
-     * to whoever asked for the unload, whereas a {@code @PreDestroy} failure is logged by the
-     * container and swallowed.
+     * The hook is the extension point rather than {@code @PreDestroy} for three reasons: it runs
+     * while this module's beans, commands and listeners are all still alive; its failure is reported
+     * to whoever asked for the <em>uninstall</em>, whereas a {@code @PreDestroy} failure is logged by
+     * the container and swallowed; and {@code PluginManager#unregisterSupersededVersions} calls
+     * {@code unregisterSelf()} without closing the container, so {@code @PreDestroy} would not run
+     * there at all.
+     * <p>
+     * That third path is also the one the second reason does <em>not</em> hold on, and the limit is
+     * named here rather than left to be discovered. On the version-supersede path a failure thrown
+     * from here is caught by {@code PluginManager#attemptPluginRegistration} and reported as the
+     * <em>incoming</em> version failing to load, while this older version stays listed as loaded with
+     * its commands, listeners and tasks already gone -- see
+     * UltiKits/UltiTools-Reborn#528, and UltiKits/UltiTools-Reborn#506 for that path's other losses.
+     * The rethrow is kept anyway: swallowing would let {@code /upm uninstall} report a clean removal
+     * while a service's tasks are still running, which is the defect this hook exists to remove, and
+     * every service is shut down before the throw either way. That path is not operator-reachable
+     * today (#506 records the measurement).
      * <p>
      * Each service is shut down on its own, and every one is shut down even when an earlier one
      * fails -- a service left running is exactly the defect this hook exists to remove. The first
@@ -137,39 +150,73 @@ public class UltiEssentials extends UltiToolsPlugin {
      * letting it replace, or be replaced by, another service's failure.
      * <p>
      * {@code shutdown} declares no checked exception, so catching {@code RuntimeException | Error}
-     * covers every real case without the width of catching {@link Throwable}. Attaching a failure to
-     * itself is skipped: {@link Throwable#addSuppressed} rejects that, and the
-     * {@link IllegalArgumentException} it would raise would escape this hook and abandon the
-     * remaining services -- which two services throwing one shared static exception instance would
-     * otherwise produce.
+     * covers every real case without the width of catching {@link Throwable}.
+     * <p>
+     * A service the container cannot resolve is a <em>collected failure</em>, not a skip. It is the
+     * same shape as the defect this hook exists to remove: a service that is missing here is one
+     * whose repeating tasks this unload did not stop, so returning quietly would let the unload
+     * report a clean removal while those tasks go on running. It is reachable without anyone
+     * noticing -- renaming a service, moving it out of {@code @UltiToolsModule}'s
+     * {@code scanBasePackages}, or registering it under an interface type all leave the module
+     * loading and its tasks starting from {@code @PostConstruct} while this hook silently stops
+     * covering it.
+     * <p>
+     * No container at all is different, and is not a failure: a module that never went through
+     * {@code PluginManager#register} has no container, so no service bean was ever built and no
+     * task was ever started. That case is reachable with a directly constructed instance
+     * (UltiKits/UltiTools-Reborn#338), which is why {@code PluginManager#unregister} guards the
+     * same way before closing the context.
      * <p>
      * Nothing is logged here. The collected failure is rethrown by {@link #onUnregister()}, and
-     * whoever asked for the unload already reports it -- {@code /upm uninstall} logs it at SEVERE
-     * naming this module and carries on, with any suppressed failure printed alongside it. A log
-     * call here would not only repeat that; it would give this barrier a way to fail, and a failure
-     * raised while reporting another one replaces it and abandons the services not yet shut down.
+     * whoever asked for the uninstall already reports it -- {@code /upm uninstall} logs it at SEVERE
+     * naming this module and carries on, with any suppressed failure printed alongside it, and the
+     * method reference that failed puts the service's own class in the frame that reaches that log.
+     * A log call here would not only repeat that; it would give this barrier a way to fail, and a
+     * failure raised while reporting another one replaces it and abandons the services not yet shut
+     * down.
      *
      * @param previousFailure the failure collected from an earlier service, or {@code null}
-     * @param type            the service's bean type, absent from the container in a module whose
-     *                        component scan did not reach it
+     * @param type            the service's bean type
      * @param shutdown        the service's own shutdown
      * @return the failure to carry on with
      */
     @SuppressWarnings("PMD.AvoidCatchingGenericException") // deliberate cleanup barrier -- see javadoc above
     private <T> Throwable shutdownService(Throwable previousFailure, Class<T> type, Consumer<T> shutdown) {
-        T service = getContext() == null ? null : getContext().getBean(type);
-        if (service == null) {
+        if (getContext() == null) {
             return previousFailure;
+        }
+        T service = getContext().getBean(type);
+        if (service == null) {
+            return collect(previousFailure, new IllegalStateException("The unload could not reach "
+                    + type.getSimpleName() + "; any repeating task it started is still running"));
         }
         try {
             shutdown.accept(service);
         } catch (RuntimeException | Error e) {
-            if (previousFailure == null) {
-                return e;
-            }
-            if (previousFailure != e) {
-                previousFailure.addSuppressed(e);
-            }
+            return collect(previousFailure, e);
+        }
+        return previousFailure;
+    }
+
+    /**
+     * Attaches {@code next} to the failure collected so far, or makes it the collected failure when
+     * there is none yet.
+     * <p>
+     * Attaching a failure to itself is skipped: {@link Throwable#addSuppressed} rejects that, and
+     * the {@link IllegalArgumentException} it would raise would escape this hook and abandon the
+     * services not yet shut down -- which two services throwing one shared static exception instance
+     * would otherwise produce.
+     *
+     * @param previousFailure the failure collected so far, or {@code null}
+     * @param next            the failure to attach
+     * @return the failure to carry on with
+     */
+    private static Throwable collect(Throwable previousFailure, Throwable next) {
+        if (previousFailure == null) {
+            return next;
+        }
+        if (previousFailure != next) {
+            previousFailure.addSuppressed(next);
         }
         return previousFailure;
     }

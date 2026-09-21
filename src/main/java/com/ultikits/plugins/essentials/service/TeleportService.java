@@ -178,10 +178,14 @@ public class TeleportService {
      * Called when this module is unloaded (UltiKits/UltiEssentials#43). A warmup countdown is a
      * repeating task owned by the {@code UltiTools} Bukkit plugin, so unloading this module does not
      * stop it: it would go on counting down and finally teleport the player on behalf of a module
-     * that is no longer installed. The player is left where they are and not told, because the
-     * command that would tell them has been unregistered by the same unload.
+     * that is no longer installed. The player is left where they are and not told: telling them
+     * would need a new language key -- nothing stops this method from calling
+     * {@code player.sendMessage(i18n(...))}, since this hook runs before command unregistration and
+     * the catalogue is still loaded -- and this module's key set is being reworked under
+     * UltiKits/UltiEssentials#26, so the key would be renamed before it was ever read.
      * <p>
-     * 模块卸载时取消所有预热传送任务，玩家留在原地。
+     * 模块卸载时取消所有预热传送任务，玩家留在原地；不发送提示是因为这需要新增语言键，而本模块的语言键
+     * 正在 UltiKits/UltiEssentials#26 中统一重命名。
      */
     public void shutdown() {
         for (BukkitTask task : pendingTeleports.values()) {

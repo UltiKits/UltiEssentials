@@ -207,8 +207,11 @@ public class EntityIdBackfillService {
         }
 
         int repaired = candidates.isEmpty() ? 0 : rewriteAll(operator, candidates, label);
-        if (repaired > 0) {
-            makeDurable(operator, label);
+        if (repaired > 0 && !makeDurable(operator, label)) {
+            // The keys reached the cache but not the disk, so after a restart those records are
+            // un-keyed again. Reporting them as repaired would make the INFO line claim a durable
+            // write that did not happen; they count as untouched and the next start-up retries.
+            repaired = 0;
         }
         return new Outcome(repaired, skipped + (candidates.size() - repaired));
     }
@@ -223,16 +226,27 @@ public class EntityIdBackfillService {
      * tick would come back up unrepaired. Re-running the repair then is harmless — it is
      * idempotent — but a log line saying a record was repaired should mean it was. A relational
      * operator is not {@code Cached} and writes as it goes, so this is a no-op there.
+     * <p>
+     * A failed write is reported rather than swallowed, and the caller drops the repaired count to
+     * zero on it: the keys would be in the cache but not on disk, so the records come back un-keyed
+     * after a restart, and an INFO line claiming they were repaired would be claiming a durable write
+     * that did not happen (gate 2 round 2).
+     *
+     * @param operator the operator to repair through
+     * @param label    the entity type name, for diagnostics
+     * @return true if the records are durable; false if writing them to disk failed
      */
-    private void makeDurable(DataOperator<?> operator, String label) {
+    private boolean makeDurable(DataOperator<?> operator, String label) {
         if (!(operator instanceof Cached)) {
-            return;
+            return true;
         }
         try {
             ((Cached) operator).flush();
+            return true;
         } catch (RuntimeException e) {
-            log.error("Repaired {} records could not be written to disk; the repair will run again "
-                    + "on the next start-up", label, e);
+            log.error("Repaired {} records could not be written to disk, so they are reported as "
+                    + "untouched; the repair will run again on the next start-up", label, e);
+            return false;
         }
     }
 

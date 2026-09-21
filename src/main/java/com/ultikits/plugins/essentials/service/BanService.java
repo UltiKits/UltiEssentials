@@ -116,63 +116,31 @@ public class BanService {
     }
     
     /**
-     * Unbans a player.
+     * Unbans a player, reporting success only once no active ban record remains for them.
      *
      * @param targetUuid the UUID of the player to unban
-     * @return true if unbanned, false if not banned
+     * @return true if an active ban existed and none remains, false if there was none or one survived
      */
     public boolean unbanPlayer(UUID targetUuid) {
-        List<BanData> activeBans = banOperator.query()
-            .where("player_uuid").eq(targetUuid.toString())
-            .list()
-            .stream()
-            .filter(b -> b.isActive() && !b.hasExpired())
-            .collect(Collectors.toList());
-
-        if (activeBans.isEmpty()) {
-            return false;
-        }
-
-        for (BanData ban : activeBans) {
-            ban.setActive(false);
-            try {
-                banOperator.update(ban);
-            } catch (IllegalAccessException e) {
-                log.error("Failed to update ban record", e);
-            }
-        }
-
-        return true;
+        return deactivateActiveBans("player_uuid", targetUuid.toString(), "player " + targetUuid);
     }
     
     /**
-     * Unbans a player by name.
+     * Unbans a player by name, reporting success only once no active ban record remains for that
+     * name.
+     * <p>
+     * The confirmation is a re-query, not the update call returning: {@code update(T)} returns
+     * {@code void} and the framework discards the affected-row count, so an update that matched no
+     * row is indistinguishable from one that cleared the flag. That is what let {@code /unban}
+     * report an unban -- and broadcast it to everyone online -- while the record's {@code active}
+     * column stayed set and the target was still rejected at login by this module's own ban message
+     * (UltiKits/UltiEssentials#35).
      *
      * @param playerName the name of the player
-     * @return true if unbanned, false if not banned
+     * @return true if an active ban existed and none remains, false if there was none or one survived
      */
     public boolean unbanPlayerByName(String playerName) {
-        List<BanData> activeBans = banOperator.query()
-            .where("player_name").eq(playerName)
-            .list()
-            .stream()
-            .filter(b -> b.isActive() && !b.hasExpired())
-            .collect(Collectors.toList());
-
-        if (activeBans.isEmpty()) {
-            return false;
-        }
-
-        for (BanData ban : activeBans) {
-            ban.setActive(false);
-            try {
-                banOperator.update(ban);
-            } catch (IllegalAccessException e) {
-                log.error("Failed to update ban record", e);
-            }
-        }
-
-        return true;
+        return deactivateActiveBans("player_name", playerName, "player name '" + playerName + "'");
     }
     
     /**
@@ -212,18 +180,30 @@ public class BanService {
      * @return true if unbanned, false if not banned
      */
     public boolean unbanIp(String ipAddress) {
-        List<BanData> ipBans = banOperator.query()
-            .where("ip_address").eq(ipAddress)
-            .list()
-            .stream()
-            .filter(b -> b.isActive() && !b.hasExpired())
-            .collect(Collectors.toList());
+        return deactivateActiveBans("ip_address", ipAddress, "IP address " + ipAddress);
+    }
 
-        if (ipBans.isEmpty()) {
+    /**
+     * Deactivates every active ban record matching one column value, then confirms by re-query that
+     * none is left active before reporting success.
+     * <p>
+     * The three unban paths held three copies of this body, so a fix applied to one of them would
+     * have left the other two reporting success on an unchanged store. A failed update on a single
+     * record is logged and the remaining records are still attempted: the re-query, not the
+     * individual call, decides the outcome.
+     *
+     * @param column  the {@code @Column} name to match on
+     * @param value   the value to match
+     * @param subject how to name the unban's subject in a diagnostic
+     * @return true if at least one active ban existed and none remains active
+     */
+    private boolean deactivateActiveBans(String column, String value, String subject) {
+        List<BanData> activeBans = activeBansMatching(column, value);
+        if (activeBans.isEmpty()) {
             return false;
         }
 
-        for (BanData ban : ipBans) {
+        for (BanData ban : activeBans) {
             ban.setActive(false);
             try {
                 banOperator.update(ban);
@@ -232,7 +212,22 @@ public class BanService {
             }
         }
 
+        List<BanData> stillActive = activeBansMatching(column, value);
+        if (!stillActive.isEmpty()) {
+            log.error("{} still has {} active ban record(s) after an unban of {} record(s); "
+                    + "reporting the unban as failed", subject, stillActive.size(), activeBans.size());
+            return false;
+        }
         return true;
+    }
+
+    private List<BanData> activeBansMatching(String column, String value) {
+        return banOperator.query()
+            .where(column).eq(value)
+            .list()
+            .stream()
+            .filter(b -> b.isActive() && !b.hasExpired())
+            .collect(Collectors.toList());
     }
     
     /**

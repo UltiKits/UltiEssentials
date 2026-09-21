@@ -4,6 +4,7 @@ import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
+import com.ultikits.plugins.essentials.service.TeleportService;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.UltiToolsModule;
 
@@ -24,8 +25,10 @@ import java.util.function.Consumer;
  * files (for example {@code config/essentials.yml}) into the running configuration beans, then
  * {@link #onReload()} restarts the scheduled-command, scoreboard and name-prefix services against
  * the re-read values, so their enable flags, intervals and command list apply without a restart
- * (UltiKits/UltiEssentials#28). This module adds no {@code onUnregister()} work: unload does not yet
- * cancel those services' tasks (UltiKits/UltiEssentials#43).
+ * (UltiKits/UltiEssentials#28). Unloading it, for example with
+ * {@code /upm uninstall UltiEssentials}, runs {@link #onUnregister()} first, which stops every
+ * repeating task this module started (UltiKits/UltiEssentials#43), and then the framework's command
+ * and listener unregistration.
  * </p>
  *
  * @author wisdommen
@@ -88,6 +91,87 @@ public class UltiEssentials extends UltiToolsPlugin {
         reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
         reloadService(ScoreboardService.class, ScoreboardService::reload);
         reloadService(NamePrefixService.class, NamePrefixService::reload);
+    }
+
+    /**
+     * Stops every repeating Bukkit task this module started, so unloading it really stops them
+     * (UltiKits/UltiEssentials#43).
+     * <p>
+     * These tasks are owned by the {@code UltiTools} Bukkit plugin rather than by this module, so
+     * Bukkit does not cancel them when this module is unloaded, and the framework's own unload path
+     * can only cancel the tasks it created itself from {@code @Scheduled} methods. Without this
+     * hook, {@code /upm uninstall UltiEssentials} reported the module uninstalled while its
+     * configured console commands kept being dispatched, its sidebar and name-prefix timers kept
+     * writing scoreboards and teams, and a teleport warmup already counting down still teleported
+     * the player.
+     * <p>
+     * The hook is the extension point rather than {@code @PreDestroy} for two reasons: it runs while
+     * this module's beans, commands and listeners are all still alive, and its failure is reported
+     * to whoever asked for the unload, whereas a {@code @PreDestroy} failure is logged by the
+     * container and swallowed.
+     * <p>
+     * Each service is shut down on its own, and every one is shut down even when an earlier one
+     * fails -- a service left running is exactly the defect this hook exists to remove. The first
+     * failure is then rethrown with any later one attached to it, so the unload is reported as
+     * incomplete instead of reporting a success it did not perform. This mirrors what the
+     * framework's own {@code unregisterSelf()} does with its three steps.
+     * <p>
+     * 卸载模块时停止本模块启动的全部重复任务；任一服务失败不影响其他服务，但失败会上报给调用方。
+     */
+    @Override
+    protected void onUnregister() {
+        Throwable failure = null;
+        failure = shutdownService(failure, ScheduledCommandService.class, ScheduledCommandService::shutdown);
+        failure = shutdownService(failure, ScoreboardService.class, ScoreboardService::shutdown);
+        failure = shutdownService(failure, NamePrefixService.class, NamePrefixService::shutdown);
+        failure = shutdownService(failure, TeleportService.class, TeleportService::shutdown);
+        if (failure instanceof RuntimeException) {
+            throw (RuntimeException) failure;
+        } else if (failure instanceof Error) {
+            throw (Error) failure;
+        }
+    }
+
+    /**
+     * Shuts one service down, collecting its failure onto {@code previousFailure} rather than
+     * letting it replace, or be replaced by, another service's failure.
+     * <p>
+     * {@code shutdown} declares no checked exception, so catching {@code RuntimeException | Error}
+     * covers every real case without the width of catching {@link Throwable}. Attaching a failure to
+     * itself is skipped: {@link Throwable#addSuppressed} rejects that, and the
+     * {@link IllegalArgumentException} it would raise would escape this hook and abandon the
+     * remaining services -- which two services throwing one shared static exception instance would
+     * otherwise produce.
+     * <p>
+     * Nothing is logged here. The collected failure is rethrown by {@link #onUnregister()}, and
+     * whoever asked for the unload already reports it -- {@code /upm uninstall} logs it at SEVERE
+     * naming this module and carries on, with any suppressed failure printed alongside it. A log
+     * call here would not only repeat that; it would give this barrier a way to fail, and a failure
+     * raised while reporting another one replaces it and abandons the services not yet shut down.
+     *
+     * @param previousFailure the failure collected from an earlier service, or {@code null}
+     * @param type            the service's bean type, absent from the container in a module whose
+     *                        component scan did not reach it
+     * @param shutdown        the service's own shutdown
+     * @return the failure to carry on with
+     */
+    @SuppressWarnings("PMD.AvoidCatchingGenericException") // deliberate cleanup barrier -- see javadoc above
+    private <T> Throwable shutdownService(Throwable previousFailure, Class<T> type, Consumer<T> shutdown) {
+        T service = getContext() == null ? null : getContext().getBean(type);
+        if (service == null) {
+            return previousFailure;
+        }
+        try {
+            shutdown.accept(service);
+        } catch (RuntimeException | Error e) {
+            if (previousFailure == null) {
+                return e;
+            }
+            if (previousFailure != e) {
+                previousFailure.addSuppressed(e);
+            }
+        }
+        return previousFailure;
     }
 
     private <T> void reloadService(Class<T> type, Consumer<T> reload) {

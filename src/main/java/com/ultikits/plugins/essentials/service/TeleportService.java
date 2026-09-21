@@ -173,6 +173,25 @@ public class TeleportService {
     }
     
     /**
+     * Cancels every pending warmup and forgets the state behind it.
+     * <p>
+     * Called when this module is unloaded (UltiKits/UltiEssentials#43). A warmup countdown is a
+     * repeating task owned by the {@code UltiTools} Bukkit plugin, so unloading this module does not
+     * stop it: it would go on counting down and finally teleport the player on behalf of a module
+     * that is no longer installed. The player is left where they are and not told, because the
+     * command that would tell them has been unregistered by the same unload.
+     * <p>
+     * 模块卸载时取消所有预热传送任务，玩家留在原地。
+     */
+    public void shutdown() {
+        for (BukkitTask task : pendingTeleports.values()) {
+            task.cancel();
+        }
+        pendingTeleports.clear();
+        teleportStartLocations.clear();
+    }
+
+    /**
      * Cleans up teleport state for a player.
      */
     private void cleanupTeleport(UUID uuid) {

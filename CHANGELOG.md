@@ -39,9 +39,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   unregistration and then its listener unregistration, so the module's commands are really removed
   and its listeners stop firing. Previously this module's unload method replaced the framework's, so
   after `/upm uninstall UltiEssentials` both its commands and its listeners stayed active until the
-  server restarted (UltiKits/UltiEssentials#23). The scheduled-command, scoreboard and name-prefix background tasks
-  are still not cancelled when the module is uninstalled without a server restart: configured
-  scheduled commands keep running (UltiKits/UltiEssentials#43).
+  server restarted (UltiKits/UltiEssentials#23).
+- `/upm uninstall UltiEssentials` now stops every repeating background task this module started, so
+  the module really stops acting on the server once it is uninstalled: configured entries of
+  `features.scheduled-commands.commands` stop being dispatched to the console, the sidebar update
+  timer and the name-prefix update timer stop, and a teleport warmup still counting down is
+  cancelled rather than completed. Players who had a sidebar are returned to the server's main
+  scoreboard and this module's name-prefix teams are emptied, so no leftover sidebar or prefix
+  survives the uninstall. Previously all of these kept running against the uninstalled module until
+  the server was restarted, while the uninstall reported success. A player whose warmup is cancelled
+  stays where they are and is not told, because the command that would have told them is
+  unregistered by the same uninstall. If one of these services fails to stop, the others are still
+  stopped and the uninstall reports that failure rather than a clean removal
+  (UltiKits/UltiEssentials#43).
 - `/delhome <name>`, `/delwarp <name>`, `/unban <player>`, `/unlock`, re-running
   `/sethome <name>` on an existing home, and breaking your own locked container now actually change
   what is stored. Every record this module writes — homes, warps, bans and container locks — was
@@ -109,8 +119,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   才会重新记录。通过原版 `team remove` 命令删除的头顶称号队伍会在下次更新时重新创建（UltiKits/UltiEssentials#44）。
 - 卸载本模块（`/upm uninstall UltiEssentials`）现在会由框架先注销命令、再注销监听器，本模块的命令会被
   真正移除，其监听器也不再触发。此前本模块的卸载方法替换了框架的卸载方法，因此执行
-  `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。在不重启服务器的情况下卸载本模块时，定时命令、计分板和头顶称号的后台
-  任务仍不会被取消，已配置的定时命令会继续执行（UltiKits/UltiEssentials#43）。
+  `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。
+- `/upm uninstall UltiEssentials` 现在会停止本模块启动的全部重复后台任务，卸载后本模块不再对服务器产生
+  影响：`features.scheduled-commands.commands` 中配置的条目不再向控制台派发命令，侧边栏刷新任务与头顶称号
+  刷新任务都会停止，正在倒计时的预热传送会被取消而不是继续执行。拥有侧边栏的玩家会回到服务器的主计分板，
+  本模块的头顶称号队伍会被清空，卸载后不会残留侧边栏或称号。此前这些任务都会继续对已卸载的模块运行，直到
+  服务器重启，而卸载却报告成功。预热传送被取消的玩家会留在原地且不会收到提示，因为提示所用的命令已随本次
+  卸载被注销。若其中某个服务停止失败，其余服务仍会停止，并且卸载会如实报告该失败，而不是报告卸载干净
+  （UltiKits/UltiEssentials#43）。
 - `/delhome <名称>`、`/delwarp <名称>`、`/unban <玩家>`、`/unlock`、对已存在的家再次执行
   `/sethome <名称>`，以及破坏自己上锁的容器，现在都会真正改变已保存的数据。本模块写入的每条记录——家、地标点、
   封禁和容器锁——此前保存时主键为空，之后的删除或更新语句匹配不到任何行，已保存的记录原样保留：被删除的家仍会

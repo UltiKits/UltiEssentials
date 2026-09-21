@@ -459,6 +459,26 @@ class EntityIdBackfillServiceTest {
         }
 
         @Test
+        @DisplayName("a repair whose write to disk fails is reported as untouched, not as repaired")
+        void aFailedFlushIsNotReportedAsRepaired() throws Exception {
+            // The keys reach the cache but not the disk, so the records come back un-keyed after a
+            // restart. An INFO line claiming them would be claiming a durable write that did not
+            // happen, which is the same class as the counts this repair exists to make trustworthy
+            // (gate 2 round 2).
+            for (int i = 0; i < 3; i++) {
+                writeLegacyRecord("homes", home("home" + i));
+            }
+            UnwritableStore<HomeData> store = new UnwritableStore<>(
+                tempDir.resolve("homes").toFile().getAbsolutePath(), HomeData.class);
+
+            Outcome outcome = backfill.repair(store, "HomeData");
+
+            assertThat(store.flushAttempts()).as("it really tried to write them").isEqualTo(1);
+            assertThat(outcome.repaired()).as("nothing durable, so nothing claimed").isZero();
+            assertThat(outcome.skipped()).as("all three reported as untouched").isEqualTo(3);
+        }
+
+        @Test
         @DisplayName("a store with nothing to repair opens no transaction at all")
         void nothingToRepairOpensNoTransaction() throws Exception {
             CountingTransactionStore<HomeData> store = new CountingTransactionStore<>(
@@ -559,6 +579,26 @@ class EntityIdBackfillServiceTest {
             assertThat(covered)
                 .as("a persisted entity absent from REPAIRED_TYPES would never be repaired")
                 .isEqualTo(persisted);
+        }
+    }
+
+    /** A real operator whose write to disk always fails, as a full or unwritable disk would. */
+    private static final class UnwritableStore<T extends BaseDataEntity<String>>
+            extends SimpleJsonDataOperator<T> {
+        private int flushAttempts;
+
+        UnwritableStore(String storeLocation, Class<T> type) {
+            super(storeLocation, type);
+        }
+
+        int flushAttempts() {
+            return flushAttempts;
+        }
+
+        @Override
+        public synchronized void flush() {
+            flushAttempts++;
+            throw new IllegalStateException("disk unwritable");
         }
     }
 

@@ -225,6 +225,21 @@ class UltiEssentialsServiceUnloadTest {
     }
 
     @Test
+    @DisplayName("no per-player teleport state is left behind after the warmups are cancelled")
+    void unloadForgetsThePerPlayerTeleportState() throws Exception {
+        bootWithEverythingRunning();
+
+        invokeOnUnregister(plugin);
+
+        assertThat((Map<?, ?>) EssentialsTestHelper.getField(teleportService, "pendingTeleports"))
+                .as("the cancelled warmup tasks")
+                .isEmpty();
+        assertThat((Map<?, ?>) EssentialsTestHelper.getField(teleportService, "teleportStartLocations"))
+                .as("the movement-detection start locations, which pin a Location and through it a World")
+                .isEmpty();
+    }
+
+    @Test
     @DisplayName("a service whose shutdown throws does not stop the others, and the failure is reported to the caller")
     void throwingServiceDoesNotStopTheOthersAndIsReported() throws Exception {
         bootWithEverythingRunning();

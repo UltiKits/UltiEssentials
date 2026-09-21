@@ -12,6 +12,7 @@ import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.interfaces.DataOperator;
+import com.ultikits.ultitools.interfaces.Query;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -52,6 +53,9 @@ class ChestLockServiceTest {
     @Mock
     private DataOperator<ChestLockData> lockOperator;
 
+    @SuppressWarnings("unchecked")
+    private final Query<ChestLockData> storedLockQuery = mock(Query.class);
+
     @BeforeEach
     void setUp() {
         MockBukkitHelper.clearForeignServer();
@@ -90,6 +94,17 @@ class ChestLockServiceTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+        // A store that reports nothing left for a location after a delete: unlockBlock and
+        // onBlockBreak now confirm removal by re-querying it before dropping the cache entry, so a
+        // mock whose query() is unstubbed describes a store no test has decided the contents of
+        // (UltiKits/UltiEssentials#37). Self-returning chain, mirroring QueryImpl's own
+        // `return this;` methods, as HomeServiceTest's queryMock already does.
+        lenient().when(lockOperator.query()).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.where(anyString())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.and(anyString())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.eq(any())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.list()).thenReturn(new ArrayList<>());
 
         when(lockOperator.getAll()).thenReturn(new ArrayList<>());
         lockService.init();

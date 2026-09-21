@@ -36,6 +36,9 @@ class ChestLockServiceMockitoTest {
     @SuppressWarnings("unchecked")
     private DataOperator<ChestLockData> lockOperator = mock(DataOperator.class);
 
+    @SuppressWarnings("unchecked")
+    private final Query<ChestLockData> storedLockQuery = mock(Query.class);
+
     @BeforeEach
     void setUp() throws Exception {
         EssentialsTestHelper.setUp();
@@ -47,8 +50,18 @@ class ChestLockServiceMockitoTest {
         EssentialsTestHelper.setField(service, "plugin", EssentialsTestHelper.getMockPlugin());
         EssentialsTestHelper.setField(service, "lockOperator", lockOperator);
 
-        reset(lockOperator);
+        reset(lockOperator, storedLockQuery);
         when(lockOperator.getAll()).thenReturn(new ArrayList<>());
+        // A store that reports nothing left for a location after a delete: unlockBlock and
+        // onBlockBreak now confirm removal by re-querying it before dropping the cache entry, so a
+        // mock whose query() is unstubbed describes a store no test has decided the contents of
+        // (UltiKits/UltiEssentials#37). Self-returning chain, mirroring QueryImpl's own
+        // `return this;` methods, as HomeServiceTest's queryMock already does.
+        lenient().when(lockOperator.query()).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.where(anyString())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.and(anyString())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.eq(any())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.list()).thenReturn(new ArrayList<>());
     }
 
     @AfterEach
@@ -512,7 +525,11 @@ class ChestLockServiceMockitoTest {
         @Test
         @DisplayName("UnlockResult should have all values")
         void unlockResultValues() {
-            assertThat(ChestLockService.UnlockResult.values()).hasSize(3);
+            // FAILED was added for UltiKits/UltiEssentials#37: a removal the store did not
+            // perform must not be reported as SUCCESS.
+            assertThat(ChestLockService.UnlockResult.values()).hasSize(4);
+            assertThat(ChestLockService.UnlockResult.valueOf("FAILED"))
+                    .isEqualTo(ChestLockService.UnlockResult.FAILED);
             assertThat(ChestLockService.UnlockResult.valueOf("SUCCESS"))
                     .isEqualTo(ChestLockService.UnlockResult.SUCCESS);
         }

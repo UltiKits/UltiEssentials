@@ -200,13 +200,13 @@ instantly on quit.
 no `ultiessentials.feed.*` node anywhere in the source. Granting `ultiessentials.heal.other`
 grants feed-others too, and there is no way to separate the two.
 
-**`/fly <player>` carries no elevated permission of its own** — its `@CmdMapping` declares no
-`permission` override, so it inherits the class-level `ultiessentials.fly`, the SAME node that
-gates toggling one's own flight. Contrast `HealCommand`/`FeedCommand` (explicit
-`ultiessentials.heal.other` override) and `GameModeCommand` (explicit
-`ultiessentials.gamemode.other` override), both of which correctly require a distinct, more
-privileged node for the other-player variant. Any player holding ordinary self-fly access can
-toggle flight for any other online player. Filed as UltiKits/UltiEssentials#25.
+**`/fly <player>` requires `ultiessentials.fly.other`** — its `@CmdMapping` declares that
+override, so a player holding only the class-level `ultiessentials.fly` that gates toggling their
+own flight is refused. This matches `HealCommand`/`FeedCommand` (`ultiessentials.heal.other`) and
+`GameModeCommand` (`ultiessentials.gamemode.other`), the module's other self/other pairs. Until
+UltiKits/UltiEssentials#25 was fixed the mapping declared no override and inherited the self node,
+so ordinary self-fly access carried flight control over every online player; `OtherPlayerPermissionTest`
+now holds all four pairs to the rule.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
@@ -217,7 +217,7 @@ toggle flight for any other online player. Filed as UltiKits/UltiEssentials#25.
 | ultiessentials.speed.set | Set the sender's walk speed (`0.2 * value`, capped at 1.0) and fly speed (`0.1 * value`, capped at 1.0); `0` resets to the platform default instead of setting a zero speed; refuses any value outside `0..speed.max-speed` | command | `/speed <value>` | ultiessentials.speed | player | player | brief | SpeedCommand#setSpeed |
 | ultiessentials.speed.reset | Reset the sender's walk and fly speed to the platform default (0.2 / 0.1) | command | `/speed reset` | ultiessentials.speed | player | player | brief | SpeedCommand#resetSpeed |
 | ultiessentials.fly.toggle-self | Toggle the sender's own flight allowance; disabling also forces `setFlying(false)` so the sender does not remain airborne with flight revoked | command | `/fly` | ultiessentials.fly | player | player | brief | FlyCommand#toggleFly |
-| ultiessentials.fly.toggle-other | Toggle a named online target's flight allowance — gated by the SAME permission node as toggling one's own flight, not a separate elevated node (see section note; UltiKits/UltiEssentials#25) | command | `/fly <player>` | ultiessentials.fly | player | admin | brief | FlyCommand#toggleFlyOther |
+| ultiessentials.fly.toggle-other | Toggle a named online target's flight allowance — gated by its own elevated node, which a holder of the self-flight node alone does not have (fixed in UltiKits/UltiEssentials#25) | command | `/fly <player>` | ultiessentials.fly.other | player | admin | brief | FlyCommand#toggleFlyOther |
 | ultiessentials.hide.toggle | Toggle the sender's own vanish: on enable, hides the sender from every online player lacking `ultiessentials.hide.see`; on disable, re-shows the sender to everyone. State is a static in-memory set, not persisted (see `## Data Persistence`) | command | `/hide` (alias `/vanish`) | ultiessentials.hide | player | admin | brief | HideCommand#toggleHide |
 | ultiessentials.gamemode.set-self | Set the sender's own game mode by numeric (`0-3`), single-letter, or full-name token | command | `/gm <mode>` | ultiessentials.gamemode.self | player | player | brief | GameModeCommand#setGameMode |
 | ultiessentials.gamemode.set-other | Set a named online target's game mode, notifying both sender and target | command | `/gm <mode> <player>` | ultiessentials.gamemode.other | player | admin | brief | GameModeCommand#setGameModeOther |

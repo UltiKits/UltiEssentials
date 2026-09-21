@@ -51,6 +51,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   came back after a restart, and moving an existing home kept the old coordinates. Records written
   from this version on carry that key, and records written by earlier versions are repaired once at
   start-up (UltiKits/UltiEssentials#34, UltiKits/UltiEssentials#35, UltiKits/UltiEssentials#37).
+- `/fly <player>` now requires `ultiessentials.fly.other`, a separate node from the
+  `ultiessentials.fly` that lets a player toggle their own flight. Previously the two shared one
+  node, so any server granting ordinary players self-flight was also letting them force flight on or
+  off for anyone online, including cutting another player's flight mid-air. Grant
+  `ultiessentials.fly.other` to whoever should keep that ability — this matches how `/heal <player>`
+  and `/gm <mode> <player>` already work (UltiKits/UltiEssentials#25).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -80,6 +86,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   出现在 `/homes` 中，被解禁的玩家登录时仍会被本模块自己的封禁提示拒绝，被破坏容器的锁会在重启后回来，移动已存在
   的家仍保留旧坐标。从本版本起写入的记录都带有该主键，更早版本写入的记录会在启动时修复一次
   （UltiKits/UltiEssentials#34、UltiKits/UltiEssentials#35、UltiKits/UltiEssentials#37）。
+- `/fly <玩家>` 现在需要 `ultiessentials.fly.other` 权限，与玩家切换自己飞行所用的 `ultiessentials.fly`
+  分开。此前两者共用同一个权限节点，因此只要服务器给普通玩家开放了自己飞行的权限，他们同时也能为任何在线玩家
+  开启或关闭飞行，包括在其飞行途中将其关闭。请为应保留该能力的人授予 `ultiessentials.fly.other`——这与
+  `/heal <玩家>`、`/gm <模式> <玩家>` 现有的做法一致（UltiKits/UltiEssentials#25）。
 
 ### Removed
 

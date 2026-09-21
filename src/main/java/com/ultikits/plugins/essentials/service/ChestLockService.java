@@ -190,7 +190,19 @@ public class ChestLockService {
     }
     
     /**
-     * Unlocks a block.
+     * Unlocks a block, reporting success only once the stored record is confirmed gone.
+     * <p>
+     * The confirmation is a re-query of the store, not the delete call returning: the framework's
+     * {@code delById} returns {@code void} and discards the affected-row count. Dropping the cache
+     * entry regardless left the cache saying "not locked" while the row was still on disk, so
+     * {@code /unlock info} reported the container unlocked and the next restart reloaded the
+     * surviving row and locked it again (UltiKits/UltiEssentials#37). The cache entry is therefore
+     * kept when the record survives: a cache that disagrees with the store makes the answer a player
+     * gets depend on how recently the server booted.
+     *
+     * @param block  the block to unlock
+     * @param player the player asking
+     * @return the outcome, including {@link UnlockResult#FAILED} when the record could not be removed
      */
     public UnlockResult unlockBlock(Block block, Player player) {
         ChestLockData lock = getLock(block.getLocation());
@@ -205,14 +217,46 @@ public class ChestLockService {
             return UnlockResult.NOT_OWNER;
         }
         
-        // Remove lock
-        lockOperator.delById(lock.getId());
-        lockCache.remove(lock.getLocationKey());
+        if (!removeStoredLock(lock)) {
+            return UnlockResult.FAILED;
+        }
         
         // If it's a double chest, unlock the other half too
         unlockDoubleChestOther(block);
         
         return UnlockResult.SUCCESS;
+    }
+
+    /**
+     * Deletes one lock record and confirms by re-query that no record remains for its location,
+     * dropping the cache entry only then.
+     *
+     * @param lock the lock record to remove
+     * @return true if nothing is stored for that location any more
+     */
+    private boolean removeStoredLock(ChestLockData lock) {
+        lockOperator.delById(lock.getId());
+        if (isStored(lock.getWorld(), lock.getX(), lock.getY(), lock.getZ())) {
+            log.error("Lock record {} at {} (owner {}) is still stored after a delete; keeping it in "
+                    + "the cache so the container does not appear unlocked until the next restart",
+                    lock.getId(), lock.getLocationKey(), lock.getOwnerName());
+            return false;
+        }
+        lockCache.remove(lock.getLocationKey());
+        return true;
+    }
+
+    /**
+     * Asks the store — never the cache — whether any lock record exists for a location.
+     */
+    private boolean isStored(String world, int x, int y, int z) {
+        return !lockOperator.query()
+            .where("world").eq(world)
+            .where("x").eq(x)
+            .where("y").eq(y)
+            .where("z").eq(z)
+            .list()
+            .isEmpty();
     }
     
     /**
@@ -242,8 +286,7 @@ public class ChestLockService {
         
         ChestLockData otherLock = getLock(other);
         if (otherLock != null) {
-            lockOperator.delById(otherLock.getId());
-            lockCache.remove(otherLock.getLocationKey());
+            removeStoredLock(otherLock);
         }
     }
     
@@ -288,14 +331,23 @@ public class ChestLockService {
     }
     
     /**
-     * Removes a lock when block is broken (for cleanup).
+     * Removes a lock when its block is broken, reporting whether the stored record is really gone.
+     * <p>
+     * Previously the cache entry was dropped whatever the store did, which is what
+     * UltiKits/UltiEssentials#37 observed: {@code /unlock info} on a chest replaced at the same
+     * coordinates reported "not locked" while the row was still on disk, and the next restart
+     * reloaded it and locked the container again. The cache is now kept in step with the store in
+     * both directions.
+     *
+     * @param location the broken block's location
+     * @return true if a lock existed and is now gone, false if there was none or it survived
      */
-    public void onBlockBreak(Location location) {
+    public boolean onBlockBreak(Location location) {
         ChestLockData lock = getLock(location);
-        if (lock != null) {
-            lockOperator.delById(lock.getId());
-            lockCache.remove(lock.getLocationKey());
+        if (lock == null) {
+            return false;
         }
+        return removeStoredLock(lock);
     }
     
     public enum LockResult {
@@ -309,6 +361,12 @@ public class ChestLockService {
     public enum UnlockResult {
         SUCCESS,
         NOT_LOCKED,
-        NOT_OWNER
+        NOT_OWNER,
+        /**
+         * The record could not be removed from the store, so the container is still locked. Kept
+         * distinct from {@link #SUCCESS} because telling a player their container is unlocked when
+         * the lock survives is the defect UltiKits/UltiEssentials#37 reports.
+         */
+        FAILED
     }
 }

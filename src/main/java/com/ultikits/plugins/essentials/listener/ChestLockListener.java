@@ -96,7 +96,12 @@ public class ChestLockListener implements Listener {
             return;
         }
         
-        // Remove lock when broken
+        // Remove lock when broken. The boolean is deliberately not acted on here: the break has
+        // already been allowed at this point, and ChestLockService logs the record and its location
+        // at ERROR when the store would not give it up, keeping the lock cached so the container
+        // does not appear unlocked until the next restart (UltiKits/UltiEssentials#37). Cancelling
+        // the break instead would stop an owner from ever breaking their own container while the
+        // store is failing, which is a policy choice this fix does not make.
         chestLockService.onBlockBreak(block.getLocation());
     }
     

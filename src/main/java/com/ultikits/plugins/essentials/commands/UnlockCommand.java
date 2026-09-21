@@ -48,6 +48,11 @@ public class UnlockCommand extends BaseEssentialsCommand {
             case NOT_OWNER:
                 player.sendMessage(i18n("§c你不是该容器的主人"));
                 break;
+            case FAILED:
+                // The lock record could not be removed from storage, so the container is still
+                // locked. Reporting success here is the defect UltiKits/UltiEssentials#37 reports.
+                player.sendMessage(i18n("§c解锁失败，该容器的锁定记录无法移除，请联系管理员"));
+                break;
         }
     }
     

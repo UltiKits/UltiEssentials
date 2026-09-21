@@ -66,7 +66,9 @@ public class ScoreboardListener implements Listener {
             Bukkit.getScheduler().runTaskLater(
                 bukkitPlugin,
                 () -> {
-                    if (event.getPlayer().isOnline()) {
+                    // Re-check auto-enable: a /ul reload during the delay may have turned it off,
+                    // and players who join after a reload follow the reloaded value (#28).
+                    if (event.getPlayer().isOnline() && config.isScoreboardAutoEnable()) {
                         scoreboardService.enableScoreboard(event.getPlayer());
                     }
                 },

@@ -42,6 +42,13 @@ public class ScoreboardService {
 
     // Scoreboard manager
     private ScoreboardManager manager;
+
+    // Instance reference to the class logger, so a test can observe the per-player failure reports
+    // (the module's test classpath has no slf4j binding to capture them otherwise).
+    private org.slf4j.Logger failureLog = log;
+
+    // Players whose sidebar update is currently failing, so the update task logs each failure once.
+    private final RepeatedFailureFilter<UUID> updateFailures = new RepeatedFailureFilter<>();
     
     /**
      * Initializes the scoreboard service.
@@ -79,15 +86,37 @@ public class ScoreboardService {
                 for (UUID uuid : enabledPlayers) {
                     Player player = Bukkit.getPlayer(uuid);
                     if (player != null && player.isOnline()) {
-                        updateScoreboard(player);
+                        refreshIsolated(uuid, player);
                     } else {
                         enabledPlayers.remove(uuid);
+                        updateFailures.forget(uuid);
                     }
                 }
             }
         }.runTaskTimer(bukkitPlugin, 20L, updateInterval * 20L);
     }
     
+    /**
+     * Refreshes one player's sidebar for the update task. A failure stays with that player: it is
+     * logged at error level the first time, suppressed while it repeats, and the player stays shown
+     * and is retried on the next update; the other players are refreshed regardless.
+     */
+    private void refreshIsolated(UUID uuid, Player player) {
+        try {
+            updateScoreboard(player);
+        } catch (RuntimeException e) {
+            if (updateFailures.firstFailure(uuid)) {
+                failureLog.error("Could not update the sidebar for {}; it will be retried on every scoreboard update, "
+                    + "and this failure is not logged again until an update for that player succeeds",
+                    player.getName(), e);
+            }
+            return;
+        }
+        if (updateFailures.recovered(uuid)) {
+            failureLog.info("The sidebar for {} updates again", player.getName());
+        }
+    }
+
     /**
      * Enables scoreboard for a player.
      */
@@ -105,10 +134,12 @@ public class ScoreboardService {
      */
     public void disableScoreboard(Player player) {
         enabledPlayers.remove(player.getUniqueId());
+        updateFailures.forget(player.getUniqueId());
         
-        // Reset to default scoreboard
+        // Give back the server's main scoreboard, not a fresh empty one: name-prefix teams and any
+        // other main-scoreboard content are only visible on the main scoreboard.
         if (manager != null) {
-            player.setScoreboard(manager.getNewScoreboard());
+            player.setScoreboard(manager.getMainScoreboard());
         }
     }
     
@@ -224,30 +255,60 @@ public class ScoreboardService {
             updateTask = null;
         }
         
-        // Reset all player scoreboards
+        // Return every player who had a sidebar to the main scoreboard
         for (UUID uuid : enabledPlayers) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && manager != null) {
-                player.setScoreboard(manager.getNewScoreboard());
+                try {
+                    player.setScoreboard(manager.getMainScoreboard());
+                } catch (RuntimeException e) {
+                    failureLog.error("Could not return {} to the main scoreboard; the other players were still reset",
+                        player.getName(), e);
+                }
             }
         }
         
         enabledPlayers.clear();
+        updateFailures.clear();
     }
     
     /**
      * Reloads the scoreboard configuration.
+     * <p>
+     * While the scoreboard stays enabled, each online player keeps the sidebar shown or hidden as it
+     * was before the reload, whatever the reloaded {@code auto-enable} says: the only per-player state
+     * this service holds is {@link #enabledPlayers}, in memory, and a {@code /scoreboard} choice is
+     * recorded there in the same way as an automatic enable on join. When the reload turns the
+     * scoreboard on, no player had a sidebar to keep, so online players follow the reloaded
+     * {@code auto-enable}; players joining after any reload follow it through
+     * {@code ScoreboardListener} (UltiKits/UltiEssentials#28). A player whose sidebar cannot be
+     * rebuilt is logged and stays marked as shown, so the update task retries it every interval,
+     * and the players after them are still restored.
+     * <p>
+     * 重载时保留每位在线玩家的侧边栏显示/隐藏状态；重载开启计分板时在线玩家按 auto-enable 处理。
      */
     public void reload() {
+        boolean wasRunning = updateTask != null;
+        Set<UUID> shownBeforeReload = new HashSet<>(enabledPlayers);
         shutdown();
         
         if (config.isScoreboardEnabled()) {
             startUpdateTask();
             
-            // Re-enable for all online players if auto-enable is set
-            if (config.isScoreboardAutoEnable()) {
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    enableScoreboard(player);
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                boolean show = wasRunning
+                    ? shownBeforeReload.contains(player.getUniqueId())
+                    : config.isScoreboardAutoEnable();
+                if (show) {
+                    try {
+                        enableScoreboard(player);
+                    } catch (RuntimeException e) {
+                        // enableScoreboard has already marked the player as shown, so the update
+                        // task retries the sidebar every interval; the other players are unaffected.
+                        failureLog.error("Could not rebuild the sidebar for {} after a reload; it will be "
+                            + "retried on the next scoreboard update, and the other players were still restored",
+                            player.getName(), e);
+                    }
                 }
             }
         }

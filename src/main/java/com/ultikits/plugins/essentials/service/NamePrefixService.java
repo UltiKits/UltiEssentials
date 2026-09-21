@@ -35,6 +35,13 @@ public class NamePrefixService {
     private Plugin bukkitPlugin;
     private BukkitTask updateTask;
     private Scoreboard scoreboard;
+
+    // Instance reference to the class logger, so a test can observe the per-player failure reports
+    // (the module's test classpath has no slf4j binding to capture them otherwise).
+    private org.slf4j.Logger failureLog = log;
+
+    // Players whose prefix update is currently failing, so the update task logs each failure once.
+    private final RepeatedFailureFilter<UUID> updateFailures = new RepeatedFailureFilter<>();
     
     // Player teams
     private final Map<UUID, Team> playerTeams = new HashMap<>();
@@ -76,7 +83,37 @@ public class NamePrefixService {
      */
     private void updateAllPlayers() {
         for (Player player : Bukkit.getOnlinePlayers()) {
+            updateIsolated(player);
+        }
+    }
+
+    /**
+     * Updates one player's prefix for the update task. A failure stays with that player: it is logged
+     * at error level the first time, suppressed while it repeats, and retried on the next update; the
+     * other players are updated regardless.
+     */
+    private void updateIsolated(Player player) {
+        UUID uuid = player.getUniqueId();
+        try {
             updatePlayer(player);
+        } catch (RuntimeException e) {
+            // Drop the cached team only if it is stale: once it was removed (for example with the
+            // vanilla team command) it throws on every use, and the next update must look the team up
+            // again or register a new one. A still-registered team is kept, because quit and shutdown
+            // need it to remove the entry an earlier step of this update may already have added.
+            Team cached = playerTeams.get(uuid);
+            if (cached != null && isStale(uuid, cached)) {
+                playerTeams.remove(uuid);
+            }
+            if (updateFailures.firstFailure(uuid)) {
+                failureLog.error("Could not update the name prefix for {}; it will be retried on every update, "
+                    + "and this failure is not logged again until an update for that player succeeds",
+                    player.getName(), e);
+            }
+            return;
+        }
+        if (updateFailures.recovered(uuid)) {
+            failureLog.info("The name prefix for {} updates again", player.getName());
         }
     }
     
@@ -93,7 +130,7 @@ public class NamePrefixService {
         // Get or create team
         Team team = playerTeams.get(uuid);
         if (team == null) {
-            String teamName = "up_" + uuid.toString().substring(0, 8);
+            String teamName = teamNameFor(uuid);
             team = scoreboard.getTeam(teamName);
             if (team == null) {
                 team = scoreboard.registerNewTeam(teamName);
@@ -128,11 +165,26 @@ public class NamePrefixService {
         team.setSuffix(suffix);
     }
     
+    private static String teamNameFor(UUID uuid) {
+        return "up_" + uuid.toString().substring(0, 8);
+    }
+
+    /**
+     * Whether a cached team no longer is the team the scoreboard holds under its name. Compared by
+     * the scoreboard's current team rather than by calling the cached object, which throws once its
+     * team was removed; CraftBukkit's {@code CraftTeam#equals} compares the underlying team, so a team
+     * re-registered under the same name is also detected.
+     */
+    private boolean isStale(UUID uuid, Team cached) {
+        return !cached.equals(scoreboard.getTeam(teamNameFor(uuid)));
+    }
+
     /**
      * Removes a player from the system.
      */
     public void removePlayer(Player player) {
         UUID uuid = player.getUniqueId();
+        updateFailures.forget(uuid);
         Team team = playerTeams.remove(uuid);
         
         if (team != null) {
@@ -167,13 +219,24 @@ public class NamePrefixService {
             updateTask = null;
         }
         
-        // Clean up teams
-        for (Team team : playerTeams.values()) {
-            for (String entry : team.getEntries()) {
-                team.removeEntry(entry);
+        // Clean up teams, one at a time: a team that can no longer be cleared (for example removed with
+        // the vanilla team command) must not keep the others populated.
+        for (Map.Entry<UUID, Team> recorded : playerTeams.entrySet()) {
+            try {
+                Team team = recorded.getValue();
+                for (String entry : team.getEntries()) {
+                    team.removeEntry(entry);
+                }
+            } catch (RuntimeException e) {
+                // Name the player when they are online; only the UUID is known otherwise.
+                Player player = Bukkit.getPlayer(recorded.getKey());
+                Object who = player != null ? player.getName() : recorded.getKey();
+                failureLog.error("Could not clear the name-prefix team of player {}; the other teams were still cleared",
+                    who, e);
             }
         }
         playerTeams.clear();
+        updateFailures.clear();
     }
     
     /**

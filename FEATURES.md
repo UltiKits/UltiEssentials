@@ -25,7 +25,11 @@ for UAT execution and issue reconciliation — the public description of these f
   `PlaceholderAPI#setPlaceholders`, they do not register their own expansion) and no `gate` rows
   (0 `@ConditionalOnConfig` sites) — all three Kinds stay in the vocabulary for cross-repository
   consistency even though none appears below. This module's one `scheduled` row is NOT backed by
-  the framework's `@Scheduled` annotation (0 sites) — see that row's own note.
+  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The one row under
+  `## Lifecycle` is an `event` row with no `@EventHandler` site behind it, so the 21
+  `@EventHandler` sites in the positive control below match the other 21 `event` rows, not all
+  22: `/ul reload` is a framework-invoked lifecycle step, not a command this repository maps or a
+  config read, so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
   from whether it carries a permission string — most command executors in this repository carry
   one, so judging by the string alone would make nearly everything `admin`. This module's core
@@ -220,9 +224,9 @@ toggle flight for any other online player. Filed as UltiKits/UltiEssentials#25.
 | ultiessentials.gamemode.shortcut-creative | Shortcut to set the sender's own game mode to CREATIVE | command | `/gmc` | ultiessentials.gamemode.self | player | player | none | GmCreativeCommand#creative |
 | ultiessentials.gamemode.shortcut-spectator | Shortcut to set the sender's own game mode to SPECTATOR | command | `/gmsp` | ultiessentials.gamemode.self | player | player | none | GmSpectatorCommand#spectator |
 | ultiessentials.gamemode.shortcut-survival | Shortcut to set the sender's own game mode to SURVIVAL | command | `/gms` | ultiessentials.gamemode.self | player | player | none | GmSurvivalCommand#survival |
-| ultiessentials.scoreboard.toggle | Toggle the sender's own sidebar scoreboard on or off | command | `/scoreboard` (alias `/sb`) | ultiessentials.scoreboard | player | player | brief | ScoreboardCommand#toggle |
+| ultiessentials.scoreboard.toggle | Toggle the sender's own sidebar scoreboard on or off; turning it off returns the sender to the server's main scoreboard | command | `/scoreboard` (alias `/sb`) | ultiessentials.scoreboard | player | player | brief | ScoreboardCommand#toggle |
 | ultiessentials.scoreboard.enable | Explicitly enable the sender's sidebar scoreboard (no-ops with a distinct message if already on) | command | `/scoreboard on` | ultiessentials.scoreboard | player | player | none | ScoreboardCommand#enable |
-| ultiessentials.scoreboard.disable | Explicitly disable the sender's sidebar scoreboard (no-ops with a distinct message if already off) | command | `/scoreboard off` | ultiessentials.scoreboard | player | player | none | ScoreboardCommand#disable |
+| ultiessentials.scoreboard.disable | Explicitly disable the sender's sidebar scoreboard and return the sender to the server's main scoreboard, where name-prefix teams are (no-ops with a distinct message if already off) | command | `/scoreboard off` | ultiessentials.scoreboard | player | player | none | ScoreboardCommand#disable |
 | ultiessentials.scoreboard.auto-enable-on-join | 1 second after join (`runTaskLater(20L)`, re-checking the player is still online), auto-enable the sidebar scoreboard when `scoreboard.auto-enable` is true | event | join the server with `features.scoreboard.enabled` and `scoreboard.auto-enable` both true | n/a | n/a | player | brief | ScoreboardListener#onPlayerJoin |
 | ultiessentials.scoreboard.disable-on-quit | Remove the quitting player from the enabled-scoreboard set unconditionally (independent of whether `scoreboard.enabled` is currently true) | event | quit the server with an active scoreboard | n/a | n/a | internal | none | ScoreboardListener#onPlayerQuit |
 | ultiessentials.commandalias.rewrite | Rewrite the leading command token of a chat-typed command per the `commandalias.aliases` map (e.g. `/gmc` -> `/gamemode creative`) before Bukkit dispatches it, evaluated at `LOWEST` priority | event | type a command whose first token matches a configured alias key | n/a | n/a | player | brief | CommandAliasListener#onPlayerCommand |
@@ -324,6 +328,31 @@ framework's declarative annotation.
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.scheduledcommands.run | Run each configured console command on its own fixed interval, indefinitely, for as long as the server is up | scheduled | runs automatically, every `interval_seconds` per configured entry, while `features.scheduled-commands.enabled` is true | n/a | n/a | admin | brief | ScheduledCommandService#startTasks |
 
+## Lifecycle
+
+UltiTools 6.3.0 makes `UltiToolsPlugin#reloadSelf()` and `#unregisterSelf()` `final` template
+methods. Before UltiKits/UltiEssentials#23's lifecycle migration this module overrode both with a
+body that only logged a line, replacing the framework's own steps; both overrides were deleted
+rather than renamed, and it prints no reload or unload line of its own. It declares one hook,
+`onReload()` (UltiKits/UltiEssentials#28), and no `onUnregister()` hook, so `/upm uninstall
+UltiEssentials` does not cancel the scheduled-command, scoreboard or name-prefix repeating tasks —
+configured scheduled commands keep executing until a restart (UltiKits/UltiEssentials#43).
+`/ul reload UltiEssentials` runs the framework's reload steps (configuration reload, language
+refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
+per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
+`reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
+(see `## Configuration` for what each restart does).
+`ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
+container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
+observable the first row below uses. The second row turns name prefixes on through a reload, and
+the third turns the scoreboard off through a reload.
+
+| ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
+|---|---|---|---|---|---|---|---|---|
+| ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module prints no reload line of its own. On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
+| ultiessentials.lifecycle.reload-nameprefix | After `features.nameprefix.enabled` is changed from `false` to `true`, `/ul reload UltiEssentials` restarts `NamePrefixService` with the main scoreboard, so the restarted update task applies the configured prefix to every online player about 1 second after the reload and a player who joins afterwards gets it 0.5 seconds after joining, with no exception from `NamePrefixService#updatePlayer` (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.nameprefix.enabled` to `true` in `config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#onReload, NamePrefixService#reload |
+| ultiessentials.lifecycle.reload-scoreboard-off | After `features.scoreboard.enabled` is changed from `true` to `false`, `/ul reload UltiEssentials` cancels the sidebar update task and returns every player who had a sidebar to the server's main scoreboard, so the sidebar disappears and name prefixes (and any other team on the main scoreboard) become visible to those players without rejoining (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.scoreboard.enabled` to `false` in `config/essentials.yml` | n/a | n/a | admin | brief | ScoreboardService#reload, ScoreboardService#shutdown |
+
 ## Data Persistence
 
 Homes, warps, bans, and chest locks are stored via `DataOperator<T>` against `@Table`-annotated
@@ -343,7 +372,9 @@ non-default-path status messages in `BanCommand`/`TempBanCommand`/`UnbanCommand`
 `BanService#formatDuration`, `ChestLockListener`'s two lock-refusal lines, and
 `DeathPunishListener`'s punishment summary — passes a Chinese literal string as the i18n lookup
 key, but that exact key exists in NEITHER `lang/en.json` NOR `lang/zh.json` (both files hold only
-90 keys total, an identical key set, confirmed by a full diff). `Language#getLocalizedText`'s only
+88 keys total, an identical key set, confirmed by a full diff; measured after
+UltiKits/UltiEssentials#23's lifecycle migration removed the two keys of the module's own unload
+and reload console lines). `Language#getLocalizedText`'s only
 fallback for an unmatched key is to return the key itself unchanged — so `language: en` has
 literally no effect on any of this text; it renders in Chinese on an English-configured server
 exactly as it would on a Chinese-configured one. A minority of messages (all of
@@ -386,15 +417,47 @@ key's value), `features.ban.broadcast-ban`, and `features.ban.broadcast-unban` (
 unban command calls `Bukkit.broadcastMessage(...)` unconditionally; these two keys' values are
 never consulted).
 
-**`/ul reload` does not actually refresh this module's scheduled-command, scoreboard, or
-name-prefix background tasks.** `UltiEssentials#reloadSelf()` logs a "config reloaded" message but
-calls none of `ScheduledCommandService#reload()`, `ScoreboardService#reload()`, or
-`NamePrefixService#reload()` — all three exist specifically to restart their respective background
-tasks against fresh config values, and none is ever invoked from anywhere in this module. This
-compounds the separately-filed UltiKits/UltiEssentials#23 (`reloadSelf()` not calling
-`super.reloadSelf()`, so even the underlying `@ConfigEntry` values are not re-read from disk):
-fixing #23 alone would still leave these three services running against their boot-time state.
-Filed as UltiKits/UltiEssentials#28.
+**`/ul reload UltiEssentials` re-reads configuration values and restarts this module's
+scheduled-command, scoreboard and name-prefix background tasks.** Since
+UltiKits/UltiEssentials#23's lifecycle migration this module no longer overrides `reloadSelf()`, so
+UltiTools 6.3.0's `final` `reloadSelf()` re-initialises every configuration bean in place and code
+that reads a getter at call time sees the edited value (`ultiessentials.lifecycle.reload`). The
+module's `onReload()` hook then calls `ScheduledCommandService#reload()`,
+`ScoreboardService#reload()` and `NamePrefixService#reload()` (UltiKits/UltiEssentials#28). Each
+cancels the repeating tasks it owns and, only if its feature is still enabled, starts them again
+against the re-read values, so an edit to `features.scheduled-commands.enabled`,
+`features.scheduled-commands.commands`, `features.scoreboard.enabled`,
+`features.scoreboard.update-interval`, `features.nameprefix.enabled`, or
+`features.nameprefix.update-interval` takes effect on reload. Each service is reloaded on its own:
+if one service's reload throws, the failure is logged at SEVERE with the service name and the other
+two are still reloaded. That failure is reported only on the server console; the reply to whoever
+ran `/ul reload` does not reflect it (UltiKits/UltiTools-Reborn#509). Turning name prefixes on by reload gives `NamePrefixService` the main
+scoreboard before its update task first runs, 1 second after the reload
+(`ultiessentials.lifecycle.reload-nameprefix`); turning them off cancels that task and removes from
+their prefix team every player this service has assigned since the server started (an entry left
+on the saved main scoreboard by an earlier session is not removed). Two effects of a reload match a
+restart rather than preserving running state: every scheduled command's interval starts counting
+again from the reload, so reloading more often than a command's interval keeps postponing that
+command; and `NamePrefixService#reload()` removes those players from their prefix team and, if
+name prefixes stay enabled, the restarted task adds online players back 1 second later. While the
+scoreboard stays enabled across a reload, each online player's sidebar stays shown or hidden as it
+was, including a `/scoreboard` choice (the only per-player scoreboard state is `ScoreboardService`'s
+in-memory `enabledPlayers` set, which `/scoreboard` and the automatic enable on join both write). A
+reload that turns the scoreboard off removes every sidebar and returns those players to the
+server's main scoreboard, so name prefixes become visible to them without rejoining
+(`ultiessentials.lifecycle.reload-scoreboard-off`); a reload that turns it on applies
+`features.scoreboard.auto-enable` to players already online. Players who join after a reload follow
+the reloaded `auto-enable` through `ScoreboardListener#onPlayerJoin`, which re-checks it when its
+delayed enable runs.
+
+**One failing player does not stop a refresh.** The scoreboard and name-prefix update tasks refresh
+each player on their own: a player whose sidebar or prefix cannot be refreshed (for example because
+a PlaceholderAPI expansion throws for that player) is logged once at error level and retried on every
+update, while the other players are refreshed as usual; the failure is logged again only after a
+refresh for that player has succeeded in between, and is forgotten when the player quits or turns
+the sidebar off. A player's name-prefix team that was removed (for example with the vanilla
+`team remove` command) is looked up again or re-created on the next update, so the prefix comes back. Each scheduled command already runs as its own task, so a command that throws
+affects only itself.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|

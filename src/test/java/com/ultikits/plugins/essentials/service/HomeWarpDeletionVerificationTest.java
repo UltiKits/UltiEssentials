@@ -216,6 +216,32 @@ class HomeWarpDeletionVerificationTest {
         }
 
         @Test
+        @DisplayName("a facing-only change the store ignored is NOT reported as updated either")
+        void anIgnoredFacingChangeIsNotReportedUpdated() throws Exception {
+            // The same coordinates, a different direction. /home reads yaw and pitch back through
+            // toLocation(), so an ignored write leaves the player facing the old way -- and a
+            // comparison of world and XYZ alone reported that as UPDATED (gate 2 P2). The check now
+            // compares the constructed location, so every field toLocation() reads is covered and the
+            // next field added is covered without anyone remembering.
+            SilentlyFailingStore<HomeData> store = homeStore();
+            HomeService service = homeService(store);
+            PlayerMock player = server.addPlayer("HomeOwner");
+            World world = server.addSimpleWorld("world");
+            store.insert(home(player.getUniqueId(), "farm"));
+            Location sameSpotFacingElsewhere = new Location(world, 1, 2, 3, 90f, 45f);
+            player.teleport(sameSpotFacingElsewhere);
+            store.ignoreUpdates();
+
+            SetHomeResult result = service.setHome(player, "farm");
+
+            assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
+            assertThat(result).isEqualTo(SetHomeResult.FAILED);
+            HomeData stored = service.getHome(player.getUniqueId(), "farm");
+            assertThat(stored).isNotNull();
+            assertThat(stored.getYaw()).as("the direction /home would still face").isEqualTo(0f);
+        }
+
+        @Test
         @DisplayName("a move the store silently ignored is NOT reported as updated")
         void anIgnoredMoveIsNotReportedUpdated() throws Exception {
             SilentlyFailingStore<HomeData> store = homeStore();

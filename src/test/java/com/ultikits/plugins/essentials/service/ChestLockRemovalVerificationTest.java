@@ -224,6 +224,28 @@ class ChestLockRemovalVerificationTest {
     class DoubleChestTests {
 
         @Test
+        @DisplayName("a stranger is refused on either half when only one half holds a record")
+        void aStrangerIsRefusedOnEitherHalfOfAPartlyRecordedLock() throws Exception {
+            // A container whose two halves disagree is reachable without any unlock at all: a lock
+            // whose second insert never completed, or legacy data holding one half. The check is keyed
+            // on the container, so one record protects the whole shared inventory -- measured before
+            // this change, every protection check took a single Location and DoubleChest was consulted
+            // only in the lock and unlock paths, so the unrecorded half was open to anyone.
+            Location left = new Location(world, 1, 64, 1);
+            Location right = new Location(world, 2, 64, 1);
+            storeLockAt(left);
+            lockService.init();
+            PlayerMock stranger = server.addPlayer("Stranger");
+
+            assertThat(lockService.canAccess(doubleChestBlockAt(left, right), stranger))
+                .as("the recorded half").isFalse();
+            assertThat(lockService.canAccess(doubleChestBlockAt(right, left), stranger))
+                .as("the half with no record of its own, sharing the same inventory").isFalse();
+            assertThat(lockService.canAccess(doubleChestBlockAt(left, right), owner))
+                .as("the owner is still allowed").isTrue();
+        }
+
+        @Test
         @DisplayName("both halves removed reports success")
         void bothHalvesRemovedReportsSuccess() throws Exception {
             Location left = new Location(world, 1, 64, 1);
@@ -254,17 +276,29 @@ class ChestLockRemovalVerificationTest {
             storeLockAt(left);
             lockService.init();
 
-            UnlockResult result = lockService.unlockBlock(doubleChestBlockAt(left, right), owner);
+            Block clicked = doubleChestBlockAt(left, right);
+            UnlockResult result = lockService.unlockBlock(clicked, owner);
 
-            assertThat(persistedLocksAt(left)).as("the half that could be removed").isZero();
-            assertThat(persistedLocksAt(right)).as("the half that survived").isEqualTo(1);
             assertThat(result)
                 .as("telling the player the container is unlocked while one half's record survives "
                     + "is #37's symptom inside the method #37 fixed (gate 1 MAJOR-02)")
                 .isEqualTo(UnlockResult.FAILED);
-            assertThat(lockService.isLocked(right))
-                .as("the surviving half stays cached, so a restart does not change the answer")
-                .isTrue();
+            // All or nothing: the half that COULD be removed is put back, because dropping it while
+            // the other half's record survives is what let a player click the now-uncached half into
+            // the shared inventory the surviving record was still protecting (gate 2 P1).
+            assertThat(persistedLocksAt(left)).as("the half that could have been removed").isEqualTo(1);
+            assertThat(persistedLocksAt(right)).as("the half that could not").isEqualTo(1);
+            assertThat(lockService.isLocked(left)).as("cached, in step with the store").isTrue();
+            assertThat(lockService.isLocked(right)).as("cached, in step with the store").isTrue();
+
+            // The observable a player would exploit, asserted directly rather than through the
+            // returned value: a stranger is refused on BOTH halves, because either record protects
+            // the one inventory behind them.
+            PlayerMock stranger = server.addPlayer("Stranger");
+            assertThat(lockService.canAccess(clicked, stranger))
+                .as("clicking the half whose record was put back").isFalse();
+            assertThat(lockService.canAccess(doubleChestBlockAt(right, left), stranger))
+                .as("clicking the half whose record never went away").isFalse();
         }
     }
 

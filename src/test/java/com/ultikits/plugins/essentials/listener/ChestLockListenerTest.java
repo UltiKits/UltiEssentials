@@ -68,12 +68,14 @@ class ChestLockListenerTest {
             when(block.getLocation()).thenReturn(loc);
 
             when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
-            when(chestLockService.canAccess(loc, player)).thenReturn(false);
+            // Keyed on the container, not the clicked block: a double chest is one shared inventory
+            // behind two blocks (gate 2 P1).
+            when(chestLockService.canAccess(block, player)).thenReturn(false);
 
             ChestLockData lockData = ChestLockData.builder()
                     .ownerName("OtherPlayer")
                     .build();
-            when(chestLockService.getLock(loc)).thenReturn(lockData);
+            when(chestLockService.denyingLock(block, player)).thenReturn(lockData);
 
             PlayerInteractEvent event = mock(PlayerInteractEvent.class);
             when(event.getClickedBlock()).thenReturn(block);
@@ -95,7 +97,7 @@ class ChestLockListenerTest {
             when(block.getLocation()).thenReturn(loc);
 
             when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
-            when(chestLockService.canAccess(loc, player)).thenReturn(true);
+            when(chestLockService.canAccess(block, player)).thenReturn(true);
 
             PlayerInteractEvent event = mock(PlayerInteractEvent.class);
             when(event.getClickedBlock()).thenReturn(block);
@@ -141,7 +143,9 @@ class ChestLockListenerTest {
 
             listener.onPlayerInteract(event);
 
-            verify(chestLockService, never()).canAccess(any(), any());
+            // Typed explicitly: canAccess is overloaded on Block and Location since the interact
+            // check moved to the container, and any() matches both.
+            verify(chestLockService, never()).canAccess(any(org.bukkit.block.Block.class), any());
         }
     }
 

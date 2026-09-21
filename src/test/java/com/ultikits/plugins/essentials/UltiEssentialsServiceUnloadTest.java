@@ -265,12 +265,52 @@ class UltiEssentialsServiceUnloadTest {
     }
 
     @Test
-    @DisplayName("a module whose services are not in the container unloads without throwing")
-    void unloadWithoutServicesDoesNotThrow() throws Exception {
+    @DisplayName("a service the container cannot resolve is reported, not skipped, and the others are still shut down")
+    void unresolvableServiceIsReportedAndTheOthersStillShutDown() throws Exception {
+        bootWithEverythingRunning();
+        SimpleContainer withoutTeleport = new SimpleContainer();
+        withoutTeleport.registerType(ScheduledCommandService.class, scheduledCommandService);
+        withoutTeleport.registerType(ScoreboardService.class, scoreboardService);
+        withoutTeleport.registerType(NamePrefixService.class, namePrefixService);
+        plugin.setContext(withoutTeleport);
+
+        assertThatThrownBy(() -> invokeOnUnregister(plugin))
+                .as("an unreachable service must not let the unload report a clean removal")
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TeleportService")
+                .hasMessageContaining("still running");
+
+        assertThat(cancelled(SCHEDULED_COMMAND_PERIOD)).isTrue();
+        assertThat(cancelled(SCOREBOARD_PERIOD)).isTrue();
+        assertThat(cancelled(NAME_PREFIX_PERIOD)).isTrue();
+        assertThat(cancelled(TELEPORT_WARMUP_PERIOD))
+                .as("the unreachable service's own task is exactly what was NOT stopped")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("every unreachable service is reported, the first as the failure and the rest suppressed")
+    void everyUnresolvableServiceIsReported() throws Exception {
         bootWithEverythingRunning();
         plugin.setContext(new SimpleContainer());
 
-        assertThatCode(() -> invokeOnUnregister(plugin)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> invokeOnUnregister(plugin))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("ScheduledCommandService")
+                .satisfies(thrown -> assertThat(thrown.getSuppressed())
+                        .as("one per remaining service, none of them lost")
+                        .hasSize(3));
+    }
+
+    @Test
+    @DisplayName("a module that never received a container unloads quietly, because no service was ever built")
+    void moduleWithoutAContainerUnloadsQuietly() throws Exception {
+        bootWithEverythingRunning();
+        plugin.setContext(null);
+
+        assertThatCode(() -> invokeOnUnregister(plugin))
+                .as("no container means no bean was built and no task was started by those beans")
+                .doesNotThrowAnyException();
     }
 
     // ---------------------------------------------------------------------------------------------

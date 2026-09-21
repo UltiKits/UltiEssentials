@@ -341,6 +341,23 @@ class EntityIdBackfillServiceTest {
         }
 
         @Test
+        @DisplayName("with no configuration available at all, run() refuses rather than proceeding")
+        void anUnresolvedConfigRefuses() throws Exception {
+            // The safe default on a gate that could not be read is to refuse: "we could not read the
+            // key that turns this off" must not mean "run it" for something that changes an operator's
+            // data (gate 1 MINOR-06). Asserted as stored bytes, like the disabled case.
+            writeLegacyRecord("homes", home("farm"));
+            List<String> before = storeContents("homes");
+            wire(true);
+            setBackfillField("config", null);
+
+            EntityIdBackfillService.Report report = backfill.run();
+
+            assertThat(report.totalRepaired()).isZero();
+            assertThat(storeContents("homes")).as("stored bytes").isEqualTo(before);
+        }
+
+        @Test
         @DisplayName("with the key disabled, run() writes nothing and the records keep no key")
         void disabledRepairsNothing() throws Exception {
             writeLegacyRecord("homes", home("farm"));
@@ -384,7 +401,7 @@ class EntityIdBackfillServiceTest {
         }
 
         @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
-        private void setBackfillField(String name, Object value) throws Exception {
+        void setBackfillField(String name, Object value) throws Exception {
             java.lang.reflect.Field field = EntityIdBackfillService.class.getDeclaredField(name);
             field.setAccessible(true);
             field.set(backfill, value);
@@ -413,6 +430,31 @@ class EntityIdBackfillServiceTest {
 
             assertThat(outcome.repaired()).as("records repaired").isEqualTo(25);
             assertThat(store.transactions()).as("transactions opened for 25 records").isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("a store that hands out detached copies is reported as repairing nothing, not as succeeding")
+        void aDetachedStoreIsNotReportedAsRepaired() throws Exception {
+            // Skipping the delete on a cache-backed store depends on that store handing out the
+            // instances it holds, so insert's onCreate() writes the key onto the stored record. If
+            // that ever stops being true -- and the framework has an open question about exactly this
+            // (UltiKits/UltiTools-Reborn#522 asks whether reads should be detached) -- the repair
+            // would write nothing. It must then SAY so rather than counting the records as repaired,
+            // which is what the confirmation step exists for. Without it, this reports 4 repaired and
+            // the records still have no key.
+            for (int i = 0; i < 4; i++) {
+                writeLegacyRecord("homes", home("home" + i));
+            }
+            DetachedReadStore<HomeData> store = new DetachedReadStore<>(
+                operatorOver("homes", HomeData.class), HomeData.class);
+
+            Outcome outcome = backfill.repair(store, "HomeData");
+
+            assertThat(outcome.repaired()).as("nothing reached the store").isZero();
+            assertThat(outcome.skipped()).as("all four are reported as untouched").isEqualTo(4);
+            for (HomeData record : store.getAll()) {
+                assertThat(record.getPersistedId()).as("still un-keyed, and reported as such").isNull();
+            }
         }
 
         @Test
@@ -558,6 +600,47 @@ class EntityIdBackfillServiceTest {
                 com.ultikits.ultitools.entities.WhereCondition... c) { return delegate.page(page, size, c); }
         @Override public void insert(T obj) { delegate.insert(obj); }
         @Override public void delById(Object id) { deletes++; delegate.delById(id); }
+        @Override public void update(String column, Object value, Object id) { delegate.update(column, value, id); }
+        @Override public void update(T obj) throws IllegalAccessException { delegate.update(obj); }
+    }
+
+    /**
+     * An operator that returns a fresh copy of every entity it is read for, the way the relational
+     * operator materialises rows -- and the shape a cache-backed operator would take if the framework
+     * ever detached its reads. Its insert cannot write a key onto anything the store keeps, so a
+     * repair through it changes nothing.
+     */
+    private static final class DetachedReadStore<T extends BaseDataEntity<String>> implements DataOperator<T> {
+        private static final Gson COPY = new Gson();
+        private final DataOperator<T> delegate;
+        private final Class<T> type;
+
+        DetachedReadStore(DataOperator<T> delegate, Class<T> type) {
+            this.delegate = delegate;
+            this.type = type;
+        }
+
+        private List<T> detach(List<T> found) {
+            List<T> copies = new ArrayList<>(found.size());
+            for (T each : found) {
+                copies.add(COPY.fromJson(COPY.toJson(each), type));
+            }
+            return copies;
+        }
+
+        @Override public List<T> getAll() { return detach(delegate.getAll()); }
+        @Override public List<T> getAll(com.ultikits.ultitools.entities.WhereCondition... c) { return detach(delegate.getAll(c)); }
+        @Override public T getById(Object id) {
+            T found = delegate.getById(id);
+            return found == null ? null : COPY.fromJson(COPY.toJson(found), type);
+        }
+        @Override public boolean exist(T object) { return delegate.exist(object); }
+        @Override public boolean exist(com.ultikits.ultitools.entities.WhereCondition... c) { return delegate.exist(c); }
+        @Override public List<T> getLike(String column, String value, LikeType likeType) { return detach(delegate.getLike(column, value, likeType)); }
+        @Override public List<T> page(int page, int size, com.ultikits.ultitools.entities.WhereCondition... c) { return detach(delegate.page(page, size, c)); }
+        @Override public void insert(T obj) { /* a detached entity reaches nothing the store keeps */ }
+        @Override public void del(com.ultikits.ultitools.entities.WhereCondition... c) { delegate.del(c); }
+        @Override public void delById(Object id) { delegate.delById(id); }
         @Override public void update(String column, Object value, Object id) { delegate.update(column, value, id); }
         @Override public void update(T obj) throws IllegalAccessException { delegate.update(obj); }
     }

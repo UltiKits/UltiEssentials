@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
@@ -37,8 +38,37 @@ public class UltiEssentials extends UltiToolsPlugin {
     @Override
     public boolean registerSelf() {
         // All services are automatically initialized by IoC container via @PostConstruct
+        repairStoredPrimaryKeys();
         getLogger().info(i18n("UltiEssentials 已启用！"));
         return true;
+    }
+
+    /**
+     * Gives records written before UltiKits/UltiEssentials#34 was fixed the primary key they were
+     * saved without, so deleting a home or warp, lifting a ban, or removing a container lock works
+     * on data this module wrote earlier.
+     * <p>
+     * Runs here rather than from a service's own {@code @PostConstruct} so that it happens after
+     * every service has its data operator, in one place an operator can find in the log. A failure
+     * is logged and enabling continues: refusing to load the module would be a worse outcome than
+     * leaving the records as they are, and the repair is idempotent, so the next start-up retries.
+     * <p>
+     * 为 #34 修复之前写入的记录补上缺失的主键；失败只记录日志，不阻止模块启用，下次启动会重试。
+     */
+    private void repairStoredPrimaryKeys() {
+        EntityIdBackfillService repair = getContext().getBean(EntityIdBackfillService.class);
+        if (repair == null) {
+            getLogger().warn("The stored-primary-key repair is unavailable; records written before "
+                    + "UltiKits/UltiEssentials#34 was fixed were left as they are");
+            return;
+        }
+        try {
+            repair.run();
+        } catch (RuntimeException e) {
+            getLogger().error(e, "The stored-primary-key repair failed; records written before "
+                    + "UltiKits/UltiEssentials#34 was fixed were left as they are, and the repair "
+                    + "will run again on the next start-up");
+        }
     }
 
     /**

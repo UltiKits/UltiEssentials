@@ -1,9 +1,11 @@
 package com.ultikits.plugins.essentials.entity.base;
 
+import java.lang.reflect.Field;
 import java.util.UUID;
 
 import com.ultikits.ultitools.abstracts.data.BaseDataEntity;
 import com.ultikits.ultitools.annotations.Column;
+import com.ultikits.ultitools.utils.ReflectionUtil;
 
 import lombok.EqualsAndHashCode;
 
@@ -123,6 +125,49 @@ public abstract class UuidKeyedDataEntity extends BaseDataEntity<String> {
      */
     public String getPersistedId() {
         return super.getId();
+    }
+
+    /**
+     * Describes this record field by field, for a log line an operator has to be able to act on.
+     * <p>
+     * Not {@code toString}: Lombok's {@code @Data} generates one per class with
+     * {@code callSuper = false}, so a subclass's {@code toString} omits every inherited field -- which
+     * on these entities means a home printed without its world or coordinates and without its own
+     * identity, i.e. exactly the fields needed to re-create it (gate 1 MAJOR-06). Switching
+     * {@code toString} to {@code callSuper = true} would fix today's output and leave the promise
+     * resting on a shape a later change can silently alter again.
+     * <p>
+     * The field list is not written out here either. It is every {@code @Column}-mapped field of the
+     * concrete class, read through the same {@link ReflectionUtil#getFields(Class)} walk the data
+     * operator itself uses to build its statements -- so it is by construction the set of fields that
+     * make up the stored record, and a field added later is included without anyone remembering to.
+     * Each is printed as {@code column=value}, so the line names what it prints.
+     *
+     * @return this record's stored columns and their values
+     */
+    @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
+    public String describeForRecovery() {
+        StringBuilder description = new StringBuilder(getClass().getSimpleName()).append('[');
+        boolean first = true;
+        for (Field field : ReflectionUtil.getFields(getClass())) {
+            Column column = field.getAnnotation(Column.class);
+            if (column == null) {
+                continue;
+            }
+            if (!first) {
+                description.append(", ");
+            }
+            first = false;
+            field.setAccessible(true);
+            Object value;
+            try {
+                value = field.get(this);
+            } catch (IllegalAccessException e) {
+                value = "<unreadable>";
+            }
+            description.append(column.value()).append('=').append(value);
+        }
+        return description.append(']').toString();
     }
 
     /**

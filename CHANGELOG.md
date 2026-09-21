@@ -58,9 +58,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `ultiessentials.fly.other` to whoever should keep that ability — this matches how `/heal <player>`
   and `/gm <mode> <player>` already work (UltiKits/UltiEssentials#25).
 - At start-up, this module now repairs records it wrote before the fix above, giving each the primary
-  key it was saved without. It reports one line per kind of record it repaired and a summary, and
-  says nothing at all when there is nothing to repair, so a line in the log always means records were
-  written. It runs once: a repaired record is not visited again on later start-ups. A record it
+  key it was saved without. It reports one line per kind of record it wrote and a summary, so such a
+  line always means records were written; a record it leaves alone is reported as a warning instead,
+  one line each with the reason. It runs once: a repaired record is not visited again on later start-ups. A record it
   cannot repair safely is left exactly as it is and reported as a warning — this happens when the
   record carries no identity of its own, when two stored records share one identity, or when a record
   already carries a key that disagrees with its identity. Such a record still reads normally, but
@@ -114,8 +114,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   分开。此前两者共用同一个权限节点，因此只要服务器给普通玩家开放了自己飞行的权限，他们同时也能为任何在线玩家
   开启或关闭飞行，包括在其飞行途中将其关闭。请为应保留该能力的人授予 `ultiessentials.fly.other`——这与
   `/heal <玩家>`、`/gm <模式> <玩家>` 现有的做法一致（UltiKits/UltiEssentials#25）。
-- 启动时，本模块现在会修复上一条所述在修复之前写入的记录，为每条记录补上保存时缺失的主键。它会为修复过的每类
-  记录各输出一行日志并给出汇总，没有需要修复的记录时则完全不输出，因此日志中出现该行就说明确实写入了数据。
+- 启动时，本模块现在会修复上一条所述在修复之前写入的记录，为每条记录补上保存时缺失的主键。它会为写入过记录的每类记录各输出一行日志并给出汇总，因此出现该行就说明确实写入了数据；
+  被跳过的记录改为以警告形式逐条报告并说明原因。
   修复只进行一次：已修复的记录在之后的启动中不会再被处理。无法安全修复的记录会原样保留，并以警告形式报告——
   出现在记录自身没有标识、两条记录共用同一标识，或记录已带有与其标识不一致的主键时。此类记录仍可正常读取，
   但删除或更新仍会失败，警告中会指出该记录，便于手动重建（UltiKits/UltiEssentials#34）。

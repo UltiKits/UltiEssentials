@@ -19,8 +19,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Repairs records this module persisted before UltiKits/UltiEssentials#34 was fixed, whose
@@ -44,6 +46,16 @@ import java.util.Map;
  * is {@code del(WhereCondition)} on the {@code uuid} column followed by {@code insert}, whose
  * {@code onCreate()} now writes the key. Adding a framework method was not an option for this
  * phase.
+ * <p>
+ * A conditional update -- an {@code UPDATE} targeted by a {@code WhereCondition} rather than by the
+ * id column -- would remove the need for the delete entirely. Measured: it does not exist.
+ * {@code DataOperator} exposes three update entry points and all three key on {@code id}
+ * ({@code update(String, Object, Object)}, {@code update(T)}, and {@code updateAll(List)} which
+ * delegates to {@code update(T)}); {@code Query}'s nineteen methods have no update terminal, only
+ * {@code delete()}; and of the framework's three {@code UPDATE} statement builders, none calls
+ * {@code appendConditions}, whose four call sites are {@code exist}, {@code getAll}, {@code page} and
+ * {@code del}. That last pair is the control for the negative: predicate targeting exists in this
+ * codebase, and is absent from every update path.
  *
  * <h2>Properties this repair is required to have</h2>
  * <ul>
@@ -58,10 +70,11 @@ import java.util.Map;
  *   <li><b>Says what it touched.</b> One INFO line per entity type that had anything to repair,
  *       plus a summary; silence when there is nothing to do, so a healthy server's log is
  *       unchanged.</li>
- *   <li><b>Loses nothing quietly.</b> The delete and the insert run inside
- *       {@code DataOperator#transaction}, so a store with a transaction manager rolls the pair back
- *       together. If the insert fails anyway, the record's full contents are logged at ERROR so an
- *       operator can re-create it by hand, and the repair moves on rather than aborting the rest.</li>
+ *   <li><b>Loses nothing quietly.</b> One transaction covers the whole entity type, so a failure
+ *       anywhere leaves the store exactly as it was rather than part-repaired -- and on a store with
+ *       no transaction manager bound, where the framework runs the action with no transaction at all,
+ *       every affected record's columns and values are logged at ERROR through
+ *       {@code describeForRecovery()}, which is enough to re-create them by hand.</li>
  * </ul>
  *
  * @author wisdomme
@@ -72,7 +85,7 @@ import java.util.Map;
 public class EntityIdBackfillService {
 
     /**
-     * Every persisted entity type this repair covers. {@code EntityIdBackfillCoverageTest} holds
+     * Every persisted entity type this repair covers. {@code EntityIdBackfillServiceTest$CoverageTests} holds
      * this list against the entity package, so a fifth entity cannot be added without either being
      * covered here or failing the build.
      */
@@ -101,12 +114,15 @@ public class EntityIdBackfillService {
      */
     public Report run() {
         Report report = new Report();
-        if (config != null && !config.isDataRepairEnabled()) {
-            // One line rather than silence: "why did it not run?" has to be answerable from the log,
-            // and an operator who set the key will recognise it.
-            log.info("Start-up repair of records saved without a primary key is off "
-                    + "(features.data-repair.enabled); those records stay as they are, and deleting "
-                    + "or updating them keeps failing");
+        if (config == null || !config.isDataRepairEnabled()) {
+            // An unresolved config bean refuses rather than proceeding: for a repair that changes an
+            // operator's data, "we could not read the key that turns this off" must not mean "run it"
+            // (gate 1 MINOR-06). One line rather than silence either way -- "why did it not run?" has
+            // to be answerable from the log, and an operator who set the key will recognise it.
+            log.info("Start-up repair of records saved without a primary key did not run ({}); those "
+                    + "records stay as they are, and deleting or updating them keeps failing",
+                    config == null ? "this module's configuration was not available"
+                            : "features.data-repair.enabled is false");
             return report;
         }
         for (Class<? extends UuidKeyedDataEntity> type : REPAIRED_TYPES) {
@@ -136,15 +152,20 @@ public class EntityIdBackfillService {
     <T extends UuidKeyedDataEntity> Outcome repair(DataOperator<T> operator, String label) {
         List<T> stored = operator.getAll();
         Map<String, Integer> occurrences = new HashMap<>();
+        Set<String> alreadyUsedKeys = new HashSet<>();
         for (T record : stored) {
             String uuid = record.getId();
             if (uuid != null) {
                 Integer seen = occurrences.get(uuid);
                 occurrences.put(uuid, seen == null ? 1 : seen + 1);
             }
+            String persisted = record.getPersistedId();
+            if (persisted != null) {
+                alreadyUsedKeys.add(persisted);
+            }
         }
 
-        int repaired = 0;
+        List<T> candidates = new ArrayList<>();
         int skipped = 0;
         for (T record : stored) {
             String uuid = record.getId();
@@ -171,16 +192,25 @@ public class EntityIdBackfillService {
                 skipped++;
                 continue;
             }
-            if (rewrite(operator, record, label, uuid)) {
-                repaired++;
-            } else {
+            if (alreadyUsedKeys.contains(uuid)) {
+                // Another record already holds this identity as its primary key, so writing it here
+                // would collide with it. Detected from the same snapshot rather than discovered by
+                // attempting the write and catching the failure: with one transaction around the
+                // whole type, an attempted collision would roll back every record repaired with it.
+                log.warn("Another stored {} record already holds {} as its primary key; the record "
+                        + "identified by it is left untouched rather than colliding with it",
+                        label, uuid);
                 skipped++;
+                continue;
             }
+            candidates.add(record);
         }
+
+        int repaired = candidates.isEmpty() ? 0 : rewriteAll(operator, candidates, label);
         if (repaired > 0) {
             makeDurable(operator, label);
         }
-        return new Outcome(repaired, skipped);
+        return new Outcome(repaired, skipped + (candidates.size() - repaired));
     }
 
     /**
@@ -206,22 +236,80 @@ public class EntityIdBackfillService {
         }
     }
 
-    private <T extends UuidKeyedDataEntity> boolean rewrite(DataOperator<T> operator, T record,
-                                                           String label, String uuid) {
+    /**
+     * Rewrites every candidate inside <strong>one</strong> transaction, and reports how many were
+     * written.
+     * <p>
+     * One transaction for the whole entity type rather than one per record, for two measured reasons.
+     * Cost: {@code SimpleJsonDataOperator.transaction} opens by deep-copying its entire cache through
+     * Gson, so a transaction per record made the repair superlinear on the main thread inside
+     * {@code onEnable} -- 100/200/400/800 records took 0.66/0.73/2.32/11.64 s, which extrapolates to
+     * minutes for a few thousand and looks exactly like a hung server (gate 1 MAJOR-05). One
+     * transaction is one deep copy per entity type instead of N. Safety: it also closes the window
+     * between the delete and the insert for the whole run rather than one record at a time, so a
+     * failure anywhere leaves the store as it was rather than part-repaired.
+     * <p>
+     * All-or-nothing is only acceptable because the one failure this loop could previously expect --
+     * colliding with a primary key another record already holds -- is now excluded before the
+     * transaction opens. What remains is an infrastructure failure, and rolling the whole run back is
+     * the right answer to that: the repair is idempotent, so the next start-up tries again.
+     *
+     * @param operator   the operator to repair through
+     * @param candidates the records to give a key, each already checked as safe to key
+     * @param label      the entity type name, for diagnostics
+     * @param <T>        the entity type
+     * @return the number of records whose key is confirmed written; 0 if the transaction rolled back
+     */
+    private <T extends UuidKeyedDataEntity> int rewriteAll(DataOperator<T> operator,
+                                                           List<T> candidates, String label) {
+        // The delete is needed only where a row can exist independently of the object that
+        // represents it. A cache-backed store hands out the instances it holds, so insert's
+        // onCreate() writes the key onto the stored record itself and the delete would remove and
+        // re-add the same entry -- while costing a full-cache Gson pass per call, because the
+        // framework's own del(WhereCondition) serialises every entry to evaluate the condition. That
+        // was the second superlinear term behind gate 1 MAJOR-05, and dropping the delete where it is
+        // redundant removes it rather than shrinking it. Whether the key really was written is then
+        // confirmed below rather than assumed, so relying on that behaviour cannot fail silently.
+        boolean cacheBacked = operator instanceof Cached;
+        Set<String> expected = new HashSet<>();
+        for (T record : candidates) {
+            expected.add(record.getId());
+        }
         try {
             operator.transaction(() -> {
-                operator.del(WhereCondition.builder().column("uuid").value(uuid).build());
-                operator.insert(record);
+                for (T record : candidates) {
+                    if (!cacheBacked) {
+                        operator.del(WhereCondition.builder()
+                                .column("uuid").value(record.getId()).build());
+                    }
+                    operator.insert(record);
+                }
                 return null;
             });
-            return true;
+            int written = 0;
+            for (T record : operator.getAll()) {
+                if (expected.contains(record.getId()) && record.getPersistedId() != null) {
+                    written++;
+                }
+            }
+            if (written != candidates.size()) {
+                log.error("Attempted to write a primary key for {} {} record(s) but only {} carry one "
+                        + "afterwards; the rest are reported as untouched", candidates.size(), label,
+                        written);
+            }
+            return written;
         } catch (Exception e) {
-            // The record is held in memory above, so its contents can still be reported in full --
-            // this is the one place where an operator may have to re-create a record by hand.
-            log.error("Failed to write a primary key for {} record " + uuid
-                    + "; it may have been removed without being written back. Its contents were: "
-                    + record, label, e);
-            return false;
+            // Every candidate is still held in memory here, so their contents can be reported in
+            // full. Through describeForRecovery(), which names the fields it prints -- the entities'
+            // own toString does not carry inherited fields (gate 1 MAJOR-06).
+            StringBuilder contents = new StringBuilder();
+            for (T record : candidates) {
+                contents.append("\n  ").append(record.describeForRecovery());
+            }
+            log.error("Repairing {} {} record(s) failed and the whole attempt was rolled back, so "
+                    + "nothing was changed. The records it would have rewritten were:{}",
+                    candidates.size(), label, contents, e);
+            return 0;
         }
     }
 
@@ -245,9 +333,6 @@ public class EntityIdBackfillService {
             return skipped;
         }
 
-        boolean touchedNothing() {
-            return repaired == 0 && skipped == 0;
-        }
     }
 
     /**
@@ -291,21 +376,24 @@ public class EntityIdBackfillService {
         }
 
         /**
-         * Writes one INFO line per entity type that had anything to repair, then a summary. Silent
-         * when there was nothing to do, so a healthy server's log is unchanged and a line here
-         * always means something was written.
+         * Writes one INFO line per entity type that had records <strong>written</strong>, then a
+         * summary. An INFO line here therefore always means records were written, which is what the
+         * javadoc, CHANGELOG and FEATURES.md all claim; a run that only skipped records used to log
+         * one too, making that claim false (gate 1 MINOR-01). A skip is already reported at WARNING,
+         * one line per record, with the reason -- so a skip-only run is not silent, it is simply not
+         * claiming a write.
          */
         void log() {
             List<String> labels = new ArrayList<>(byType.keySet());
             Collections.sort(labels);
             for (String label : labels) {
                 Outcome outcome = byType.get(label);
-                if (!outcome.touchedNothing()) {
+                if (outcome.repaired() > 0) {
                     log.info("Repaired the stored primary key of {} {} record(s); left {} untouched",
                         outcome.repaired(), label, outcome.skipped());
                 }
             }
-            if (totalRepaired() > 0 || totalSkipped() > 0) {
+            if (totalRepaired() > 0) {
                 log.info("Records written before UltiKits/UltiEssentials#34 was fixed: {} repaired, "
                         + "{} left untouched. This runs once -- a repaired record is not visited again.",
                     totalRepaired(), totalSkipped());

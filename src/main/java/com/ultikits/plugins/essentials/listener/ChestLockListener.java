@@ -55,10 +55,12 @@ public class ChestLockListener implements Listener {
         
         Player player = event.getPlayer();
         
-        if (!chestLockService.canAccess(block.getLocation(), player)) {
+        // Keyed on the container, not on the clicked block: a double chest is one shared inventory
+        // behind two blocks, so a record covering either half protects the items behind both.
+        if (!chestLockService.canAccess(block, player)) {
             event.setCancelled(true);
             
-            ChestLockData lock = chestLockService.getLock(block.getLocation());
+            ChestLockData lock = chestLockService.denyingLock(block, player);
             if (lock != null) {
                 player.sendMessage(plugin.i18n("§c该容器被 §f") + 
                     lock.getOwnerName() + plugin.i18n(" §c锁定"));

@@ -81,6 +81,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   old location. Unlocking a double chest reports success only when BOTH halves' records are gone; a
   surviving half is reported as a failure and stays locked (UltiKits/UltiEssentials#34,
   UltiKits/UltiEssentials#35, UltiKits/UltiEssentials#37).
+- A lock on a double chest is now enforced from either side, and unlocking one is all or nothing.
+  Because the two halves are one shared inventory, a lock record on either half now refuses strangers
+  clicking either block — previously the check looked only at the block clicked, so a container whose
+  halves disagreed could be opened from the unrecorded side. Unlocking removes every record protecting
+  the container together: if any of them cannot be removed, none is, the container keeps reporting as
+  locked, and the failure is reported rather than a half-unlocked container being left behind
+  (UltiKits/UltiEssentials#37).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -128,6 +135,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `/sethome <名称>` 会在之后核对已保存的坐标，若新位置未写入存储则报告失败，而不再确认一次仍会把玩家传送到
   旧位置的"移动"。解锁大箱子时，只有两半的记录都被移除才报告成功；任一半的记录仍然存在即报告失败并保持上锁
   （UltiKits/UltiEssentials#34、UltiKits/UltiEssentials#35、UltiKits/UltiEssentials#37）。
+- 大箱子的锁现在从任意一侧都会生效，解锁则是要么两边都解、要么都不解。由于大箱子的两半共用一个容器，任一半上的
+  锁定记录现在都会拒绝他人点击任意一块——此前检查只看被点击的那一块，因此两半记录不一致的容器可以从没有记录的
+  一侧打开。解锁时会把保护该容器的所有记录放在同一个事务中一起移除：只要有一条无法移除，就一条都不移除，容器
+  继续显示为已锁定，并报告失败，而不会留下解锁了一半的容器（UltiKits/UltiEssentials#37）。
 
 ### Removed
 

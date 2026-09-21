@@ -217,38 +217,116 @@ public class ChestLockService {
             return UnlockResult.NOT_OWNER;
         }
         
-        if (!removeStoredLock(lock)) {
-            return UnlockResult.FAILED;
-        }
-        
-        // A double chest is two lock records, and the container is only unlocked when both are gone.
-        // Discarding this result reported success while the other half's record survived and
-        // re-locked the container on the next restart -- UltiKits/UltiEssentials#37's own symptom,
-        // inside the method that fixed it (gate 1 MAJOR-02).
-        if (!unlockDoubleChestOther(block)) {
-            return UnlockResult.FAILED;
-        }
-        
-        return UnlockResult.SUCCESS;
+        // Every record protecting this container comes out together or none does. Removing them one
+        // at a time left the first half dropped from the cache while the second half's record
+        // survived, and since the interact check keys on the clicked block, clicking that now-uncached
+        // half opened the shared inventory the surviving record was still protecting -- a bypass
+        // introduced by returning FAILED after the first removal had already taken effect (gate 2 P1).
+        return removeAllStoredLocks(locksProtectingSameContainerAs(block))
+                ? UnlockResult.SUCCESS : UnlockResult.FAILED;
     }
 
     /**
-     * Deletes one lock record and confirms by re-query that no record remains for its location,
-     * dropping the cache entry only then.
+     * Removes a set of lock records all together, or leaves every one of them exactly as it was.
+     * <p>
+     * The confirmation runs <strong>inside</strong> the transaction and aborts it, so a record that
+     * the store will not give up rolls the whole removal back rather than leaving some records gone
+     * and some present. The cache is mutated only afterwards, and only if the store agreed on all of
+     * them, so there is no point at which the cache and the store disagree about part of a container.
+     * <p>
+     * Removing them one at a time is what produced gate 2's bypass: the first half was dropped from
+     * the cache, the second half's record survived, and the interact check -- which keys on the
+     * clicked block -- then allowed clicks on the uncached half into the shared inventory the
+     * surviving record was still protecting. Restoring the first record on failure would be a
+     * compensating write that can itself fail, and would leave the same hazard for any future
+     * multi-record lock; this makes the intermediate state unable to exist instead.
+     * <p>
+     * On a store with no transaction manager bound the framework runs the action with no transaction
+     * at all, so the deletes that succeeded stand. The cache is still not touched, which errs towards
+     * reporting the container as locked -- protective, and the opposite of a bypass.
      *
-     * @param lock the lock record to remove
-     * @return true if nothing is stored for that location any more
+     * @param locks every record protecting the container, possibly one
+     * @return true if all of them are gone; false if any survived, with none of them dropped
      */
-    private boolean removeStoredLock(ChestLockData lock) {
-        lockOperator.delById(lock.getId());
-        if (isStored(lock.getWorld(), lock.getX(), lock.getY(), lock.getZ())) {
-            log.error("Lock record {} at {} (owner {}) is still stored after a delete; keeping it in "
-                    + "the cache so the container does not appear unlocked until the next restart",
-                    lock.getId(), lock.getLocationKey(), lock.getOwnerName());
+    private boolean removeAllStoredLocks(List<ChestLockData> locks) {
+        if (locks.isEmpty()) {
+            return true;
+        }
+        try {
+            lockOperator.transaction(() -> {
+                for (ChestLockData lock : locks) {
+                    lockOperator.delById(lock.getId());
+                }
+                for (ChestLockData lock : locks) {
+                    if (isStored(lock.getWorld(), lock.getX(), lock.getY(), lock.getZ())) {
+                        // Aborts the transaction, which is the point: every delete in it is undone.
+                        throw new IllegalStateException("Lock record " + lock.getId() + " at "
+                                + lock.getLocationKey() + " is still stored after a delete");
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            StringBuilder kept = new StringBuilder();
+            for (ChestLockData lock : locks) {
+                kept.append(' ').append(lock.getLocationKey());
+            }
+            log.error("Could not remove the {} lock record(s) protecting this container, so none of "
+                    + "them was removed and all of them stay in the cache -- the container keeps "
+                    + "reporting as locked rather than half-unlocked. Locations:{}",
+                    locks.size(), kept, e);
             return false;
         }
-        lockCache.remove(lock.getLocationKey());
+        for (ChestLockData lock : locks) {
+            lockCache.remove(lock.getLocationKey());
+        }
         return true;
+    }
+
+    /**
+     * Every cached lock record protecting the same container as {@code block} -- its own, plus the
+     * other half's when the block is part of a double chest, because the two halves share one
+     * inventory.
+     *
+     * @param block a container block
+     * @return the records protecting it, in no particular order, possibly empty
+     */
+    private List<ChestLockData> locksProtectingSameContainerAs(Block block) {
+        List<ChestLockData> locks = new ArrayList<>(2);
+        ChestLockData own = getLock(block.getLocation());
+        if (own != null) {
+            locks.add(own);
+        }
+        Location other = doubleChestOtherHalf(block);
+        if (other != null) {
+            ChestLockData otherLock = getLock(other);
+            if (otherLock != null) {
+                locks.add(otherLock);
+            }
+        }
+        return locks;
+    }
+
+    /**
+     * The location of the other half of {@code block}'s double chest, or null when it is not one.
+     */
+    @Nullable
+    private Location doubleChestOtherHalf(Block block) {
+        if (block.getType() != Material.CHEST && block.getType() != Material.TRAPPED_CHEST) {
+            return null;
+        }
+        if (!(block.getState() instanceof Chest)) {
+            return null;
+        }
+        Chest chest = (Chest) block.getState();
+        InventoryHolder holder = chest.getInventory().getHolder();
+        if (!(holder instanceof DoubleChest)) {
+            return null;
+        }
+        DoubleChest doubleChest = (DoubleChest) holder;
+        Location left = ((Chest) doubleChest.getLeftSide()).getLocation();
+        Location right = ((Chest) doubleChest.getRightSide()).getLocation();
+        return block.getLocation().equals(left) ? right : left;
     }
 
     /**
@@ -262,40 +340,6 @@ public class ChestLockService {
             .where("z").eq(z)
             .list()
             .isEmpty();
-    }
-    
-    /**
-     * Unlocks the other half of a double chest, reporting whether nothing is left for the caller to
-     * worry about.
-     *
-     * @param block the half that was just unlocked
-     * @return true when this block is not a double chest, when the other half holds no lock, or when
-     *         the other half's record is confirmed gone; false only when a record survived
-     */
-    private boolean unlockDoubleChestOther(Block block) {
-        if (block.getType() != Material.CHEST && block.getType() != Material.TRAPPED_CHEST) {
-            return true;
-        }
-        
-        if (!(block.getState() instanceof Chest)) {
-            return true;
-        }
-        
-        Chest chest = (Chest) block.getState();
-        InventoryHolder holder = chest.getInventory().getHolder();
-        
-        if (!(holder instanceof DoubleChest)) {
-            return true;
-        }
-        
-        DoubleChest doubleChest = (DoubleChest) holder;
-        Location left = ((Chest) doubleChest.getLeftSide()).getLocation();
-        Location right = ((Chest) doubleChest.getRightSide()).getLocation();
-        
-        Location other = block.getLocation().equals(left) ? right : left;
-        
-        ChestLockData otherLock = getLock(other);
-        return otherLock == null || removeStoredLock(otherLock);
     }
     
     /**
@@ -313,7 +357,62 @@ public class ChestLockService {
     }
     
     /**
+     * Checks whether a player may open the container this block belongs to, keyed on the
+     * <strong>container</strong> rather than on the block they clicked.
+     * <p>
+     * A double chest is one shared inventory behind two blocks, so opening either block opens the same
+     * items. Keying the check on the clicked block alone means a lock record covering one half does not
+     * protect clicks on the other -- measured: every protection check in this module took a single
+     * {@code Location}, and {@code DoubleChest} was consulted only in the lock and unlock paths. Gate 2
+     * found one route to that divergence (a partly-completed unlock, now impossible); this closes the
+     * rest, including a lock whose second half was never written and legacy data holding only one half.
+     * <p>
+     * A player who may access every record protecting the container may open it; one denied by any of
+     * them may not.
+     *
+     * @param block  the container block the player is acting on
+     * @param player the player
+     * @return true if no record protecting this container denies them
+     */
+    public boolean canAccess(Block block, Player player) {
+        for (ChestLockData lock : locksProtectingSameContainerAs(block)) {
+            if (!canAccess(lock, player)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * The record protecting this container that denies {@code player}, or null if none does. Used to
+     * name an owner in a refusal message.
+     *
+     * @param block  the container block
+     * @param player the player
+     * @return the denying record, or null
+     */
+    @Nullable
+    public ChestLockData denyingLock(Block block, Player player) {
+        for (ChestLockData lock : locksProtectingSameContainerAs(block)) {
+            if (!canAccess(lock, player)) {
+                return lock;
+            }
+        }
+        return null;
+    }
+
+    private boolean canAccess(ChestLockData lock, Player player) {
+        if (lock.getOwnerUuid().equals(player.getUniqueId().toString())) {
+            return true;
+        }
+        return config.isChestLockAdminBypass() && player.hasPermission("ultiessentials.lock.admin");
+    }
+
+    /**
      * Checks if a player can access a locked block.
+     * <p>
+     * Keyed on one location, so for a double chest it answers for that half only. Prefer
+     * {@link #canAccess(Block, Player)}, which answers for the whole container.
      */
     public boolean canAccess(Location location, Player player) {
         ChestLockData lock = getLock(location);
@@ -355,7 +454,10 @@ public class ChestLockService {
         if (lock == null) {
             return false;
         }
-        return removeStoredLock(lock);
+        // Exactly this location's record: the other half of a double chest is still standing, so its
+        // own lock must survive. Routed through the same all-or-nothing path so there is one place
+        // where the cache is mutated after the store agrees.
+        return removeAllStoredLocks(Collections.singletonList(lock));
     }
     
     public enum LockResult {

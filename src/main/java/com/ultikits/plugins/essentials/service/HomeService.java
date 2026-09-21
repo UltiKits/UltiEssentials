@@ -140,7 +140,7 @@ public class HomeService {
                 log.error("Failed to update home", e);
             }
             HomeData stored = getHome(playerUuid, normalizedName);
-            if (stored == null || !isAt(stored, target)) {
+            if (stored == null || !storesTheSamePlaceAs(stored, target)) {
                 log.error("Home '{}' of player {} still reads as {} after moving it to {}; "
                         + "reporting the move as failed", normalizedName, playerUuid,
                         stored == null ? "absent" : describe(stored), describe(target));
@@ -206,21 +206,43 @@ public class HomeService {
         return DeleteResult.REMOVED;
     }
 
-    private static boolean isAt(HomeData home, Location location) {
-        return location.getWorld() != null
-                && location.getWorld().getName().equals(home.getWorld())
-                && Double.compare(home.getX(), location.getX()) == 0
-                && Double.compare(home.getY(), location.getY()) == 0
-                && Double.compare(home.getZ(), location.getZ()) == 0;
+    /**
+     * Whether the stored record would teleport a player to {@code target}.
+     * <p>
+     * Both sides are put through the entity's own {@code fromLocation}/{@code toLocation} round trip
+     * and the constructed values are compared, rather than a list of fields. {@code toLocation()} is
+     * the single place the stored fields are read, so a field added to the entity later cannot fall
+     * out of this comparison without someone changing that method -- whereas comparing world and
+     * coordinates by hand passed a move that changed only the facing direction, and would have passed
+     * the next field the same way (gate 2 P2).
+     * <p>
+     * The round trip is applied to {@code target} as well, not just to the record, so the comparison
+     * does not turn on world <em>identity</em>: both sides resolve their world by name exactly as a
+     * later {@code /home} would. Comparing the raw target against the reconstructed record reported a
+     * correct write as failed whenever two world objects shared a name.
+     */
+    private static boolean storesTheSamePlaceAs(HomeData stored, Location target) {
+        HomeData asStored = new HomeData();
+        asStored.fromLocation(target);
+        return Objects.equals(asStored.toLocation(), stored.toLocation());
     }
 
+    /**
+     * Describes a home by the location it would actually teleport a player to.
+     * <p>
+     * The verification above compares {@code toLocation()} rather than a list of fields, and this
+     * prints the same value, for the same reason: {@code toLocation()} is the one place the stored
+     * fields are read, so a field added to the entity later cannot fall out of either the comparison
+     * or the diagnostic without someone changing that method. Comparing world and coordinates by hand
+     * passed a move that changed only the facing direction, and would have passed the next field too
+     * (gate 2 P2).
+     */
     private static String describe(HomeData home) {
-        return home.getWorld() + " " + home.getX() + "/" + home.getY() + "/" + home.getZ();
+        return String.valueOf(home.toLocation());
     }
 
     private static String describe(Location location) {
-        return (location.getWorld() == null ? "?" : location.getWorld().getName())
-                + " " + location.getX() + "/" + location.getY() + "/" + location.getZ();
+        return String.valueOf(location);
     }
     
     /**

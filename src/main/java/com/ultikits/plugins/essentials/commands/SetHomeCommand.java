@@ -53,6 +53,11 @@ public class SetHomeCommand extends BaseEssentialsCommand {
             case UPDATED:
                 player.sendMessage(i18n("家位置已更新！") + " (" + name.toLowerCase() + ")");
                 break;
+            case FAILED:
+                // The home exists and the move did not reach storage, so /home would still teleport
+                // to the old location. Reporting it as updated is #34's symptom (gate 1 MAJOR-01).
+                player.sendMessage(i18n("§c设置失败，家的新位置无法写入存储，仍将传送到旧位置，请联系管理员") + " (" + name.toLowerCase() + ")");
+                break;
             case LIMIT_REACHED:
                 player.sendMessage(i18n("你已达到最大家数量限制"));
                 player.sendMessage(i18n("使用 /delhome <名称> 删除一个家"));

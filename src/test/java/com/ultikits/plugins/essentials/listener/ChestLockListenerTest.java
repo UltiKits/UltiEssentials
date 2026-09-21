@@ -10,6 +10,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
@@ -68,12 +69,14 @@ class ChestLockListenerTest {
             when(block.getLocation()).thenReturn(loc);
 
             when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
-            when(chestLockService.canAccess(loc, player)).thenReturn(false);
+            // Keyed on the container, not the clicked block: a double chest is one shared inventory
+            // behind two blocks (gate 2 P1).
+            when(chestLockService.canAccess(block, player)).thenReturn(false);
 
             ChestLockData lockData = ChestLockData.builder()
                     .ownerName("OtherPlayer")
                     .build();
-            when(chestLockService.getLock(loc)).thenReturn(lockData);
+            when(chestLockService.denyingLock(block, player)).thenReturn(lockData);
 
             PlayerInteractEvent event = mock(PlayerInteractEvent.class);
             when(event.getClickedBlock()).thenReturn(block);
@@ -95,7 +98,7 @@ class ChestLockListenerTest {
             when(block.getLocation()).thenReturn(loc);
 
             when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
-            when(chestLockService.canAccess(loc, player)).thenReturn(true);
+            when(chestLockService.canAccess(block, player)).thenReturn(true);
 
             PlayerInteractEvent event = mock(PlayerInteractEvent.class);
             when(event.getClickedBlock()).thenReturn(block);
@@ -141,7 +144,72 @@ class ChestLockListenerTest {
 
             listener.onPlayerInteract(event);
 
-            verify(chestLockService, never()).canAccess(any(), any());
+            // Typed explicitly: canAccess is overloaded on Block and Location since the interact
+            // check moved to the container, and any() matches both.
+            verify(chestLockService, never()).canAccess(any(org.bukkit.block.Block.class), any());
+        }
+
+        @Test
+        @DisplayName("Should refuse a left click with the break wording, not the open wording")
+        void shouldRefuseLeftClickWithBreakWording() {
+            Block block = mock(Block.class);
+            World world = EssentialsTestHelper.createMockWorld("world");
+            Location loc = new Location(world, 10, 64, 20);
+            when(block.getType()).thenReturn(Material.CHEST);
+            when(block.getLocation()).thenReturn(loc);
+
+            when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
+            when(chestLockService.canAccess(block, player)).thenReturn(false);
+
+            ChestLockData lockData = ChestLockData.builder()
+                    .ownerName("OtherPlayer")
+                    .build();
+            when(chestLockService.denyingLock(block, player)).thenReturn(lockData);
+
+            PlayerInteractEvent event = mock(PlayerInteractEvent.class);
+            when(event.getClickedBlock()).thenReturn(block);
+            when(event.getPlayer()).thenReturn(player);
+            when(event.getAction()).thenReturn(Action.LEFT_CLICK_BLOCK);
+
+            listener.onPlayerInteract(event);
+
+            // The refusal itself is the assertion that matters, and it is asserted first: a left
+            // click on someone else's locked container must still be cancelled here. The wording
+            // is the declared-but-undelivered half, and it is checked second so that a change
+            // which bought the wording by letting the click through fails on this line rather
+            // than passing on the next.
+            verify(event).setCancelled(true);
+            // Exact equality, not contains(): the open wording is a strict prefix of the break
+            // wording, so contains() would pass on the very message this row exists to reject.
+            verify(player).sendMessage("§c该容器被 §fOtherPlayer §c锁定，无法破坏");
+        }
+
+        @Test
+        @DisplayName("Should keep the open wording for a right click")
+        void shouldKeepOpenWordingOnRightClick() {
+            Block block = mock(Block.class);
+            World world = EssentialsTestHelper.createMockWorld("world");
+            Location loc = new Location(world, 10, 64, 20);
+            when(block.getType()).thenReturn(Material.CHEST);
+            when(block.getLocation()).thenReturn(loc);
+
+            when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
+            when(chestLockService.canAccess(block, player)).thenReturn(false);
+
+            ChestLockData lockData = ChestLockData.builder()
+                    .ownerName("OtherPlayer")
+                    .build();
+            when(chestLockService.denyingLock(block, player)).thenReturn(lockData);
+
+            PlayerInteractEvent event = mock(PlayerInteractEvent.class);
+            when(event.getClickedBlock()).thenReturn(block);
+            when(event.getPlayer()).thenReturn(player);
+            when(event.getAction()).thenReturn(Action.RIGHT_CLICK_BLOCK);
+
+            listener.onPlayerInteract(event);
+
+            verify(event).setCancelled(true);
+            verify(player).sendMessage("§c该容器被 §fOtherPlayer §c锁定");
         }
     }
 
@@ -157,13 +225,15 @@ class ChestLockListenerTest {
             Location loc = new Location(world, 10, 64, 20);
             when(block.getLocation()).thenReturn(loc);
 
-            when(chestLockService.isLocked(loc)).thenReturn(true);
-
             ChestLockData lockData = ChestLockData.builder()
                     .ownerUuid("other-uuid")
                     .ownerName("OtherPlayer")
                     .build();
-            when(chestLockService.getLock(loc)).thenReturn(lockData);
+            // Container-scoped: breaking asks for every record protecting the container this block
+            // belongs to, not just this block's own. Keyed on the block, a stranger could break the
+            // unrecorded half of a locked double chest and collect the drops (gate 2 round 3).
+            when(chestLockService.locksProtecting(block))
+                    .thenReturn(Collections.singletonList(lockData));
             when(player.hasPermission("ultiessentials.lock.admin")).thenReturn(false);
 
             BlockBreakEvent event = new BlockBreakEvent(block, player);
@@ -184,13 +254,12 @@ class ChestLockListenerTest {
             Location loc = new Location(world, 10, 64, 20);
             when(block.getLocation()).thenReturn(loc);
 
-            when(chestLockService.isLocked(loc)).thenReturn(true);
-
             ChestLockData lockData = ChestLockData.builder()
                     .ownerUuid(ownerUuid.toString())
                     .ownerName("Owner")
                     .build();
-            when(chestLockService.getLock(loc)).thenReturn(lockData);
+            when(chestLockService.locksProtecting(block))
+                    .thenReturn(Collections.singletonList(lockData));
 
             BlockBreakEvent event = new BlockBreakEvent(block, owner);
 
@@ -208,13 +277,12 @@ class ChestLockListenerTest {
             Location loc = new Location(world, 10, 64, 20);
             when(block.getLocation()).thenReturn(loc);
 
-            when(chestLockService.isLocked(loc)).thenReturn(true);
-
             ChestLockData lockData = ChestLockData.builder()
                     .ownerUuid("other-uuid")
                     .ownerName("OtherPlayer")
                     .build();
-            when(chestLockService.getLock(loc)).thenReturn(lockData);
+            when(chestLockService.locksProtecting(block))
+                    .thenReturn(Collections.singletonList(lockData));
             when(player.hasPermission("ultiessentials.lock.admin")).thenReturn(true);
 
             BlockBreakEvent event = new BlockBreakEvent(block, player);
@@ -233,7 +301,7 @@ class ChestLockListenerTest {
             Location loc = new Location(world, 10, 64, 20);
             when(block.getLocation()).thenReturn(loc);
 
-            when(chestLockService.isLocked(loc)).thenReturn(false);
+            when(chestLockService.locksProtecting(block)).thenReturn(Collections.emptyList());
 
             BlockBreakEvent event = new BlockBreakEvent(block, player);
 
@@ -252,7 +320,7 @@ class ChestLockListenerTest {
 
             listener.onBlockBreak(event);
 
-            verify(chestLockService, never()).isLocked(any());
+            verify(chestLockService, never()).locksProtecting(any());
         }
 
         @Test
@@ -290,8 +358,8 @@ class ChestLockListenerTest {
             Block normalBlock = mock(Block.class);
             when(normalBlock.getLocation()).thenReturn(loc2);
 
-            when(chestLockService.isLocked(loc1)).thenReturn(true);
-            when(chestLockService.isLocked(loc2)).thenReturn(false);
+            when(chestLockService.isContainerLocked(lockedBlock)).thenReturn(true);
+            when(chestLockService.isContainerLocked(normalBlock)).thenReturn(false);
 
             List<Block> blockList = new ArrayList<>(Arrays.asList(lockedBlock, normalBlock));
             EntityExplodeEvent event = mock(EntityExplodeEvent.class);
@@ -328,7 +396,7 @@ class ChestLockListenerTest {
 
             Block lockedBlock = mock(Block.class);
             when(lockedBlock.getLocation()).thenReturn(loc);
-            when(chestLockService.isLocked(loc)).thenReturn(true);
+            when(chestLockService.isContainerLocked(lockedBlock)).thenReturn(true);
 
             List<Block> blockList = new ArrayList<>(Collections.singletonList(lockedBlock));
             BlockExplodeEvent event = mock(BlockExplodeEvent.class);
@@ -364,7 +432,7 @@ class ChestLockListenerTest {
 
             Block lockedBlock = mock(Block.class);
             when(lockedBlock.getLocation()).thenReturn(loc);
-            when(chestLockService.isLocked(loc)).thenReturn(true);
+            when(chestLockService.isContainerLocked(lockedBlock)).thenReturn(true);
 
             BlockPistonExtendEvent event = mock(BlockPistonExtendEvent.class);
             when(event.getBlocks()).thenReturn(Collections.singletonList(lockedBlock));
@@ -417,7 +485,7 @@ class ChestLockListenerTest {
 
             Block lockedBlock = mock(Block.class);
             when(lockedBlock.getLocation()).thenReturn(loc);
-            when(chestLockService.isLocked(loc)).thenReturn(true);
+            when(chestLockService.isContainerLocked(lockedBlock)).thenReturn(true);
 
             BlockPistonRetractEvent event = mock(BlockPistonRetractEvent.class);
             when(event.getBlocks()).thenReturn(Collections.singletonList(lockedBlock));
@@ -471,7 +539,9 @@ class ChestLockListenerTest {
             // Create a mock Container that is also an InventoryHolder
             Container container = mock(Container.class);
             when(container.getLocation()).thenReturn(loc);
-            when(chestLockService.isLocked(loc)).thenReturn(true);
+            // Resolved from the holder rather than from a Location: a double chest's holder is a
+            // DoubleChest, which is not a Container, so the old instanceof test skipped it entirely.
+            when(chestLockService.isContainerLocked(container)).thenReturn(true);
 
             Inventory sourceInv = mock(Inventory.class);
             when(sourceInv.getHolder()).thenReturn(container);

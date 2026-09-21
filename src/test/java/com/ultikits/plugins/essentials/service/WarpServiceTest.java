@@ -205,11 +205,14 @@ class WarpServiceTest {
                 .build();
 
             when(warpOperator.getAll(any())).thenReturn(List.of(warp));
-            when(queryMock.first()).thenReturn(warp);
+            // Second value models the store after a successful delete: deleteWarp re-queries to
+            // confirm the record is gone before reporting success, so a stub that keeps returning
+            // the warp describes a delete that removed nothing (UltiKits/UltiEssentials#34).
+            when(queryMock.first()).thenReturn(warp, (WarpData) null);
 
-            boolean result = warpService.deleteWarp("spawn");
+            WarpService.DeleteResult result = warpService.deleteWarp("spawn");
 
-            assertThat(result).isTrue();
+            assertThat(result).isEqualTo(WarpService.DeleteResult.REMOVED);
             verify(warpOperator).delById(warp.getId());
         }
 
@@ -218,9 +221,9 @@ class WarpServiceTest {
         void shouldReturnFalseWhenWarpNotFound() {
             when(warpOperator.getAll(any())).thenReturn(new ArrayList<>());
 
-            boolean result = warpService.deleteWarp("nonexistent");
+            WarpService.DeleteResult result = warpService.deleteWarp("nonexistent");
 
-            assertThat(result).isFalse();
+            assertThat(result).isEqualTo(WarpService.DeleteResult.NOT_FOUND);
             verify(warpOperator, never()).delById(any());
         }
     }

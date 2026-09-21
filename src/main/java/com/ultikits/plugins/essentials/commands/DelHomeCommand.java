@@ -33,12 +33,19 @@ public class DelHomeCommand extends BaseEssentialsCommand {
             return;
         }
         
-        boolean deleted = homeService.deleteHome(player.getUniqueId(), name);
-        
-        if (deleted) {
-            player.sendMessage(i18n("家已删除！") + " (" + name.toLowerCase() + ")");
-        } else {
-            player.sendMessage(i18n("找不到该家"));
+        switch (homeService.deleteHome(player.getUniqueId(), name)) {
+            case REMOVED:
+                player.sendMessage(i18n("家已删除！") + " (" + name.toLowerCase() + ")");
+                break;
+            case NOT_FOUND:
+                player.sendMessage(i18n("找不到该家"));
+                break;
+            case FAILED:
+                // Distinct from NOT_FOUND on purpose: the home is still there, so telling the
+                // player it does not exist would send them away while /homes still lists it
+                // (gate 1 MAJOR-03).
+                player.sendMessage(i18n("§c删除失败，该家的记录无法从存储中移除，请联系管理员"));
+                break;
         }
     }
 }

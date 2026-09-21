@@ -250,7 +250,7 @@ class HomeCommandsTest {
         @Test
         @DisplayName("Should delete home successfully")
         void shouldDeleteHome() {
-            when(homeService.deleteHome(playerUuid, "base")).thenReturn(true);
+            when(homeService.deleteHome(playerUuid, "base")).thenReturn(HomeService.DeleteResult.REMOVED);
 
             command.deleteHome(player, "base");
 
@@ -260,7 +260,7 @@ class HomeCommandsTest {
         @Test
         @DisplayName("Should send message when home not found")
         void shouldSendMessageWhenNotFound() {
-            when(homeService.deleteHome(playerUuid, "missing")).thenReturn(false);
+            when(homeService.deleteHome(playerUuid, "missing")).thenReturn(HomeService.DeleteResult.NOT_FOUND);
 
             command.deleteHome(player, "missing");
 

@@ -366,7 +366,7 @@ class BanCommandsTest {
         @Test
         @DisplayName("Should unban player successfully")
         void shouldUnbanSuccess() {
-            when(banService.unbanPlayerByName("BadPlayer")).thenReturn(true);
+            when(banService.unbanPlayerByName("BadPlayer")).thenReturn(BanService.UnbanResult.REMOVED);
 
             command.unban(player, "BadPlayer");
 
@@ -376,7 +376,7 @@ class BanCommandsTest {
         @Test
         @DisplayName("Should send message when player not banned")
         void shouldSendMessageWhenNotBanned() {
-            when(banService.unbanPlayerByName("GoodPlayer")).thenReturn(false);
+            when(banService.unbanPlayerByName("GoodPlayer")).thenReturn(BanService.UnbanResult.NOT_BANNED);
 
             command.unban(player, "GoodPlayer");
 
@@ -386,7 +386,7 @@ class BanCommandsTest {
         @Test
         @DisplayName("Should distinguish a name banned outside this plugin from not banned anywhere (13-11, UltiEssentials#12 half 2)")
         void shouldDistinguishServerBanFromNoBanAtAll() {
-            when(banService.unbanPlayerByName("VanillaBannedPlayer")).thenReturn(false);
+            when(banService.unbanPlayerByName("VanillaBannedPlayer")).thenReturn(BanService.UnbanResult.NOT_BANNED);
             when(banService.isBannedInServerBanList("VanillaBannedPlayer")).thenReturn(true);
 
             command.unban(player, "VanillaBannedPlayer");
@@ -409,7 +409,7 @@ class BanCommandsTest {
         @Test
         @DisplayName("Should warn about a remaining server ban after removing this plugin's own ban record, without broadcasting a misleading full unban (13-11, review round 2)")
         void shouldWarnAboutRemainingServerBanAfterPluginUnban() {
-            when(banService.unbanPlayerByName("DoubleBannedPlayer")).thenReturn(true);
+            when(banService.unbanPlayerByName("DoubleBannedPlayer")).thenReturn(BanService.UnbanResult.REMOVED);
             when(banService.isBannedInServerBanList("DoubleBannedPlayer")).thenReturn(true);
 
             command.unban(player, "DoubleBannedPlayer");

@@ -12,6 +12,7 @@ import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.interfaces.DataOperator;
+import com.ultikits.ultitools.interfaces.Query;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -52,8 +53,11 @@ class ChestLockServiceTest {
     @Mock
     private DataOperator<ChestLockData> lockOperator;
 
+    @SuppressWarnings("unchecked")
+    private final Query<ChestLockData> storedLockQuery = mock(Query.class);
+
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         MockBukkitHelper.clearForeignServer();
         server = MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
@@ -90,6 +94,23 @@ class ChestLockServiceTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
+        // A store that reports nothing left for a location after a delete: unlockBlock and
+        // onBlockBreak now confirm removal by re-querying it before dropping the cache entry, so a
+        // mock whose query() is unstubbed describes a store no test has decided the contents of
+        // (UltiKits/UltiEssentials#37). Self-returning chain, mirroring QueryImpl's own
+        // `return this;` methods, as HomeServiceTest's queryMock already does.
+        // DataOperator#transaction is a default interface method, so a Mockito mock returns null and
+        // never runs the action. The removal path now wraps its deletes in one transaction -- all of
+        // them apply or none do (gate 2 P1) -- so a mock that swallows the action describes a store
+        // that does nothing at all.
+        lenient().when(lockOperator.transaction(org.mockito.ArgumentMatchers.<java.util.concurrent.Callable<Object>>any()))
+                .thenAnswer(inv -> ((java.util.concurrent.Callable<?>) inv.getArgument(0)).call());
+        lenient().when(lockOperator.query()).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.where(anyString())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.and(anyString())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.eq(any())).thenReturn(storedLockQuery);
+        lenient().when(storedLockQuery.list()).thenReturn(new ArrayList<>());
 
         when(lockOperator.getAll()).thenReturn(new ArrayList<>());
         lockService.init();

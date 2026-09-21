@@ -253,6 +253,14 @@ public class EssentialsConfig extends AbstractConfigEntity {
         put("night", "time set night");
     }};
 
+    // ============ 启动数据修复 Start-up data repair ============
+    // Kept in the `features.` namespace because it is the only namespace this file uses; a lone
+    // top-level key would be a convention decision of its own. What it controls is a repair, not a
+    // feature -- see EntityIdBackfillService and FEATURES.md's `ultiessentials.storedkey.repair`.
+    @ConfigEntry(path = "features.data-repair.enabled",
+            comment = "启动时修复缺少主键的旧记录（家、地标点、封禁、容器锁）；关闭后这些记录无法删除或更新")
+    private boolean dataRepairEnabled = true;
+
     public EssentialsConfig() {
         super("config/essentials.yml");
     }

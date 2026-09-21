@@ -126,12 +126,25 @@ public class HomeService {
         HomeData existingHome = getHome(playerUuid, normalizedName);
         
         if (existingHome != null) {
-            // Update existing home
-            updateHomeLocation(existingHome, player.getLocation());
+            // Update existing home, then confirm the store really holds the new location. The
+            // framework's update(T) returns void and addresses its row by WHERE id = ?, so an update
+            // that matched nothing is indistinguishable from one that moved the home -- which is
+            // UltiKits/UltiEssentials#34's symptom on the trigger this module's CHANGELOG claims
+            // fixed (gate 1 MAJOR-01). The re-query compares coordinates rather than merely finding
+            // the record, because the record was always going to still be there.
+            Location target = player.getLocation();
+            updateHomeLocation(existingHome, target);
             try {
                 homeOperator.update(existingHome);
             } catch (IllegalAccessException e) {
                 log.error("Failed to update home", e);
+            }
+            HomeData stored = getHome(playerUuid, normalizedName);
+            if (stored == null || !storesTheSamePlaceAs(stored, target)) {
+                log.error("Home '{}' of player {} still reads as {} after moving it to {}; "
+                        + "reporting the move as failed", normalizedName, playerUuid,
+                        stored == null ? "absent" : describe(stored), describe(target));
+                return SetHomeResult.FAILED;
             }
             return SetHomeResult.UPDATED;
         }
@@ -164,19 +177,72 @@ public class HomeService {
     }
     
     /**
-     * Deletes a home.
+     * Deletes a home, reporting success only once the record is confirmed gone from the store.
+     * <p>
+     * The confirmation is a re-query, not the delete call returning: the framework's
+     * {@code delById} returns {@code void} and discards the affected-row count, so a delete that
+     * matched no row is indistinguishable from one that removed the record at the call site. That
+     * is what let {@code /delhome farm} report success while {@code /homes} kept listing
+     * {@code farm} (UltiKits/UltiEssentials#34). The re-query is by player and name rather than by
+     * id, because that is what the player observes: a duplicate record under the same name
+     * surviving is still a home that was not deleted.
      *
      * @param playerUuid the player's UUID
      * @param name       the home name
-     * @return true if deleted, false if not found
+     * @return what happened: removed, no such home, or the record survived
      */
-    public boolean deleteHome(UUID playerUuid, String name) {
-        HomeData home = getHome(playerUuid, name.toLowerCase().trim());
+    public DeleteResult deleteHome(UUID playerUuid, String name) {
+        String normalizedName = name.toLowerCase().trim();
+        HomeData home = getHome(playerUuid, normalizedName);
         if (home == null) {
-            return false;
+            return DeleteResult.NOT_FOUND;
         }
         homeOperator.delById(home.getId());
-        return true;
+        if (getHome(playerUuid, normalizedName) != null) {
+            log.error("Home '{}' of player {} is still stored after a delete of record {}; "
+                    + "reporting the deletion as failed", normalizedName, playerUuid, home.getId());
+            return DeleteResult.FAILED;
+        }
+        return DeleteResult.REMOVED;
+    }
+
+    /**
+     * Whether the stored record would teleport a player to {@code target}.
+     * <p>
+     * Both sides are put through the entity's own {@code fromLocation}/{@code toLocation} round trip
+     * and the constructed values are compared, rather than a list of fields. {@code toLocation()} is
+     * the single place the stored fields are read, so a field added to the entity later cannot fall
+     * out of this comparison without someone changing that method -- whereas comparing world and
+     * coordinates by hand passed a move that changed only the facing direction, and would have passed
+     * the next field the same way (gate 2 P2).
+     * <p>
+     * The round trip is applied to {@code target} as well, not just to the record, so the comparison
+     * does not turn on world <em>identity</em>: both sides resolve their world by name exactly as a
+     * later {@code /home} would. Comparing the raw target against the reconstructed record reported a
+     * correct write as failed whenever two world objects shared a name.
+     */
+    private static boolean storesTheSamePlaceAs(HomeData stored, Location target) {
+        HomeData asStored = new HomeData();
+        asStored.fromLocation(target);
+        return Objects.equals(asStored.toLocation(), stored.toLocation());
+    }
+
+    /**
+     * Describes a home by the location it would actually teleport a player to.
+     * <p>
+     * The verification above compares {@code toLocation()} rather than a list of fields, and this
+     * prints the same value, for the same reason: {@code toLocation()} is the one place the stored
+     * fields are read, so a field added to the entity later cannot fall out of either the comparison
+     * or the diagnostic without someone changing that method. Comparing world and coordinates by hand
+     * passed a move that changed only the facing direction, and would have passed the next field too
+     * (gate 2 P2).
+     */
+    private static String describe(HomeData home) {
+        return String.valueOf(home.toLocation());
+    }
+
+    private static String describe(Location location) {
+        return String.valueOf(location);
     }
     
     /**
@@ -245,6 +311,27 @@ public class HomeService {
         UPDATED,
         LIMIT_REACHED,
         INVALID_NAME,
-        DISABLED
+        DISABLED,
+        /**
+         * The home existed and the move did not reach the store, so the player would still be
+         * teleported to the old location (gate 1 MAJOR-01).
+         */
+        FAILED
+    }
+
+    /**
+     * What a deletion did, so the caller can tell a record that was never there from one the store
+     * would not give up.
+     * <p>
+     * Three values rather than a boolean because the two failures are not the same thing to the
+     * person reading the message: "there is no such record" ends the matter, while "the record is
+     * still there" means the thing they asked for did not happen and they need to look. Collapsing
+     * them told an operator a home did not exist while {@code /homes} still listed it (gate 1
+     * MAJOR-03). Matches {@link ChestLockService.UnlockResult}, which already had this shape.
+     */
+    public enum DeleteResult {
+        REMOVED,
+        NOT_FOUND,
+        FAILED
     }
 }

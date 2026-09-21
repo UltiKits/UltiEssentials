@@ -141,18 +141,32 @@ public class WarpService {
     }
     
     /**
-     * Deletes a warp.
+     * Deletes a warp, reporting success only once the record is confirmed gone from the store.
+     * <p>
+     * The confirmation is a re-query, not the delete call returning: the framework's
+     * {@code delById} returns {@code void} and discards the affected-row count, so a delete that
+     * matched no row is indistinguishable from one that removed the record at the call site. That
+     * is what let {@code /delwarp shop} report success while {@code /warps} kept listing
+     * {@code shop} (UltiKits/UltiEssentials#34). The re-query is by name rather than by id, because
+     * that is what the player observes: a duplicate record under the same name surviving is still a
+     * warp that was not deleted.
      *
      * @param name the warp name
-     * @return true if deleted, false if not found
+     * @return what happened: removed, no such warp, or the record survived
      */
-    public boolean deleteWarp(String name) {
-        WarpData warp = getWarp(name.toLowerCase().trim());
+    public DeleteResult deleteWarp(String name) {
+        String normalizedName = name.toLowerCase().trim();
+        WarpData warp = getWarp(normalizedName);
         if (warp == null) {
-            return false;
+            return DeleteResult.NOT_FOUND;
         }
         warpOperator.delById(warp.getId());
-        return true;
+        if (getWarp(normalizedName) != null) {
+            log.error("Warp '{}' is still stored after a delete of record {}; "
+                    + "reporting the deletion as failed", normalizedName, warp.getId());
+            return DeleteResult.FAILED;
+        }
+        return DeleteResult.REMOVED;
     }
     
     /**
@@ -222,5 +236,21 @@ public class WarpService {
         ALREADY_EXISTS,
         INVALID_NAME,
         DISABLED
+    }
+
+    /**
+     * What a deletion did, so the caller can tell a record that was never there from one the store
+     * would not give up.
+     * <p>
+     * Three values rather than a boolean because the two failures are not the same thing to the
+     * person reading the message: "there is no such record" ends the matter, while "the record is
+     * still there" means the thing they asked for did not happen and they need to look. Collapsing
+     * them told an operator a home did not exist while {@code /homes} still listed it (gate 1
+     * MAJOR-03). Matches {@link ChestLockService.UnlockResult}, which already had this shape.
+     */
+    public enum DeleteResult {
+        REMOVED,
+        NOT_FOUND,
+        FAILED
     }
 }

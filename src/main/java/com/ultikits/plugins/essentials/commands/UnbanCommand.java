@@ -34,7 +34,18 @@ public class UnbanCommand extends BaseEssentialsCommand {
     
     @CmdMapping(format = "<player>")
     public void unban(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
-        boolean success = banService.unbanPlayerByName(playerName);
+        BanService.UnbanResult outcome = banService.unbanPlayerByName(playerName);
+
+        if (outcome == BanService.UnbanResult.FAILED) {
+            // Never the "not banned" branch below: the ban record is still active, so the player is
+            // still rejected at login and /banlist still lists them. Reporting "not banned" would
+            // stop the operator looking just as effectively as the old false success did
+            // (gate 1 MAJOR-03).
+            sender.sendMessage(i18n("§c解禁失败，该玩家的封禁记录无法更新，该玩家仍处于封禁状态，请联系管理员") + " (" + playerName + ")");
+            return;
+        }
+
+        boolean success = outcome == BanService.UnbanResult.REMOVED;
 
         if (success && banService.isBannedInServerBanList(playerName)) {
             // The plugin's own ban record was removed, but the same name is also banned in

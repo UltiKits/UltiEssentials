@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
@@ -18,7 +19,6 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.InventoryHolder;
 
 /**
  * Listener for chest lock protection.
@@ -54,16 +54,50 @@ public class ChestLockListener implements Listener {
         }
         
         Player player = event.getPlayer();
-        
-        if (!chestLockService.canAccess(block.getLocation(), player)) {
+
+        // Keyed on the container, not on the clicked block: a double chest is one shared inventory
+        // behind two blocks, so a record covering either half protects the items behind both.
+        if (!chestLockService.canAccess(block, player)) {
             event.setCancelled(true);
-            
-            ChestLockData lock = chestLockService.getLock(block.getLocation());
+
+            ChestLockData lock = chestLockService.denyingLock(block, player);
             if (lock != null) {
-                player.sendMessage(plugin.i18n("§c该容器被 §f") + 
-                    lock.getOwnerName() + plugin.i18n(" §c锁定"));
+                // A left click on a block is the start of digging it, so this handler -- not
+                // onBlockBreak -- is what a player meets when they try to mine someone else's
+                // locked container. Gate 3 round 4 measured that: the only event a normal mining
+                // attempt produced was LEFT_CLICK_BLOCK cancelled=true, with no BlockBreakEvent at
+                // all, so the break wording onBlockBreak carries was unreachable by a player and
+                // reachable only through Player#breakBlock, which skips this event.
+                //
+                // Nothing about the refusal moves to say so. setCancelled(true) above is
+                // unconditional and runs before this branch is chosen; getAction() is a read of
+                // data the event already carries; and onBlockBreak still refuses on its own. The
+                // rule this obeys is that a guard is never weakened to improve a message -- had
+                // the wording required the refusal to happen later so a second listener could
+                // speak, the right answer would have been to keep the generic wording and correct
+                // the declaration instead.
+                player.sendMessage(event.getAction() == Action.LEFT_CLICK_BLOCK
+                    ? breakRefusal(lock) : accessRefusal(lock));
             }
         }
+    }
+
+    /**
+     * The refusal a player gets when a lock stops them reaching a container's contents.
+     */
+    private String accessRefusal(ChestLockData lock) {
+        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定");
+    }
+
+    /**
+     * The refusal a player gets when a lock stops them destroying a container.
+     * <p>
+     * Shared by the two handlers that can refuse a break -- {@link #onPlayerInteract} for an
+     * ordinary mining attempt and {@link #onBlockBreak} for one driven through the API -- so the
+     * wording cannot drift between the route a player takes and the route a plugin takes.
+     */
+    private String breakRefusal(ChestLockData lock) {
+        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定，无法破坏");
     }
     
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -73,30 +107,40 @@ public class ChestLockListener implements Listener {
         }
         
         Block block = event.getBlock();
-        
-        if (!chestLockService.isLocked(block.getLocation())) {
-            return;
-        }
-        
         Player player = event.getPlayer();
-        ChestLockData lock = chestLockService.getLock(block.getLocation());
-        
-        if (lock == null) {
-            return;
-        }
-        
-        // Check if player is owner or admin
-        boolean isOwner = lock.getOwnerUuid().equals(player.getUniqueId().toString());
+
+        // Keyed on the container, for the same reason onPlayerInteract is: a double chest is one
+        // shared inventory behind two blocks. Asking isLocked about the clicked block alone left the
+        // unrecorded half of a partly-recorded double chest breakable by anyone, and breaking it drops
+        // its contents on the floor -- strictly worse than the interact bypass, which only opened them
+        // (UltiKits/UltiEssentials#50 gate 2 round 3).
+        //
+        // Deliberately the raw permission node rather than ChestLockService#canAccess(Block, Player):
+        // admin bypass for opening a container is gated by chestlock.admin-bypass, admin bypass for
+        // breaking one is not. FEATURES.md records that these are two separate checks that happen to
+        // require the same node, and this fix widens which records are consulted without changing
+        // which players are let through.
         boolean isAdmin = player.hasPermission("ultiessentials.lock.admin");
-        
-        if (!isOwner && !isAdmin) {
+        ChestLockData denying = null;
+        for (ChestLockData lock : chestLockService.locksProtecting(block)) {
+            if (!lock.getOwnerUuid().equals(player.getUniqueId().toString()) && !isAdmin) {
+                denying = lock;
+                break;
+            }
+        }
+
+        if (denying != null) {
             event.setCancelled(true);
-            player.sendMessage(plugin.i18n("§c该容器被 §f") + 
-                lock.getOwnerName() + plugin.i18n(" §c锁定，无法破坏"));
+            player.sendMessage(breakRefusal(denying));
             return;
         }
-        
-        // Remove lock when broken
+
+        // Remove lock when broken. The boolean is deliberately not acted on here: the break has
+        // already been allowed at this point, and ChestLockService logs the record and its location
+        // at ERROR when the store would not give it up, keeping the lock cached so the container
+        // does not appear unlocked until the next restart (UltiKits/UltiEssentials#37). Cancelling
+        // the break instead would stop an owner from ever breaking their own container while the
+        // store is failing, which is a policy choice this fix does not make.
         chestLockService.onBlockBreak(block.getLocation());
     }
     
@@ -106,18 +150,21 @@ public class ChestLockListener implements Listener {
             return;
         }
         
-        // Remove locked blocks from explosion
-        event.blockList().removeIf(block -> chestLockService.isLocked(block.getLocation()));
+        // Container-scoped: an explosion that destroys the unrecorded half of a partly-recorded double
+        // chest drops that half's contents just as a break does, so the same whole-container lookup
+        // applies. This is the site whose earlier "an explosion destroys a specific block, not a
+        // container" reasoning was the same argument that left breaking open (gate 2 round 3).
+        event.blockList().removeIf(block -> chestLockService.isContainerLocked(block));
     }
-    
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
         if (!config.isChestLockEnabled()) {
             return;
         }
-        
-        // Remove locked blocks from explosion
-        event.blockList().removeIf(block -> chestLockService.isLocked(block.getLocation()));
+
+        // Container-scoped, for the reason given on onEntityExplode.
+        event.blockList().removeIf(block -> chestLockService.isContainerLocked(block));
     }
     
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -126,22 +173,27 @@ public class ChestLockListener implements Listener {
             return;
         }
         
+        // Container-scoped for consistency with every other protection site. Vanilla will not let a
+        // piston move a block entity at all, so no exploitable route through this handler is known --
+        // but "no route is known" was also true of breaking until it was looked for, and the cost of
+        // widening the lookup is one map probe.
         for (Block block : event.getBlocks()) {
-            if (chestLockService.isLocked(block.getLocation())) {
+            if (chestLockService.isContainerLocked(block)) {
                 event.setCancelled(true);
                 return;
             }
         }
     }
-    
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPistonRetract(BlockPistonRetractEvent event) {
         if (!config.isChestLockEnabled()) {
             return;
         }
-        
+
+        // Container-scoped, for the reason given on onPistonExtend.
         for (Block block : event.getBlocks()) {
-            if (chestLockService.isLocked(block.getLocation())) {
+            if (chestLockService.isContainerLocked(block)) {
                 event.setCancelled(true);
                 return;
             }
@@ -154,13 +206,19 @@ public class ChestLockListener implements Listener {
             return;
         }
         
-        // Prevent hopper from moving items from locked containers
-        InventoryHolder source = event.getSource().getHolder();
-        if (source instanceof org.bukkit.block.Container) {
-            org.bukkit.block.Container container = (org.bukkit.block.Container) source;
-            if (chestLockService.isLocked(container.getLocation())) {
-                event.setCancelled(true);
-            }
+        // Prevent a hopper from moving items out of a locked container.
+        //
+        // Resolved through the service rather than by an `instanceof Container` test here: a double
+        // chest's inventory is held by a DoubleChest, which is not a Container and not a block state,
+        // so the old test skipped every double chest -- a hopper could drain one even when BOTH halves
+        // held records. That is a wider hole than the unrecorded-half case the break fix closes, and
+        // it is fixed here rather than reported (gate 2 round 3).
+        //
+        // getDestination() is deliberately not checked: inserting items into a locked container does
+        // not expose its contents, and cancelling insertion would stop an owner's own hopper feeding
+        // their own locked chest.
+        if (chestLockService.isContainerLocked(event.getSource().getHolder())) {
+            event.setCancelled(true);
         }
     }
 }

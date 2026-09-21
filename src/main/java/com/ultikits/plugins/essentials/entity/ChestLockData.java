@@ -2,11 +2,10 @@ package com.ultikits.plugins.essentials.entity;
 
 import java.util.UUID;
 
-import com.ultikits.ultitools.abstracts.data.BaseDataEntity;
+import com.ultikits.plugins.essentials.entity.base.UuidKeyedDataEntity;
 import com.ultikits.ultitools.annotations.Column;
 import com.ultikits.ultitools.annotations.Table;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -21,19 +20,11 @@ import lombok.NoArgsConstructor;
  * @version 1.0.0
  */
 @Data
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @Table("essentials_chest_locks")
-public class ChestLockData extends BaseDataEntity<String> {
+public class ChestLockData extends UuidKeyedDataEntity {
 
-    /**
-     * Unique identifier for this lock.
-     */
-    @Column("uuid")
-    private UUID uuid;
-    
     /**
      * World name where the chest is located.
      */
@@ -75,7 +66,36 @@ public class ChestLockData extends BaseDataEntity<String> {
      */
     @Column("created_at")
     private long createdAt;
-    
+
+    /**
+     * Creates a chest-lock record.
+     * <p>
+     * Declared explicitly rather than through a class-level {@code @Builder} because {@code uuid}
+     * now lives on {@link UuidKeyedDataEntity}: a class-level builder covers only the class's own
+     * fields and would silently drop {@code .uuid(...)} from the builder's API.
+     *
+     * @param uuid      the record's module-generated identity
+     * @param world     world name where the container is located
+     * @param x         x coordinate
+     * @param y         y coordinate
+     * @param z         z coordinate
+     * @param ownerUuid UUID of the player who owns this lock
+     * @param ownerName name of the owner
+     * @param createdAt timestamp when the lock was created
+     */
+    @Builder
+    public ChestLockData(UUID uuid, String world, int x, int y, int z, String ownerUuid,
+                         String ownerName, long createdAt) {
+        super(uuid);
+        this.world = world;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.ownerUuid = ownerUuid;
+        this.ownerName = ownerName;
+        this.createdAt = createdAt;
+    }
+
     /**
      * Creates a location key for quick lookup.
      */
@@ -88,19 +108,5 @@ public class ChestLockData extends BaseDataEntity<String> {
      */
     public static String createLocationKey(String world, int x, int y, int z) {
         return world + ":" + x + ":" + y + ":" + z;
-    }
-
-    @Override
-    public String getId() {
-        return uuid == null ? null : uuid.toString();
-    }
-
-    @Override
-    public void setId(String id) {
-        this.uuid = id == null ? null : UUID.fromString(id);
-    }
-
-    public void setId(UUID id) {
-        this.uuid = id;
     }
 }

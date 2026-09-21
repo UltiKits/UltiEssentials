@@ -36,7 +36,12 @@ public class FlyCommand extends BaseEssentialsCommand {
         }
     }
 
-    @CmdMapping(format = "<player>")
+    // Acting on another player needs a node the self variant does not grant. Without this
+    // override the mapping inherited the class-level ultiessentials.fly, so every server granting
+    // ordinary players self-flight also let them force flight on or off for anyone online
+    // (UltiKits/UltiEssentials#25). Matches the ultiessentials.gamemode.other /
+    // ultiessentials.heal.other pattern the module's other self/other pairs already use.
+    @CmdMapping(format = "<player>", permission = "ultiessentials.fly.other")
     public void toggleFlyOther(
             @CmdSender Player sender,
             @CmdParam("player") Player target) {

@@ -221,9 +221,9 @@ class BanServiceTest {
             when(banOperator.getAll(any())).thenReturn(List.of(ban));
             when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(ban));
 
-            boolean result = banService.unbanPlayer(player.getUniqueId());
+            BanService.UnbanResult result = banService.unbanPlayer(player.getUniqueId());
 
-            assertThat(result).isTrue();
+            assertThat(result).isEqualTo(BanService.UnbanResult.REMOVED);
             verify(banOperator).update(any(BanData.class));
         }
 
@@ -232,9 +232,9 @@ class BanServiceTest {
         void shouldReturnFalseWhenPlayerNotBanned() throws Exception {
             when(banOperator.getAll(any())).thenReturn(new ArrayList<>());
 
-            boolean result = banService.unbanPlayer(player.getUniqueId());
+            BanService.UnbanResult result = banService.unbanPlayer(player.getUniqueId());
 
-            assertThat(result).isFalse();
+            assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
             verify(banOperator, never()).update(any());
         }
 
@@ -255,9 +255,9 @@ class BanServiceTest {
             when(banOperator.getAll(any())).thenReturn(List.of(ban));
             when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(ban));
 
-            boolean result = banService.unbanPlayerByName(player.getName());
+            BanService.UnbanResult result = banService.unbanPlayerByName(player.getName());
 
-            assertThat(result).isTrue();
+            assertThat(result).isEqualTo(BanService.UnbanResult.REMOVED);
         }
     }
 
@@ -307,9 +307,9 @@ class BanServiceTest {
             when(banOperator.getAll(any())).thenReturn(List.of(ban));
             when(banOperator.query().where(anyString()).eq(any()).list()).thenReturn(List.of(ban));
 
-            boolean result = banService.unbanIp("127.0.0.1");
+            BanService.UnbanResult result = banService.unbanIp("127.0.0.1");
 
-            assertThat(result).isTrue();
+            assertThat(result).isEqualTo(BanService.UnbanResult.REMOVED);
         }
     }
 

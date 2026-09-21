@@ -22,7 +22,7 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 ### 💪 玩家状态
 | 命令 | 描述 | 权限 |
 |------|------|------|
-| `/fly [玩家]` | 切换飞行模式 | `ultiessentials.fly` |
+| `/fly [玩家]` | 切换飞行模式 | `ultiessentials.fly` (自己) / `ultiessentials.fly.other` (其他玩家) |
 | `/heal [玩家]` | 恢复生命值 | `ultiessentials.heal.self` / `ultiessentials.heal.other` |
 | `/feed [玩家]` | 恢复饱食度 | `ultiessentials.heal.self` / `ultiessentials.heal.other` |
 | `/speed <速度>` | 调整移动速度 (0-10) | `ultiessentials.speed` |
@@ -203,7 +203,8 @@ auto-reply:
 ### 玩家状态权限
 | 权限 | 描述 | 默认 |
 |------|------|------|
-| `ultiessentials.fly` | 切换飞行模式 | OP |
+| `ultiessentials.fly` | 切换自己的飞行模式 | OP |
+| `ultiessentials.fly.other` | 切换其他玩家的飞行模式（`ultiessentials.fly` 不授予此权限） | OP |
 | `ultiessentials.heal.self` | 治疗自己 | OP |
 | `ultiessentials.heal.other` | 治疗其他玩家 | OP |
 | `ultiessentials.speed` | 调整速度 | OP |

@@ -293,8 +293,12 @@ the player quits or name prefixes are turned off.
 ## Configuration
 
 One row per `@ConfigEntity` class (D-06's config-per-file rule), not per key: `essentials.yml`
-(59 keys), `spawn.yml` (8 keys), `lobby.yml` (6 keys), `motd.yml` (3 keys), `tabbar.yml` (2 keys)
-— 78 keys total, matching `FEATURES.md`'s `## Configuration` section exactly. Each row confirms
+(60 keys), `spawn.yml` (8 keys), `lobby.yml` (6 keys), `motd.yml` (3 keys), `tabbar.yml` (2 keys)
+— 79 keys total. `FEATURES.md`'s `## Configuration` heading carries the same two numbers and is
+the authority for them: reconcile against it rather than trusting the figures here, which went
+stale once already when `features.data-repair.enabled` was added and left this row telling testers
+to confirm 59 of 60 keys — a count that passes while the newly added, data-mutating safety switch
+is the one omitted. Each row confirms
 every key in the file is present at its `FEATURES.md`-documented default, then flips one or more
 representative keys and observes the behaviour follow — **except the four keys `FEATURES.md`
 documents as having no observable effect** (`features.wild.cooldown`, `features.recall.enabled`,
@@ -305,7 +309,7 @@ own checklist applies to its three no-effect `announcements.*.interval` keys.
 
 | ID | Preconditions | Steps | Expected | Layer | Covers |
 |---|---|---|---|---|---|
-| ultiessentials.config.essentials-yml | Fresh `config/essentials.yml` at its shipped default | Load the file; confirm all 59 keys listed under `FEATURES.md`'s `## Configuration` section are present at their documented defaults; then set `features.heal.enabled: false` (default true), restart, and confirm `ultiessentials.heal.self` (see `## Player Status & Utility`) now shows the translated `feature_disabled` line instead of healing; separately set `features.home.default-max-homes: 1` (default 3) and confirm a second `/sethome` attempt now hits the limit at count 1, not 3. Do NOT vary `features.wild.cooldown`, `features.recall.enabled`, `features.ban.broadcast-ban`, or `features.ban.broadcast-unban` expecting any observable effect — none has one (UltiKits/UltiEssentials#27) | All 59 keys present at their documented defaults before any change; after the changes, `/heal` is refused while disabled, and the home limit is enforced at the new, lower value | protocol | |
+| ultiessentials.config.essentials-yml | Fresh `config/essentials.yml` at its shipped default | Load the file; confirm all 60 keys listed under `FEATURES.md`'s `## Configuration` section are present at their documented defaults; then set `features.heal.enabled: false` (default true), restart, and confirm `ultiessentials.heal.self` (see `## Player Status & Utility`) now shows the translated `feature_disabled` line instead of healing; separately set `features.home.default-max-homes: 1` (default 3) and confirm a second `/sethome` attempt now hits the limit at count 1, not 3. Do NOT vary `features.wild.cooldown`, `features.recall.enabled`, `features.ban.broadcast-ban`, or `features.ban.broadcast-unban` expecting any observable effect — none has one (UltiKits/UltiEssentials#27) | All 60 keys present at their documented defaults before any change; after the changes, `/heal` is refused while disabled, and the home limit is enforced at the new, lower value | protocol | |
 | ultiessentials.config.spawn-yml | Fresh `config/spawn.yml` at its shipped default | Load the file; confirm all 8 keys are present at their documented defaults; then set `spawn.location.x: 100` (default 0.0), restart, and confirm `/spawn` now teleports to X=100 rather than X=0 | All 8 keys present at their documented defaults before the change; after the change, `/spawn` teleports to the new X coordinate | server | |
 | ultiessentials.config.lobby-yml | Fresh `config/lobby.yml` at its shipped default | Load the file; confirm all 6 keys are present at their documented defaults; then set `lobby.location.y: 100` (default 64.0), restart, and confirm `/lobby` now teleports to Y=100 | All 6 keys present at their documented defaults before the change; after the change, `/lobby` teleports to the new Y coordinate | server | |
 | ultiessentials.config.motd-yml | Fresh `config/motd.yml` at its shipped default | Load the file; confirm all 3 keys are present at their documented defaults; then set `motd.line1` to a distinguishable value, restart, and ping the server's status | All 3 keys present at their documented defaults before the change; the server-list MOTD's first line shows the new, distinguishable value | os-input | |

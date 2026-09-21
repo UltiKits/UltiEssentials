@@ -42,6 +42,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   server restarted (UltiKits/UltiEssentials#23). The scheduled-command, scoreboard and name-prefix background tasks
   are still not cancelled when the module is uninstalled without a server restart: configured
   scheduled commands keep running (UltiKits/UltiEssentials#43).
+- `/delhome <name>`, `/delwarp <name>`, `/unban <player>`, `/unlock`, re-running
+  `/sethome <name>` on an existing home, and breaking your own locked container now actually change
+  what is stored. Every record this module writes — homes, warps, bans and container locks — was
+  previously saved with an empty primary key, so the later delete or update matched no row at all
+  and the stored record survived untouched: a deleted home reappeared in `/homes`, an unbanned
+  player was still rejected at login with this module's own ban message, a broken container's lock
+  came back after a restart, and moving an existing home kept the old coordinates. Records written
+  from this version on carry that key, and records written by earlier versions are repaired once at
+  start-up (UltiKits/UltiEssentials#34, UltiKits/UltiEssentials#35, UltiKits/UltiEssentials#37).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -65,6 +74,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   真正移除，其监听器也不再触发。此前本模块的卸载方法替换了框架的卸载方法，因此执行
   `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。在不重启服务器的情况下卸载本模块时，定时命令、计分板和头顶称号的后台
   任务仍不会被取消，已配置的定时命令会继续执行（UltiKits/UltiEssentials#43）。
+- `/delhome <名称>`、`/delwarp <名称>`、`/unban <玩家>`、`/unlock`、对已存在的家再次执行
+  `/sethome <名称>`，以及破坏自己上锁的容器，现在都会真正改变已保存的数据。本模块写入的每条记录——家、地标点、
+  封禁和容器锁——此前保存时主键为空，之后的删除或更新语句匹配不到任何行，已保存的记录原样保留：被删除的家仍会
+  出现在 `/homes` 中，被解禁的玩家登录时仍会被本模块自己的封禁提示拒绝，被破坏容器的锁会在重启后回来，移动已存在
+  的家仍保留旧坐标。从本版本起写入的记录都带有该主键，更早版本写入的记录会在启动时修复一次
+  （UltiKits/UltiEssentials#34、UltiKits/UltiEssentials#35、UltiKits/UltiEssentials#37）。
 
 ### Removed
 

@@ -8,7 +8,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 
-import com.ultikits.ultitools.abstracts.data.BaseDataEntity;
 import com.ultikits.ultitools.annotations.Column;
 
 import lombok.Data;
@@ -20,6 +19,9 @@ import lombok.NoArgsConstructor;
  * <p>
  * 包含位置信息的数据实体基类。
  * 提取自 HomeData 和 WarpData 的公共位置字段。
+ * <p>
+ * Identity handling, including the persisted primary key, comes from
+ * {@link UuidKeyedDataEntity}.
  *
  * @author wisdomme
  * @version 1.0.0
@@ -27,7 +29,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public abstract class LocationDataEntity extends BaseDataEntity<String> {
+public abstract class LocationDataEntity extends UuidKeyedDataEntity {
     
     @Column("world")
     protected String world;
@@ -48,8 +50,9 @@ public abstract class LocationDataEntity extends BaseDataEntity<String> {
     protected float pitch;
     
     /**
-     * Creates a LocationDataEntity with location fields.
+     * Creates a LocationDataEntity with its identity and location fields.
      *
+     * @param uuid  the record's module-generated identity
      * @param world the world name
      * @param x     the x coordinate
      * @param y     the y coordinate
@@ -57,7 +60,8 @@ public abstract class LocationDataEntity extends BaseDataEntity<String> {
      * @param yaw   the yaw angle
      * @param pitch the pitch angle
      */
-    protected LocationDataEntity(String world, double x, double y, double z, float yaw, float pitch) {
+    protected LocationDataEntity(UUID uuid, String world, double x, double y, double z, float yaw, float pitch) {
+        super(uuid);
         this.world = world;
         this.x = x;
         this.y = y;

@@ -21,9 +21,6 @@ import java.util.UUID;
 @Table("essentials_warps")
 public class WarpData extends LocationDataEntity {
     
-    @Column("uuid")
-    private UUID uuid;
-    
     @Column("name")
     private String name;
     
@@ -39,25 +36,10 @@ public class WarpData extends LocationDataEntity {
     @Builder
     public WarpData(UUID uuid, String name, String world, double x, double y, double z,
                     float yaw, float pitch, String permission, String createdBy, long createdAt) {
-        super(world, x, y, z, yaw, pitch);
-        this.uuid = uuid;
+        super(uuid, world, x, y, z, yaw, pitch);
         this.name = name;
         this.permission = permission;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
-    }
-    
-    @Override
-    public String getId() {
-        return uuid == null ? null : uuid.toString();
-    }
-
-    @Override
-    public void setId(String id) {
-        this.uuid = id == null ? null : UUID.fromString(id);
-    }
-
-    public void setId(UUID id) {
-        this.uuid = id;
     }
 }

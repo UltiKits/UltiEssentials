@@ -21,9 +21,6 @@ import java.util.UUID;
 @Table("essentials_homes")
 public class HomeData extends LocationDataEntity {
     
-    @Column("uuid")
-    private UUID uuid;
-    
     @Column("player_uuid")
     private String playerUuid;
     
@@ -36,24 +33,9 @@ public class HomeData extends LocationDataEntity {
     @Builder
     public HomeData(UUID uuid, String playerUuid, String name, String world,
                     double x, double y, double z, float yaw, float pitch, long createdAt) {
-        super(world, x, y, z, yaw, pitch);
-        this.uuid = uuid;
+        super(uuid, world, x, y, z, yaw, pitch);
         this.playerUuid = playerUuid;
         this.name = name;
         this.createdAt = createdAt;
-    }
-    
-    @Override
-    public String getId() {
-        return uuid == null ? null : uuid.toString();
-    }
-
-    @Override
-    public void setId(String id) {
-        this.uuid = id == null ? null : UUID.fromString(id);
-    }
-
-    public void setId(UUID id) {
-        this.uuid = id;
     }
 }

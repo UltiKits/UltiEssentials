@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
@@ -53,18 +54,50 @@ public class ChestLockListener implements Listener {
         }
         
         Player player = event.getPlayer();
-        
+
         // Keyed on the container, not on the clicked block: a double chest is one shared inventory
         // behind two blocks, so a record covering either half protects the items behind both.
         if (!chestLockService.canAccess(block, player)) {
             event.setCancelled(true);
-            
+
             ChestLockData lock = chestLockService.denyingLock(block, player);
             if (lock != null) {
-                player.sendMessage(plugin.i18n("§c该容器被 §f") + 
-                    lock.getOwnerName() + plugin.i18n(" §c锁定"));
+                // A left click on a block is the start of digging it, so this handler -- not
+                // onBlockBreak -- is what a player meets when they try to mine someone else's
+                // locked container. Gate 3 round 4 measured that: the only event a normal mining
+                // attempt produced was LEFT_CLICK_BLOCK cancelled=true, with no BlockBreakEvent at
+                // all, so the break wording onBlockBreak carries was unreachable by a player and
+                // reachable only through Player#breakBlock, which skips this event.
+                //
+                // Nothing about the refusal moves to say so. setCancelled(true) above is
+                // unconditional and runs before this branch is chosen; getAction() is a read of
+                // data the event already carries; and onBlockBreak still refuses on its own. The
+                // rule this obeys is that a guard is never weakened to improve a message -- had
+                // the wording required the refusal to happen later so a second listener could
+                // speak, the right answer would have been to keep the generic wording and correct
+                // the declaration instead.
+                player.sendMessage(event.getAction() == Action.LEFT_CLICK_BLOCK
+                    ? breakRefusal(lock) : accessRefusal(lock));
             }
         }
+    }
+
+    /**
+     * The refusal a player gets when a lock stops them reaching a container's contents.
+     */
+    private String accessRefusal(ChestLockData lock) {
+        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定");
+    }
+
+    /**
+     * The refusal a player gets when a lock stops them destroying a container.
+     * <p>
+     * Shared by the two handlers that can refuse a break -- {@link #onPlayerInteract} for an
+     * ordinary mining attempt and {@link #onBlockBreak} for one driven through the API -- so the
+     * wording cannot drift between the route a player takes and the route a plugin takes.
+     */
+    private String breakRefusal(ChestLockData lock) {
+        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定，无法破坏");
     }
     
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -98,8 +131,7 @@ public class ChestLockListener implements Listener {
 
         if (denying != null) {
             event.setCancelled(true);
-            player.sendMessage(plugin.i18n("§c该容器被 §f") +
-                denying.getOwnerName() + plugin.i18n(" §c锁定，无法破坏"));
+            player.sendMessage(breakRefusal(denying));
             return;
         }
 

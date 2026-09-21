@@ -347,7 +347,8 @@ rather than renamed, and it prints no reload or unload line of its own. It decla
 refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
 per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
 `reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
-(see `## Configuration` for what each restart does).
+(see `## Configuration` for what each restart does), warning by name for any it cannot resolve
+rather than skipping it silently.
 `/upm uninstall UltiEssentials` runs `onUnregister()` first — it calls `shutdown()` on
 `ScheduledCommandService`, `ScoreboardService`, `NamePrefixService` and `TeleportService`, each on
 its own and each even when an earlier one fails, then reports the first failure — and only then the

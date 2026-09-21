@@ -221,9 +221,25 @@ public class UltiEssentials extends UltiToolsPlugin {
         return previousFailure;
     }
 
+    /**
+     * Reloads one service, leaving the others to be reloaded whatever this one does.
+     * <p>
+     * A service the container cannot resolve is reported as a warning rather than skipped in
+     * silence -- the same defect class {@link #shutdownService} was corrected for (gate 1 WR-02),
+     * found by sweeping this repository for it. It is reported rather than thrown because
+     * {@code reloadSelf()} does not isolate {@link #onReload()}
+     * (UltiKits/UltiTools-Reborn#509), so throwing here would stop the services after it from
+     * reloading at all; a warning that names the service is what this hook can give without that
+     * cost, and it matches {@link #repairStoredPrimaryKeys()}'s precedent in this same class.
+     *
+     * @param type   the service's bean type
+     * @param reload the service's own reload
+     */
     private <T> void reloadService(Class<T> type, Consumer<T> reload) {
         T service = getContext().getBean(type);
         if (service == null) {
+            getLogger().warn("The reload could not reach " + type.getSimpleName()
+                    + "; it is still running against the configuration it was started with");
             return;
         }
         try {

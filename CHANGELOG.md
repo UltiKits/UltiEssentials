@@ -57,6 +57,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   UltiKits/UltiEssentials#51. If one of these services fails to stop, or cannot be reached at all,
   the others are still stopped and the uninstall reports that failure rather than a clean removal
   (UltiKits/UltiEssentials#43).
+- `/ul reload UltiEssentials` now names, as a warning in the console, any of those services it could
+  not reach — previously it reloaded the ones it found and reported success either way, so a feature
+  left running on its old configuration looked identical to one that had been reloaded. The other
+  services are still reloaded (UltiKits/UltiEssentials#43).
 - `/delhome <name>`, `/delwarp <name>`, `/unban <player>`, `/unlock`, re-running
   `/sethome <name>` on an existing home, and breaking your own locked container now actually change
   what is stored. Every record this module writes — homes, warps, bans and container locks — was
@@ -135,6 +139,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   任务——待处理的 `/tpa` 请求仍会在卸载后最多 `features.tpa.timeout` 秒（默认 30 秒）超时并向双方发送消息，
   卸载前一秒内加入的玩家仍可能被加上侧边栏或头顶称号，这部分残留记录在 UltiKits/UltiEssentials#51。若其中
   某个服务停止失败或根本无法找到，其余服务仍会停止，并且卸载会如实报告该失败，而不是报告卸载干净
+  （UltiKits/UltiEssentials#43）。
+- `/ul reload UltiEssentials` 现在会在控制台以警告形式指出重载时找不到的服务——此前它只重载能找到的服务
+  并一律报告成功，因此仍按旧配置运行的功能与已重载的功能在日志上无法区分。其余服务仍会正常重载
   （UltiKits/UltiEssentials#43）。
 - `/delhome <名称>`、`/delwarp <名称>`、`/unban <玩家>`、`/unlock`、对已存在的家再次执行
   `/sethome <名称>`，以及破坏自己上锁的容器，现在都会真正改变已保存的数据。本模块写入的每条记录——家、地标点、

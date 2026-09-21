@@ -10,6 +10,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
@@ -146,6 +147,69 @@ class ChestLockListenerTest {
             // Typed explicitly: canAccess is overloaded on Block and Location since the interact
             // check moved to the container, and any() matches both.
             verify(chestLockService, never()).canAccess(any(org.bukkit.block.Block.class), any());
+        }
+
+        @Test
+        @DisplayName("Should refuse a left click with the break wording, not the open wording")
+        void shouldRefuseLeftClickWithBreakWording() {
+            Block block = mock(Block.class);
+            World world = EssentialsTestHelper.createMockWorld("world");
+            Location loc = new Location(world, 10, 64, 20);
+            when(block.getType()).thenReturn(Material.CHEST);
+            when(block.getLocation()).thenReturn(loc);
+
+            when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
+            when(chestLockService.canAccess(block, player)).thenReturn(false);
+
+            ChestLockData lockData = ChestLockData.builder()
+                    .ownerName("OtherPlayer")
+                    .build();
+            when(chestLockService.denyingLock(block, player)).thenReturn(lockData);
+
+            PlayerInteractEvent event = mock(PlayerInteractEvent.class);
+            when(event.getClickedBlock()).thenReturn(block);
+            when(event.getPlayer()).thenReturn(player);
+            when(event.getAction()).thenReturn(Action.LEFT_CLICK_BLOCK);
+
+            listener.onPlayerInteract(event);
+
+            // The refusal itself is the assertion that matters, and it is asserted first: a left
+            // click on someone else's locked container must still be cancelled here. The wording
+            // is the declared-but-undelivered half, and it is checked second so that a change
+            // which bought the wording by letting the click through fails on this line rather
+            // than passing on the next.
+            verify(event).setCancelled(true);
+            // Exact equality, not contains(): the open wording is a strict prefix of the break
+            // wording, so contains() would pass on the very message this row exists to reject.
+            verify(player).sendMessage("§c该容器被 §fOtherPlayer §c锁定，无法破坏");
+        }
+
+        @Test
+        @DisplayName("Should keep the open wording for a right click")
+        void shouldKeepOpenWordingOnRightClick() {
+            Block block = mock(Block.class);
+            World world = EssentialsTestHelper.createMockWorld("world");
+            Location loc = new Location(world, 10, 64, 20);
+            when(block.getType()).thenReturn(Material.CHEST);
+            when(block.getLocation()).thenReturn(loc);
+
+            when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
+            when(chestLockService.canAccess(block, player)).thenReturn(false);
+
+            ChestLockData lockData = ChestLockData.builder()
+                    .ownerName("OtherPlayer")
+                    .build();
+            when(chestLockService.denyingLock(block, player)).thenReturn(lockData);
+
+            PlayerInteractEvent event = mock(PlayerInteractEvent.class);
+            when(event.getClickedBlock()).thenReturn(block);
+            when(event.getPlayer()).thenReturn(player);
+            when(event.getAction()).thenReturn(Action.RIGHT_CLICK_BLOCK);
+
+            listener.onPlayerInteract(event);
+
+            verify(event).setCancelled(true);
+            verify(player).sendMessage("§c该容器被 §fOtherPlayer §c锁定");
         }
     }
 

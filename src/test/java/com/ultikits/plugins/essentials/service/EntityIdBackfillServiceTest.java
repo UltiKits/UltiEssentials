@@ -8,6 +8,7 @@ import com.ultikits.plugins.essentials.entity.WarpData;
 import com.ultikits.plugins.essentials.entity.base.UuidKeyedDataEntity;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService.Outcome;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
+import com.ultikits.plugins.essentials.utils.SilentlyFailingStore;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.abstracts.data.BaseDataEntity;
 import com.ultikits.ultitools.interfaces.impl.data.json.SimpleJsonDataOperator;
@@ -129,6 +130,42 @@ class EntityIdBackfillServiceTest {
 
             assertThat(outcome.repaired()).isZero();
             assertThat(outcome.skipped()).isZero();
+        }
+
+        @Test
+        @DisplayName("the un-keyed record is deleted, not merely written over")
+        void theUnKeyedRecordIsDeleted() throws Exception {
+            // Asserted as a call on the store rather than as a state difference, because the two
+            // backends hide it differently and only one of them is reachable from a test here.
+            // The JSON operator hands out the instances in its own cache and its insert is a
+            // putIfAbsent, so onCreate() writes the key onto the cached instance whether or not the
+            // old entry was removed first -- the repair appears to work either way. A relational
+            // operator materialises every row afresh and its insert is a real INSERT, so without the
+            // delete the un-keyed row would survive ALONGSIDE a new keyed one: one home listed
+            // twice, and the older row still undeletable. Measured: removing the delete leaves every
+            // other assertion in this class green (revert-proofs/w1,
+            // UltiEssentials-34-MUTATION-repair-delete), which is why this assertion exists.
+            HomeData legacy = home("farm");
+            writeLegacyRecord("homes", legacy);
+            SilentlyFailingStore<HomeData> store = countingOperatorOver("homes", HomeData.class);
+
+            Outcome outcome = backfill.repair(store, "HomeData");
+
+            assertThat(outcome.repaired()).isEqualTo(1);
+            assertThat(store.deleteAttempts())
+                .as("one delete of the un-keyed record, before it is written back")
+                .isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("a record that needs no repair is not deleted")
+        void anAlreadyCorrectRecordIsNotDeleted() throws Exception {
+            SilentlyFailingStore<HomeData> store = countingOperatorOver("homes", HomeData.class);
+            store.insert(home("farm"));
+
+            backfill.repair(store, "HomeData");
+
+            assertThat(store.deleteAttempts()).as("nothing was deleted").isZero();
         }
 
         @Test
@@ -318,6 +355,17 @@ class EntityIdBackfillServiceTest {
                 Files.newOutputStream(new File(dir, fileName + ".json").toPath()), StandardCharsets.UTF_8)) {
             writer.write(json);
         }
+    }
+
+    /**
+     * The same real JSON operator, counting the deletes and updates it is asked for -- used where a
+     * step's effect is invisible on this backend but matters on the relational one.
+     */
+    private <T extends BaseDataEntity<String>> SilentlyFailingStore<T> countingOperatorOver(
+            String store, Class<T> type) {
+        File dir = tempDir.resolve(store).toFile();
+        assertThat(dir.isDirectory() || dir.mkdirs()).isTrue();
+        return new SilentlyFailingStore<>(dir.getAbsolutePath(), type);
     }
 
     private <T extends BaseDataEntity<String>> SimpleJsonDataOperator<T> operatorOver(

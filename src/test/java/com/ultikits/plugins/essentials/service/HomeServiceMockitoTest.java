@@ -268,7 +268,10 @@ class HomeServiceMockitoTest {
         void shouldDeleteHome() {
             UUID homeId = UUID.randomUUID();
             HomeData home = HomeData.builder().uuid(homeId).name("home").build();
-            when(query.first()).thenReturn(home);
+            // Second value models the store after a successful delete: deleteHome re-queries to
+            // confirm the record is gone before reporting success, so a stub that keeps returning
+            // the home describes a delete that removed nothing (UltiKits/UltiEssentials#34).
+            when(query.first()).thenReturn(home, (HomeData) null);
 
             boolean result = homeService.deleteHome(UUID.randomUUID(), "home");
 

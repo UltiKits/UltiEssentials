@@ -242,7 +242,10 @@ class HomeServiceTest {
                 .build();
 
             when(homeOperator.getAll(any())).thenReturn(List.of(home));
-            when(queryMock.first()).thenReturn(home);
+            // Second value models the store after a successful delete: deleteHome re-queries to
+            // confirm the record is gone before reporting success, so a stub that keeps returning
+            // the home describes a delete that removed nothing (UltiKits/UltiEssentials#34).
+            when(queryMock.first()).thenReturn(home, (HomeData) null);
 
             boolean result = homeService.deleteHome(player.getUniqueId(), "home1");
 

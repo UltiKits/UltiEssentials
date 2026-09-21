@@ -269,7 +269,10 @@ class WarpServiceMockitoTest {
         void shouldDeleteWarp() {
             UUID warpId = UUID.randomUUID();
             WarpData warp = WarpData.builder().uuid(warpId).name("spawn").build();
-            when(query.first()).thenReturn(warp);
+            // Second value models the store after a successful delete: deleteWarp re-queries to
+            // confirm the record is gone before reporting success, so a stub that keeps returning
+            // the warp describes a delete that removed nothing (UltiKits/UltiEssentials#34).
+            when(query.first()).thenReturn(warp, (WarpData) null);
 
             boolean result = warpService.deleteWarp("spawn");
 

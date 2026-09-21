@@ -2,7 +2,9 @@ package com.ultikits.plugins.essentials.service;
 
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.HomeData;
+import com.ultikits.plugins.essentials.service.HomeService.DeleteResult;
 import com.ultikits.plugins.essentials.entity.WarpData;
+import com.ultikits.plugins.essentials.service.HomeService.SetHomeResult;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.SilentlyFailingStore;
 import com.ultikits.plugins.essentials.utils.TestHelper;
@@ -13,7 +15,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.mockbukkit.mockbukkit.MockBukkit;
+import org.mockbukkit.mockbukkit.ServerMock;
+import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
@@ -50,11 +56,12 @@ class HomeWarpDeletionVerificationTest {
     Path tempDir;
 
     private EssentialsConfig config;
+    private ServerMock server;
 
     @BeforeEach
     void setUp() {
         MockBukkitHelper.clearForeignServer();
-        MockBukkit.mock();
+        server = MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
 
         config = mock(EssentialsConfig.class);
@@ -79,10 +86,10 @@ class HomeWarpDeletionVerificationTest {
             UUID player = UUID.randomUUID();
             store.insert(home(player, "farm"));
 
-            boolean deleted = service.deleteHome(player, "farm");
+            DeleteResult deleted = service.deleteHome(player, "farm");
 
             assertThat(store.deleteAttempts()).as("the service really asked the store to delete").isEqualTo(1);
-            assertThat(deleted).isTrue();
+            assertThat(deleted).isEqualTo(DeleteResult.REMOVED);
             assertThat(service.getHome(player, "farm")).as("home re-read from the store").isNull();
             assertThat(service.getHomes(player)).isEmpty();
         }
@@ -96,10 +103,13 @@ class HomeWarpDeletionVerificationTest {
             store.insert(home(player, "farm"));
             store.ignoreDeletes();
 
-            boolean deleted = service.deleteHome(player, "farm");
+            DeleteResult deleted = service.deleteHome(player, "farm");
 
             assertThat(store.deleteAttempts()).as("the service really asked the store to delete").isEqualTo(1);
-            assertThat(deleted).as("reported outcome while the record survives").isFalse();
+            assertThat(deleted)
+                .as("a surviving record must not be reported as an absent one -- the operator would "
+                    + "stop looking while /homes still lists it (gate 1 MAJOR-03)")
+                .isEqualTo(DeleteResult.FAILED);
             assertThat(service.getHome(player, "farm")).as("the record the caller was told about").isNotNull();
         }
 
@@ -109,9 +119,9 @@ class HomeWarpDeletionVerificationTest {
             SilentlyFailingStore<HomeData> store = homeStore();
             HomeService service = homeService(store);
 
-            boolean deleted = service.deleteHome(UUID.randomUUID(), "never-existed");
+            DeleteResult deleted = service.deleteHome(UUID.randomUUID(), "never-existed");
 
-            assertThat(deleted).isFalse();
+            assertThat(deleted).isEqualTo(DeleteResult.NOT_FOUND);
             assertThat(store.deleteAttempts()).as("no delete attempted for a record that is absent").isZero();
         }
 
@@ -124,9 +134,9 @@ class HomeWarpDeletionVerificationTest {
             UUID other = UUID.randomUUID();
             store.insert(home(owner, "farm"));
 
-            boolean deleted = service.deleteHome(other, "farm");
+            DeleteResult deleted = service.deleteHome(other, "farm");
 
-            assertThat(deleted).isFalse();
+            assertThat(deleted).isEqualTo(DeleteResult.NOT_FOUND);
             assertThat(service.getHome(owner, "farm")).as("the owner's home").isNotNull();
         }
     }
@@ -142,10 +152,10 @@ class HomeWarpDeletionVerificationTest {
             WarpService service = warpService(store);
             store.insert(warp("shop"));
 
-            boolean deleted = service.deleteWarp("shop");
+            WarpService.DeleteResult deleted = service.deleteWarp("shop");
 
             assertThat(store.deleteAttempts()).as("the service really asked the store to delete").isEqualTo(1);
-            assertThat(deleted).isTrue();
+            assertThat(deleted).isEqualTo(WarpService.DeleteResult.REMOVED);
             assertThat(service.getWarp("shop")).as("warp re-read from the store").isNull();
             assertThat(service.getAllWarps()).isEmpty();
         }
@@ -158,10 +168,12 @@ class HomeWarpDeletionVerificationTest {
             store.insert(warp("shop"));
             store.ignoreDeletes();
 
-            boolean deleted = service.deleteWarp("shop");
+            WarpService.DeleteResult deleted = service.deleteWarp("shop");
 
             assertThat(store.deleteAttempts()).as("the service really asked the store to delete").isEqualTo(1);
-            assertThat(deleted).as("reported outcome while the record survives").isFalse();
+            assertThat(deleted)
+                .as("a surviving record must not be reported as an absent one (gate 1 MAJOR-03)")
+                .isEqualTo(WarpService.DeleteResult.FAILED);
             assertThat(service.getWarp("shop")).as("the record the caller was told about").isNotNull();
         }
 
@@ -171,10 +183,59 @@ class HomeWarpDeletionVerificationTest {
             SilentlyFailingStore<WarpData> store = warpStore();
             WarpService service = warpService(store);
 
-            boolean deleted = service.deleteWarp("never-existed");
+            WarpService.DeleteResult deleted = service.deleteWarp("never-existed");
 
-            assertThat(deleted).isFalse();
+            assertThat(deleted).isEqualTo(WarpService.DeleteResult.NOT_FOUND);
             assertThat(store.deleteAttempts()).as("no delete attempted for a record that is absent").isZero();
+        }
+    }
+
+    @Nested
+    @DisplayName("/sethome on an existing home (gate 1 MAJOR-01)")
+    class SetHomeUpdateTests {
+
+        @Test
+        @DisplayName("a move that really is stored is reported as updated, and the stored coordinates change")
+        void aStoredMoveIsReportedUpdated() throws Exception {
+            SilentlyFailingStore<HomeData> store = homeStore();
+            HomeService service = homeService(store);
+            PlayerMock player = server.addPlayer("HomeOwner");
+            store.insert(home(player.getUniqueId(), "farm"));
+            World world = server.addSimpleWorld("world");
+            player.teleport(new Location(world, 40, 70, 50));
+
+            SetHomeResult result = service.setHome(player, "farm");
+
+            assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
+            assertThat(result).isEqualTo(SetHomeResult.UPDATED);
+            HomeData stored = service.getHome(player.getUniqueId(), "farm");
+            assertThat(stored).isNotNull();
+            assertThat(stored.getX()).isEqualTo(40);
+            assertThat(stored.getY()).isEqualTo(70);
+            assertThat(stored.getZ()).isEqualTo(50);
+        }
+
+        @Test
+        @DisplayName("a move the store silently ignored is NOT reported as updated")
+        void anIgnoredMoveIsNotReportedUpdated() throws Exception {
+            SilentlyFailingStore<HomeData> store = homeStore();
+            HomeService service = homeService(store);
+            PlayerMock player = server.addPlayer("HomeOwner");
+            store.insert(home(player.getUniqueId(), "farm"));
+            World world = server.addSimpleWorld("world");
+            player.teleport(new Location(world, 40, 70, 50));
+            store.ignoreUpdates();
+
+            SetHomeResult result = service.setHome(player, "farm");
+
+            assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
+            assertThat(result)
+                .as("telling the player the home moved while the stored coordinates did not is #34's "
+                    + "symptom on the trigger the CHANGELOG claims fixed (gate 1 MAJOR-01)")
+                .isEqualTo(SetHomeResult.FAILED);
+            HomeData stored = service.getHome(player.getUniqueId(), "farm");
+            assertThat(stored).isNotNull();
+            assertThat(stored.getX()).as("the coordinates the player would be sent to").isEqualTo(1);
         }
     }
 

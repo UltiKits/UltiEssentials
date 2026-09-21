@@ -227,7 +227,7 @@ class WarpCommandsTest {
         @Test
         @DisplayName("Should delete warp successfully")
         void shouldDeleteWarpSuccess() {
-            when(warpService.deleteWarp("spawn")).thenReturn(true);
+            when(warpService.deleteWarp("spawn")).thenReturn(WarpService.DeleteResult.REMOVED);
 
             command.delWarp(player, "spawn");
 
@@ -237,7 +237,7 @@ class WarpCommandsTest {
         @Test
         @DisplayName("Should send message when warp not found")
         void shouldSendMessageWhenNotFound() {
-            when(warpService.deleteWarp("missing")).thenReturn(false);
+            when(warpService.deleteWarp("missing")).thenReturn(WarpService.DeleteResult.NOT_FOUND);
 
             command.delWarp(player, "missing");
 

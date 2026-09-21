@@ -273,9 +273,9 @@ class HomeServiceMockitoTest {
             // the home describes a delete that removed nothing (UltiKits/UltiEssentials#34).
             when(query.first()).thenReturn(home, (HomeData) null);
 
-            boolean result = homeService.deleteHome(UUID.randomUUID(), "home");
+            HomeService.DeleteResult result = homeService.deleteHome(UUID.randomUUID(), "home");
 
-            assertThat(result).isTrue();
+            assertThat(result).isEqualTo(HomeService.DeleteResult.REMOVED);
             verify(homeOperator).delById(homeId.toString());
         }
 
@@ -284,9 +284,9 @@ class HomeServiceMockitoTest {
         void shouldReturnFalseWhenNotFound() {
             when(query.first()).thenReturn(null);
 
-            boolean result = homeService.deleteHome(UUID.randomUUID(), "nonexistent");
+            HomeService.DeleteResult result = homeService.deleteHome(UUID.randomUUID(), "nonexistent");
 
-            assertThat(result).isFalse();
+            assertThat(result).isEqualTo(HomeService.DeleteResult.NOT_FOUND);
         }
     }
 
@@ -357,7 +357,11 @@ class HomeServiceMockitoTest {
         @Test
         @DisplayName("Should have all values")
         void shouldHaveAllValues() {
-            assertThat(HomeService.SetHomeResult.values()).hasSize(5);
+            // FAILED was added for gate 1 MAJOR-01: a move that did not reach the store must not be
+            // reported as UPDATED.
+            assertThat(HomeService.SetHomeResult.values()).hasSize(6);
+            assertThat(HomeService.SetHomeResult.valueOf("FAILED"))
+                    .isEqualTo(HomeService.SetHomeResult.FAILED);
         }
     }
 }

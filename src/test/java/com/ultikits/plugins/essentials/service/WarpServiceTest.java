@@ -210,9 +210,9 @@ class WarpServiceTest {
             // the warp describes a delete that removed nothing (UltiKits/UltiEssentials#34).
             when(queryMock.first()).thenReturn(warp, (WarpData) null);
 
-            boolean result = warpService.deleteWarp("spawn");
+            WarpService.DeleteResult result = warpService.deleteWarp("spawn");
 
-            assertThat(result).isTrue();
+            assertThat(result).isEqualTo(WarpService.DeleteResult.REMOVED);
             verify(warpOperator).delById(warp.getId());
         }
 
@@ -221,9 +221,9 @@ class WarpServiceTest {
         void shouldReturnFalseWhenWarpNotFound() {
             when(warpOperator.getAll(any())).thenReturn(new ArrayList<>());
 
-            boolean result = warpService.deleteWarp("nonexistent");
+            WarpService.DeleteResult result = warpService.deleteWarp("nonexistent");
 
-            assertThat(result).isFalse();
+            assertThat(result).isEqualTo(WarpService.DeleteResult.NOT_FOUND);
             verify(warpOperator, never()).delById(any());
         }
     }

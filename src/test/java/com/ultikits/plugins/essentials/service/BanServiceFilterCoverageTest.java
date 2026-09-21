@@ -95,9 +95,9 @@ class BanServiceFilterCoverageTest {
         when(query.list()).thenReturn(
                 new java.util.ArrayList<>(Collections.singletonList(expiredButStillMarkedActive(null))));
 
-        boolean result = banService.unbanPlayer(playerUuid);
+        BanService.UnbanResult result = banService.unbanPlayer(playerUuid);
 
-        assertThat(result).isFalse();
+        assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
         verify(banOperator, never()).update(any(BanData.class));
     }
 
@@ -117,9 +117,9 @@ class BanServiceFilterCoverageTest {
         when(query.list()).thenReturn(
                 new java.util.ArrayList<>(Collections.singletonList(expiredButStillMarkedActive(null))));
 
-        boolean result = banService.unbanPlayerByName("TestPlayer");
+        BanService.UnbanResult result = banService.unbanPlayerByName("TestPlayer");
 
-        assertThat(result).isFalse();
+        assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
         verify(banOperator, never()).update(any(BanData.class));
     }
 
@@ -129,9 +129,9 @@ class BanServiceFilterCoverageTest {
         when(query.list()).thenReturn(
                 new java.util.ArrayList<>(Collections.singletonList(expiredButStillMarkedActive("10.0.0.5"))));
 
-        boolean result = banService.unbanIp("10.0.0.5");
+        BanService.UnbanResult result = banService.unbanIp("10.0.0.5");
 
-        assertThat(result).isFalse();
+        assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
         verify(banOperator, never()).update(any(BanData.class));
     }
 

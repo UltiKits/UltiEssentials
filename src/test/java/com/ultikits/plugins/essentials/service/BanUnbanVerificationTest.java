@@ -2,6 +2,7 @@ package com.ultikits.plugins.essentials.service;
 
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
+import com.ultikits.plugins.essentials.service.BanService.UnbanResult;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.SilentlyFailingStore;
 import com.ultikits.plugins.essentials.utils.TestHelper;
@@ -88,10 +89,10 @@ class BanUnbanVerificationTest {
             UUID target = UUID.randomUUID();
             store.insert(activeBan(target, "BannedPlayer", null));
 
-            boolean unbanned = banService.unbanPlayerByName("BannedPlayer");
+            UnbanResult unbanned = banService.unbanPlayerByName("BannedPlayer");
 
             assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
-            assertThat(unbanned).isTrue();
+            assertThat(unbanned).isEqualTo(UnbanResult.REMOVED);
             assertThat(banService.getActiveBan(target)).as("active ban re-read from the store").isNull();
         }
 
@@ -102,19 +103,22 @@ class BanUnbanVerificationTest {
             store.insert(activeBan(target, "BannedPlayer", null));
             store.ignoreUpdates();
 
-            boolean unbanned = banService.unbanPlayerByName("BannedPlayer");
+            UnbanResult unbanned = banService.unbanPlayerByName("BannedPlayer");
 
             assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
-            assertThat(unbanned).as("reported outcome while the ban is still active").isFalse();
+            assertThat(unbanned)
+                .as("a ban that is still active must not be reported as no ban at all -- the operator "
+                    + "stops looking while /banlist still lists them (gate 1 MAJOR-03)")
+                .isEqualTo(UnbanResult.FAILED);
             assertThat(banService.getActiveBan(target)).as("the ban the caller was told about").isNotNull();
         }
 
         @Test
         @DisplayName("a name with no active ban is still reported as not banned, without an update")
         void anUnbannedNameIsReportedNotBanned() {
-            boolean unbanned = banService.unbanPlayerByName("NeverBanned");
+            UnbanResult unbanned = banService.unbanPlayerByName("NeverBanned");
 
-            assertThat(unbanned).isFalse();
+            assertThat(unbanned).isEqualTo(UnbanResult.NOT_BANNED);
             assertThat(store.updateAttempts()).as("no update attempted for a name with no active ban").isZero();
         }
 
@@ -128,10 +132,10 @@ class BanUnbanVerificationTest {
             store.insert(second);
             store.ignoreUpdates();
 
-            boolean unbanned = banService.unbanPlayerByName("BannedPlayer");
+            UnbanResult unbanned = banService.unbanPlayerByName("BannedPlayer");
 
             assertThat(store.updateAttempts()).as("both records were offered to the store").isEqualTo(2);
-            assertThat(unbanned).isFalse();
+            assertThat(unbanned).isEqualTo(UnbanResult.FAILED);
             assertThat(banService.getActiveBan(target)).isNotNull();
         }
     }
@@ -146,10 +150,10 @@ class BanUnbanVerificationTest {
             UUID target = UUID.randomUUID();
             store.insert(activeBan(target, "BannedPlayer", null));
 
-            boolean unbanned = banService.unbanPlayer(target);
+            UnbanResult unbanned = banService.unbanPlayer(target);
 
             assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isTrue();
+            assertThat(unbanned).isEqualTo(UnbanResult.REMOVED);
             assertThat(banService.getActiveBan(target)).isNull();
         }
 
@@ -160,10 +164,10 @@ class BanUnbanVerificationTest {
             store.insert(activeBan(target, "BannedPlayer", null));
             store.ignoreUpdates();
 
-            boolean unbanned = banService.unbanPlayer(target);
+            UnbanResult unbanned = banService.unbanPlayer(target);
 
             assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isFalse();
+            assertThat(unbanned).isEqualTo(UnbanResult.FAILED);
             assertThat(banService.getActiveBan(target)).isNotNull();
         }
     }
@@ -177,10 +181,10 @@ class BanUnbanVerificationTest {
         void aDeactivatedIpBanIsReportedUnbanned() {
             store.insert(activeBan(UUID.randomUUID(), "BannedPlayer", "203.0.113.7"));
 
-            boolean unbanned = banService.unbanIp("203.0.113.7");
+            UnbanResult unbanned = banService.unbanIp("203.0.113.7");
 
             assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isTrue();
+            assertThat(unbanned).isEqualTo(UnbanResult.REMOVED);
             assertThat(banService.getActiveIpBan("203.0.113.7")).isNull();
         }
 
@@ -190,19 +194,19 @@ class BanUnbanVerificationTest {
             store.insert(activeBan(UUID.randomUUID(), "BannedPlayer", "203.0.113.7"));
             store.ignoreUpdates();
 
-            boolean unbanned = banService.unbanIp("203.0.113.7");
+            UnbanResult unbanned = banService.unbanIp("203.0.113.7");
 
             assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isFalse();
+            assertThat(unbanned).isEqualTo(UnbanResult.FAILED);
             assertThat(banService.getActiveIpBan("203.0.113.7")).isNotNull();
         }
 
         @Test
         @DisplayName("an IP with no active ban is still reported as not banned, without an update")
         void anUnbannedIpIsReportedNotBanned() {
-            boolean unbanned = banService.unbanIp("203.0.113.8");
+            UnbanResult unbanned = banService.unbanIp("203.0.113.8");
 
-            assertThat(unbanned).isFalse();
+            assertThat(unbanned).isEqualTo(UnbanResult.NOT_BANNED);
             assertThat(store.updateAttempts()).isZero();
         }
     }

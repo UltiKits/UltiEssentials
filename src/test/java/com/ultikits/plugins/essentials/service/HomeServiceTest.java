@@ -247,9 +247,9 @@ class HomeServiceTest {
             // the home describes a delete that removed nothing (UltiKits/UltiEssentials#34).
             when(queryMock.first()).thenReturn(home, (HomeData) null);
 
-            boolean result = homeService.deleteHome(player.getUniqueId(), "home1");
+            HomeService.DeleteResult result = homeService.deleteHome(player.getUniqueId(), "home1");
 
-            assertThat(result).isTrue();
+            assertThat(result).isEqualTo(HomeService.DeleteResult.REMOVED);
             verify(homeOperator).delById(home.getId());
         }
 
@@ -258,9 +258,9 @@ class HomeServiceTest {
         void shouldReturnFalseWhenHomeNotFound() {
             when(homeOperator.getAll(any())).thenReturn(new ArrayList<>());
 
-            boolean result = homeService.deleteHome(player.getUniqueId(), "nonexistent");
+            HomeService.DeleteResult result = homeService.deleteHome(player.getUniqueId(), "nonexistent");
 
-            assertThat(result).isFalse();
+            assertThat(result).isEqualTo(HomeService.DeleteResult.NOT_FOUND);
             verify(homeOperator, never()).delById(any());
         }
     }

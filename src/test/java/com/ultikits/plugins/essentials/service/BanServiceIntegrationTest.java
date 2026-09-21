@@ -92,9 +92,9 @@ class BanServiceIntegrationTest {
         assertThat(banResult).isEqualTo(BanResult.SUCCESS);
         assertThat(banService.getActiveBan(targetUuid)).isNotNull();
 
-        boolean unbanned = banService.unbanPlayerByName(targetName);
+        BanService.UnbanResult unbanned = banService.unbanPlayerByName(targetName);
 
-        assertThat(unbanned).isTrue();
+        assertThat(unbanned).isEqualTo(BanService.UnbanResult.REMOVED);
         assertThat(banService.getActiveBan(targetUuid)).isNull();
     }
 
@@ -107,13 +107,13 @@ class BanServiceIntegrationTest {
         Bukkit.getBanList(BanList.Type.NAME).addBan(targetName, "vanilla ban", (Date) null, null);
         assertThat(banService.isBannedInServerBanList(targetName)).isTrue();
 
-        boolean unbanned = banService.unbanPlayerByName(targetName);
+        BanService.UnbanResult unbanned = banService.unbanPlayerByName(targetName);
 
         // This plugin's own records genuinely hold nothing for this name -- unbanPlayerByName
         // correctly reports false rather than silently claiming success for a store it never
         // touched. What matters is that the false here is NOT the same "not banned" as a player
         // who is banned nowhere at all: isBannedInServerBanList still distinguishes the two.
-        assertThat(unbanned).isFalse();
+        assertThat(unbanned).isEqualTo(BanService.UnbanResult.NOT_BANNED);
         assertThat(banService.isBannedInServerBanList(targetName)).isTrue();
     }
 

@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
 import com.ultikits.plugins.essentials.entity.ChestLockData;
 import com.ultikits.plugins.essentials.entity.HomeData;
@@ -82,13 +83,32 @@ public class EntityIdBackfillService {
     @Autowired
     private UltiToolsPlugin plugin;
 
+    @Autowired
+    private EssentialsConfig config;
+
     /**
      * Repairs every covered entity type, returning what was done per type.
+     * <p>
+     * Held off entirely when {@code features.data-repair.enabled} is {@code false}. It defaults to
+     * true because an operator who never learns this defect exists would never turn a repair on, and
+     * records that stay silently un-keyed are worse than a repair that runs; the key exists because
+     * running without anyone deciding is exactly what makes this repair costly, and an operator
+     * mid-migration or without a backup has a real reason to wait. There is no dry-run mode on
+     * purpose: it would double the paths and the interesting one would be the one nobody runs, while
+     * the WARNING per skipped record and the INFO per repaired type already say what happened.
      *
-     * @return the outcome, for logging and for tests
+     * @return the outcome, for logging and for tests; all zeroes when the key is off
      */
     public Report run() {
         Report report = new Report();
+        if (config != null && !config.isDataRepairEnabled()) {
+            // One line rather than silence: "why did it not run?" has to be answerable from the log,
+            // and an operator who set the key will recognise it.
+            log.info("Start-up repair of records saved without a primary key is off "
+                    + "(features.data-repair.enabled); those records stay as they are, and deleting "
+                    + "or updating them keeps failing");
+            return report;
+        }
         for (Class<? extends UuidKeyedDataEntity> type : REPAIRED_TYPES) {
             report.put(type.getSimpleName(), repair(type));
         }

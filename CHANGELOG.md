@@ -66,6 +66,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   already carries a key that disagrees with its identity. Such a record still reads normally, but
   deleting or updating it keeps failing, and the warning names it so it can be re-created by hand
   (UltiKits/UltiEssentials#34).
+- New configuration key `features.data-repair.enabled` in `config/essentials.yml`, default `true`:
+  whether the start-up repair described above runs. Set it to `false` to leave records written before
+  the fix exactly as they are — useful if you are part-way through a migration or have not taken a
+  backup yet. One log line then names the key, no records are written, and deleting or updating those
+  records keeps failing until you turn it back on. There is no dry-run setting
+  (UltiKits/UltiEssentials#34).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -104,6 +110,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   修复只进行一次：已修复的记录在之后的启动中不会再被处理。无法安全修复的记录会原样保留，并以警告形式报告——
   出现在记录自身没有标识、两条记录共用同一标识，或记录已带有与其标识不一致的主键时。此类记录仍可正常读取，
   但删除或更新仍会失败，警告中会指出该记录，便于手动重建（UltiKits/UltiEssentials#34）。
+- `config/essentials.yml` 新增配置项 `features.data-repair.enabled`，默认 `true`：控制上述启动修复是否执行。
+  设为 `false` 会让修复前写入的记录保持原样——在数据迁移进行中或尚未备份时很有用。此时日志会输出一行指明该配置项，
+  不写入任何记录，这些记录的删除与更新在重新开启前仍会失败。本项没有“试运行”模式（UltiKits/UltiEssentials#34）。
 
 ### Removed
 

@@ -389,6 +389,25 @@ class UltiEssentialsServiceReloadTest {
     }
 
     @Test
+    @DisplayName("a service the container cannot resolve is reported rather than skipped in silence")
+    void unresolvableServiceIsReportedOnReload() throws Exception {
+        boot(yaml(false, 5, false, 1, false, Collections.<String>emptyList()));
+        SimpleContainer withoutScoreboard = new SimpleContainer();
+        withoutScoreboard.registerType(ScheduledCommandService.class, scheduledCommandService);
+        withoutScoreboard.registerType(NamePrefixService.class, namePrefixService);
+        plugin.setContext(withoutScoreboard);
+        PluginLogger logger = mock(PluginLogger.class);
+        doReturn(logger).when(plugin).getLogger();
+
+        rewriteAndReload(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
+
+        // Named, so an operator can see which feature did not follow the edited configuration; the
+        // services around it still reloaded, which is why this is a warning and not a throw.
+        verify(logger).warn(contains("ScoreboardService"));
+        assertThat(periods()).containsExactly(100L);
+    }
+
+    @Test
     @DisplayName("a player whose sidebar cannot be rebuilt does not stop the carry-over for the next player")
     void throwingPlayerDoesNotStopTheCarryOver() throws Exception {
         Player other = EssentialsTestHelper.createMockPlayer("Alex", UUID.randomUUID());

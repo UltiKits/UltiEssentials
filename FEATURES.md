@@ -334,32 +334,62 @@ framework's declarative annotation.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
-| ultiessentials.scheduledcommands.run | Run each configured console command on its own fixed interval, indefinitely, for as long as the server is up | scheduled | runs automatically, every `interval_seconds` per configured entry, while `features.scheduled-commands.enabled` is true | n/a | n/a | admin | brief | ScheduledCommandService#startTasks |
+| ultiessentials.scheduledcommands.run | Run each configured console command on its own fixed interval, indefinitely, for as long as this module stays loaded (stopped by `/upm uninstall UltiEssentials`, UltiKits/UltiEssentials#43) | scheduled | runs automatically, every `interval_seconds` per configured entry, while `features.scheduled-commands.enabled` is true | n/a | n/a | admin | brief | ScheduledCommandService#startTasks |
 
 ## Lifecycle
 
 UltiTools 6.3.0 makes `UltiToolsPlugin#reloadSelf()` and `#unregisterSelf()` `final` template
 methods. Before UltiKits/UltiEssentials#23's lifecycle migration this module overrode both with a
 body that only logged a line, replacing the framework's own steps; both overrides were deleted
-rather than renamed, and it prints no reload or unload line of its own. It declares one hook,
-`onReload()` (UltiKits/UltiEssentials#28), and no `onUnregister()` hook, so `/upm uninstall
-UltiEssentials` does not cancel the scheduled-command, scoreboard or name-prefix repeating tasks —
-configured scheduled commands keep executing until a restart (UltiKits/UltiEssentials#43).
+rather than renamed, and it prints no reload or unload line of its own. It declares two hooks,
+`onReload()` (UltiKits/UltiEssentials#28) and `onUnregister()` (UltiKits/UltiEssentials#43).
 `/ul reload UltiEssentials` runs the framework's reload steps (configuration reload, language
 refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
 per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
 `reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
-(see `## Configuration` for what each restart does).
+(see `## Configuration` for what each restart does), warning by name for any it cannot resolve
+rather than skipping it silently. That warning, and the unload's matching failure, cannot be
+produced on a stock install and are not checklist material: all four services are unconditional
+`@Service` beans and this module declares no `@ConditionalOnConfig`, so `getBean` returns null
+only after a source change — a renamed service, one moved out of `scanBasePackages`, or one
+registered under an interface type. They are guards against that, not states an operator can
+configure into, and what holds them instead is `UltiEssentialsServiceUnloadTest` (three tests)
+and `UltiEssentialsServiceReloadTest#unresolvableServiceIsReportedOnReload`, each pinned by its
+own mutation pair. Note also that `/ul reload <name>` replies success unconditionally, so the
+reload warning reaches the console and never the sender (UltiKits/UltiTools-Reborn#529).
+`/upm uninstall UltiEssentials` runs `onUnregister()` first — it calls `shutdown()` on
+`ScheduledCommandService`, `ScoreboardService`, `NamePrefixService` and `TeleportService`, each on
+its own and each even when an earlier one fails, then reports the first failure — and only then the
+framework's command and listener unregistration. This matters because these four services start
+repeating tasks through `BukkitRunnable#runTaskTimer` owned by the `UltiTools` Bukkit plugin, not by
+this module: Bukkit does not cancel them when this module is unloaded, and the framework's unload
+path cancels only the tasks it created itself from `@Scheduled` methods (this module declares none).
+The *defect* never affected server shutdown — Bukkit cancels every task of the `UltiTools` plugin when
+that plugin is disabled — but the *hook* runs there too: `UltiTools#onDisable` calls
+`PluginManager#close()`, which calls `unregister()` and so `unregisterSelf()` on every loaded module
+(`close()` isolates a module whose hook throws, so a failure here cannot skip another module's
+unregistration or the framework's own config save). The visible consequence of that is one file:
+`NamePrefixService#shutdown` empties teams on the server's main scoreboard, which Bukkit persists to
+`world/data/scoreboard.dat`, so a clean stop now writes entries out of that file that it previously
+left in. Players get their prefix back about a second after rejoining, from the same update task.
+`shutdown()` empties each `up_` team but does not unregister it, on unload as on reload. That is a
+deliberate carry-over, not an oversight: the method is shared with `/ul reload`, where the team is
+needed again moments later, and a re-installed module finds and reuses the existing team rather than
+registering a new one. The cost is that after an uninstall the server keeps one registered, empty
+`up_<first 8 characters of the player UUID>` team per player who was online while the module ran,
+until someone runs the vanilla `team remove` on it. The changelog says so in both languages.
 `ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
 container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
-observable the first row below uses. The second row turns name prefixes on through a reload, and
-the third turns the scoreboard off through a reload.
+observable the first row below uses. The second row turns name prefixes on through a reload, the
+third turns the scoreboard off through a reload, and the fourth unloads the module and reads whether
+its repeating tasks stopped.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module prints no reload line of its own. On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
 | ultiessentials.lifecycle.reload-nameprefix | After `features.nameprefix.enabled` is changed from `false` to `true`, `/ul reload UltiEssentials` restarts `NamePrefixService` with the main scoreboard, so the restarted update task applies the configured prefix to every online player about 1 second after the reload and a player who joins afterwards gets it 0.5 seconds after joining, with no exception from `NamePrefixService#updatePlayer` (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.nameprefix.enabled` to `true` in `config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#onReload, NamePrefixService#reload |
 | ultiessentials.lifecycle.reload-scoreboard-off | After `features.scoreboard.enabled` is changed from `true` to `false`, `/ul reload UltiEssentials` cancels the sidebar update task and returns every player who had a sidebar to the server's main scoreboard, so the sidebar disappears and name prefixes (and any other team on the main scoreboard) become visible to those players without rejoining (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.scoreboard.enabled` to `false` in `config/essentials.yml` | n/a | n/a | admin | brief | ScoreboardService#reload, ScoreboardService#shutdown |
+| ultiessentials.lifecycle.unload-tasks | `/upm uninstall UltiEssentials` stops every repeating task this module started: configured entries of `features.scheduled-commands.commands` stop being dispatched to the console, the sidebar and name-prefix update tasks stop, and a teleport warmup still counting down is cancelled rather than completed. Players who had a sidebar are returned to the server's main scoreboard and this module's name-prefix team entries are removed, although the now-empty teams stay registered. Before UltiKits/UltiEssentials#43 the module declared no `onUnregister()` hook, so all of these kept running against the uninstalled module until the server was restarted while the uninstall reported success. One-shot delayed tasks are out of scope and are tracked in UltiKits/UltiEssentials#51 | event | `/upm uninstall UltiEssentials` from the server console (framework calls `unregisterSelf()`, which runs `onUnregister()` and then unregisters this module's commands and listeners) | n/a | n/a | admin | brief | UltiEssentials#onUnregister, ScheduledCommandService#shutdown, ScoreboardService#shutdown, NamePrefixService#shutdown, TeleportService#shutdown |
 
 ## Data Persistence
 

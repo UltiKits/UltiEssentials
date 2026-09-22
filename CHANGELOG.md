@@ -39,9 +39,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   unregistration and then its listener unregistration, so the module's commands are really removed
   and its listeners stop firing. Previously this module's unload method replaced the framework's, so
   after `/upm uninstall UltiEssentials` both its commands and its listeners stayed active until the
-  server restarted (UltiKits/UltiEssentials#23). The scheduled-command, scoreboard and name-prefix background tasks
-  are still not cancelled when the module is uninstalled without a server restart: configured
-  scheduled commands keep running (UltiKits/UltiEssentials#43).
+  server restarted (UltiKits/UltiEssentials#23).
+- `/upm uninstall UltiEssentials` now stops every repeating background task this module started:
+  configured entries of `features.scheduled-commands.commands` stop being dispatched to the console,
+  the sidebar update timer and the name-prefix update timer stop, and a teleport warmup still
+  counting down is cancelled rather than completed. Players who had a sidebar are returned to the
+  server's main scoreboard and this module's name-prefix teams are emptied of their members, so no
+  leftover sidebar or prefix survives the uninstall; the now-empty `up_` teams themselves stay
+  registered on the main scoreboard and can be removed with the vanilla `team remove` command.
+  Previously all of these kept running against the uninstalled module until the server was
+  restarted, while the uninstall reported success. A player whose warmup is cancelled stays where
+  they are and is not told: telling them would need a new language key, and this module's keys are
+  being reworked under UltiKits/UltiEssentials#26. This covers the tasks that run on a timer, and
+  not tasks scheduled to run once — a pending `/tpa` request still expires and still messages both
+  players up to `features.tpa.timeout` seconds (30 by default) after the uninstall, and a player who
+  joins in the second before it can still be given a sidebar or a name prefix; that residue is
+  UltiKits/UltiEssentials#51. If one of these services fails to stop, or cannot be reached at all,
+  the others are still stopped and the uninstall reports that failure rather than a clean removal
+  (UltiKits/UltiEssentials#43).
+- `/ul reload UltiEssentials` now names, as a warning in the console, any of those services it could
+  not reach — previously it reloaded the ones it found and reported success either way, so a feature
+  left running on its old configuration looked identical to one that had been reloaded. The other
+  services are still reloaded. On a stock install nothing can make this warning appear, and likewise
+  nothing can make the uninstall above report a service it could not reach: both are guards against a
+  future change to this module's own source, not settings you can reach from a configuration file
+  (UltiKits/UltiEssentials#43).
 - `/delhome <name>`, `/delwarp <name>`, `/unban <player>`, `/unlock`, re-running
   `/sethome <name>` on an existing home, and breaking your own locked container now actually change
   what is stored. Every record this module writes — homes, warps, bans and container locks — was
@@ -109,8 +131,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   才会重新记录。通过原版 `team remove` 命令删除的头顶称号队伍会在下次更新时重新创建（UltiKits/UltiEssentials#44）。
 - 卸载本模块（`/upm uninstall UltiEssentials`）现在会由框架先注销命令、再注销监听器，本模块的命令会被
   真正移除，其监听器也不再触发。此前本模块的卸载方法替换了框架的卸载方法，因此执行
-  `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。在不重启服务器的情况下卸载本模块时，定时命令、计分板和头顶称号的后台
-  任务仍不会被取消，已配置的定时命令会继续执行（UltiKits/UltiEssentials#43）。
+  `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。
+- `/upm uninstall UltiEssentials` 现在会停止本模块启动的全部重复后台任务：
+  `features.scheduled-commands.commands` 中配置的条目不再向控制台派发命令，侧边栏刷新任务与头顶称号刷新
+  任务都会停止，正在倒计时的预热传送会被取消而不是继续执行。拥有侧边栏的玩家会回到服务器的主计分板，本模块
+  的头顶称号队伍会被清空成员，卸载后不会残留侧边栏或称号；已清空的 `up_` 队伍本身仍注册在主计分板上，可用
+  原版 `team remove` 命令删除。此前这些任务都会继续对已卸载的模块运行，直到服务器重启，而卸载却报告成功。
+  预热传送被取消的玩家会留在原地且不会收到提示：发送提示需要新增语言键，而本模块的语言键正在
+  UltiKits/UltiEssentials#26 中统一重命名。本次改动覆盖的是按固定间隔重复的任务，不包括只执行一次的延时
+  任务——待处理的 `/tpa` 请求仍会在卸载后最多 `features.tpa.timeout` 秒（默认 30 秒）超时并向双方发送消息，
+  卸载前一秒内加入的玩家仍可能被加上侧边栏或头顶称号，这部分残留记录在 UltiKits/UltiEssentials#51。若其中
+  某个服务停止失败或根本无法找到，其余服务仍会停止，并且卸载会如实报告该失败，而不是报告卸载干净
+  （UltiKits/UltiEssentials#43）。
+- `/ul reload UltiEssentials` 现在会在控制台以警告形式指出重载时找不到的服务——此前它只重载能找到的服务
+  并一律报告成功，因此仍按旧配置运行的功能与已重载的功能在日志上无法区分。其余服务仍会正常重载。在未修改
+  源码的正式版本上，这条警告不可能出现，上面卸载时“找不到某个服务”的报错同样不可能出现：两者都是针对本模块
+  源码未来改动的防护，而不是可以通过配置文件进入的状态（UltiKits/UltiEssentials#43）。
 - `/delhome <名称>`、`/delwarp <名称>`、`/unban <玩家>`、`/unlock`、对已存在的家再次执行
   `/sethome <名称>`，以及破坏自己上锁的容器，现在都会真正改变已保存的数据。本模块写入的每条记录——家、地标点、
   封禁和容器锁——此前保存时主键为空，之后的删除或更新语句匹配不到任何行，已保存的记录原样保留：被删除的家仍会

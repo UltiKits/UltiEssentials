@@ -141,9 +141,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Previously the cooldown was a fixed 60 seconds and the key was never read. The default is still
   `60`, which is what every existing file already holds unless you edited it — an edited value takes
   effect from this version. `0` means no cooldown. `/ul reload UltiEssentials` applies a new value to
-  the next `/wild`; a cooldown already running keeps the end time it started with. A value below `0`
-  or above `3600` stops the module loading at start-up, and on `/ul reload` the reload is refused and
-  the running value is kept (UltiKits/UltiEssentials#27, through UltiKits/UltiTools-Reborn#531).
+  the next `/wild`; a cooldown already running keeps the end time it started with, also when the new
+  value is `0`. A negative value stops the module loading at start-up, with an error naming the key
+  and the value. On `/ul reload UltiEssentials` a negative value is not applied: the console shows a
+  warning naming the key, `/wild` keeps the cooldown it was using, and the rest of the reload —
+  other settings in the file, the service restarts — completes as usual. The setting used to be
+  declared with a 3600-second maximum; that limit is gone, and any value up to 2147483647 seconds is
+  accepted (UltiKits/UltiEssentials#27, through UltiKits/UltiTools-Reborn#531).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -231,9 +235,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   收到提示（在审查 UltiKits/UltiEssentials#32 时发现）。
 - `config/essentials.yml` 中的 `features.wild.cooldown` 现在决定 `/wild` 的冷却时间（秒）。此前冷却时间固定为
   60 秒，该配置项从未被读取。默认值仍为 `60`，现有配置文件中除非你改过，本来就是这个值——改过的值从本版本起生效。
-  `0` 表示不冷却。`/ul reload UltiEssentials` 会让新值作用于下一次 `/wild`；已经开始的冷却保持其原有的结束时间。
-  小于 `0` 或大于 `3600` 的值会在启动时阻止模块加载，在 `/ul reload` 时则拒绝本次重载并保留当前值
-  （UltiKits/UltiEssentials#27，依赖 UltiKits/UltiTools-Reborn#531）。
+  `0` 表示不冷却。`/ul reload UltiEssentials` 会让新值作用于下一次 `/wild`；已经开始的冷却保持其原有的结束时间，
+  新值为 `0` 时也是如此。负数会在启动时阻止模块加载，错误信息会指明该配置项和数值。在
+  `/ul reload UltiEssentials` 时负数不会生效：控制台会输出一条指明该配置项的警告，`/wild` 继续使用原来的冷却时间，
+  重载的其余部分——文件中的其他设置、各服务的重启——照常完成。该设置原先声明了 3600 秒的上限，该上限已取消，
+  最大可接受 2147483647 秒（UltiKits/UltiEssentials#27，依赖 UltiKits/UltiTools-Reborn#531）。
 
 ### Changed
 

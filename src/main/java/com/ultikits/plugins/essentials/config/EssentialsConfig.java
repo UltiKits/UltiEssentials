@@ -42,7 +42,9 @@ public class EssentialsConfig extends AbstractConfigEntity {
     // framework's config-bound @CmdCD on WildCommand#wildTeleport, so this field is the only place
     // the default lives, and /ul reload applies a new value (UltiKits/UltiEssentials#27,
     // UltiKits/UltiTools-Reborn#531). Must stay an int: the binding accepts only integral fields.
-    @Range(min = 0, max = 3600)
+    // Deliberately no @Range: the binding owns the range (0 to Integer.MAX_VALUE), refusing the
+    // module at load and keeping the running value with a WARNING on reload. A module @Range would
+    // pre-empt that on reload by aborting the whole reload part-way (maintainer ruling 2026-09-23).
     @ConfigEntry(path = "features.wild.cooldown", comment = "随机传送冷却时间(秒)，0 为不冷却")
     private int wildCooldown = 60;
 

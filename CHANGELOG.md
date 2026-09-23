@@ -114,11 +114,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   take effect. Previously `/ban`, `/tempban` and `/unban` announced every successful ban or unban to
   the whole server whatever these were set to. Both default to `true`, which is what the commands
   always did, so nothing changes unless one is `false` — and if your file already has one set to
-  `false`, it takes effect from this version. With
-  `features.ban.broadcast-ban: false`, a ban's notice and reason go to whoever issued it instead of to
-  everyone — the notice was the issuer's only confirmation, so it is redirected rather than dropped —
-  and the rest of the server no longer sees it; when a player issues the ban, that includes the
-  console. `/banlist` lists the ban either way. With `features.ban.broadcast-unban: false`, the
+  `false`, it takes effect from this version. With `features.ban.broadcast-ban: false`, a ban's
+  notice and reason go to whoever issued it instead of to everyone — the notice was the issuer's
+  only confirmation, so it is redirected rather than dropped — and the rest of the server no longer
+  sees it. `/banlist` lists the ban either way. With `features.ban.broadcast-unban: false`, the
   issuer still gets the unban confirmation they always got, and nothing is broadcast
   (UltiKits/UltiEssentials#27).
 - A pending `/tpa` or `/tpahere` request is now cleared as soon as its sender or its target leaves
@@ -202,7 +201,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   与这些命令一直以来的行为相同，因此除非其中一项为 `false`，否则没有任何变化——若你的文件中已将其中一项设为
   `false`，从本版本起即会生效。设置
   `features.ban.broadcast-ban: false` 后，封禁通知及原因改为只发送给执行者，而不再发给所有人——该通知是执行者
-  唯一的确认信息，因此是改发而不是丢弃——服务器其他人不再看到它；由玩家执行封禁时，这也包括控制台。无论如何设置，
+  唯一的确认信息，因此是改发而不是丢弃——服务器其他人不再看到它。无论如何设置，
   `/banlist` 都会列出该封禁。设置 `features.ban.broadcast-unban: false` 后，执行者仍会收到一直以来的解禁确认，
   且不再进行任何广播（UltiKits/UltiEssentials#27）。
 - 待处理的 `/tpa` 或 `/tpahere` 请求现在会在其发送者或目标离开服务器时立即清除。此前该请求会一直保留到

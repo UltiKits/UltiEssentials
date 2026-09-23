@@ -105,9 +105,12 @@ confirmed by reading `WhitelistCommand.java` directly (6 `@CmdMapping` sites: `a
 module) and `ChestLockListener.java` (7 `@EventHandler` sites: `onPlayerInteract`, `onBlockBreak`,
 `onEntityExplode`, `onBlockExplode`, `onPistonExtend`, `onPistonRetract`, `onInventoryMove` — the
 largest single-class handler count). `ultiessentials.whitelist.add` (`WhitelistCommand#add`) is
-this module's standing positive control for the command-row count: 57 `@CmdMapping` sites and 57
-`command`-Kind rows below, checked by identity, not merely by count — see the acceptance-criteria
-verify in plan 10-08 Task 1, which fails a table that reports 38 (classes) instead of 57 (formats).
+this module's standing positive control for the command-row count: 57 `@CmdMapping` sites, each the
+Source of exactly one `command`-Kind row below, checked by identity, not merely by count — see the
+acceptance-criteria verify in plan 10-08 Task 1, which fails a table that reports 38 (classes) instead
+of 57 (formats). There are 58 `command` rows: the 58th, `ultiessentials.home.set-named.outcome-verified`,
+is a second row on `/sethome <name>` whose Source is `HomeService#setHome`, not a mapping (re-measured
+when the `@EventHandler` count above was updated; the earlier figure of 57 rows predates that row).
 
 ## Teleportation & World Presence
 
@@ -269,7 +272,7 @@ report that distinction rather than a false "not banned anywhere".
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
-| ultiessentials.ban.ban | Permanently ban a player (online or previously-seen offline) with a fixed, hardcoded-Chinese default reason (no i18n call — read `BanCommand.java:38` for the exact characters; it reads roughly "no reason given"), kicking them immediately if online, and announcing the ban — to the whole server, or to the issuer alone when `features.ban.broadcast-ban` is `false` | command | `/ban <player>` (alias `/eban`) | ultiessentials.ban | both | admin | brief | BanCommand#ban |
+| ultiessentials.ban.ban | Permanently ban a player (online or previously-seen offline) with a fixed, hardcoded-Chinese default reason (no i18n call — read `BanCommand.java:43` for the exact characters; it reads roughly "no reason given"), kicking them immediately if online, and announcing the ban — to the whole server, or to the issuer alone when `features.ban.broadcast-ban` is `false` | command | `/ban <player>` (alias `/eban`) | ultiessentials.ban | both | admin | brief | BanCommand#ban |
 | ultiessentials.ban.ban-with-reason | Permanently ban a player with a given reason, kicking them immediately if online, and announcing the ban and reason — to the whole server, or to the issuer alone when `features.ban.broadcast-ban` is `false` | command | `/ban <player> <reason>` | ultiessentials.ban | both | admin | brief | BanCommand#banWithReason |
 | ultiessentials.ban.tempban | Temporarily ban a player for a parsed duration (`1d`/`2h`/`30m`/`1w`, combinable e.g. `1d12h30m`) with the same fixed, hardcoded-Chinese default reason as `ultiessentials.ban.ban` (see that row), refusing on an unparseable duration, and announcing the ban as `ultiessentials.ban.ban` does | command | `/tempban <player> <duration>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempban |
 | ultiessentials.ban.tempban-with-reason | Temporarily ban a player for a parsed duration with a given reason, announcing the ban and reason as `ultiessentials.ban.ban-with-reason` does | command | `/tempban <player> <duration> <reason>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempbanWithReason |
@@ -432,8 +435,10 @@ and reload console lines). `Language#getLocalizedText`'s only
 fallback for an unmatched key is to return the key itself unchanged — so `language: en` has
 literally no effect on any of this text; it renders in Chinese on an English-configured server
 exactly as it would on a Chinese-configured one. A minority of messages (all of
-`BanListCommand`, most of `UnbanCommand`, the base disabled-feature / player-not-found i18n key pair used
-throughout (both DO have real English translations, keyed `feature_disabled` and a Chinese-literal key respectively — read `lang/en.json` for the exact strings), and the handful of `teleport_*`-style keys) DO have real English translations and
+`BanListCommand`, most of `UnbanCommand`, the disabled-feature / player-not-found i18n keys used
+throughout (Chinese-sentence keys that DO have real English translations — read `lang/en.json` for
+the exact strings; the separate `feature_disabled` key has had no reader since
+UltiKits/UltiEssentials#29 removed the unused base-command helper that used it), and the handful of `teleport_*`-style keys) DO have real English translations and
 behave correctly. `BanService#formatKickMessage`/`#formatDuration` do not call `i18n(...)` at all
 — their Chinese text is a compile-time literal with no lookup step, not merely an unmatched key.
 Filed as UltiKits/UltiEssentials#26 (scope: catalogue the affected call sites; do not translate,
@@ -552,7 +557,7 @@ affects only itself.
 | ultiessentials.config.essentials.features.scoreboard.enabled | Enable `/scoreboard`/`/sb` and the sidebar-scoreboard update loop | config | `config/essentials.yml: features.scoreboard.enabled (default: true)` | n/a | n/a | admin | brief | ScoreboardService#enableScoreboard |
 | ultiessentials.config.essentials.features.scoreboard.auto-enable | Automatically enable the sidebar scoreboard 1 second after a player joins | config | `config/essentials.yml: features.scoreboard.auto-enable (default: true)` | n/a | n/a | admin | brief | ScoreboardListener#onPlayerJoin |
 | ultiessentials.config.essentials.features.scoreboard.update-interval | Seconds between sidebar-scoreboard content refreshes for every player with it enabled (validated `@Range(1, 60)`) | config | `config/essentials.yml: features.scoreboard.update-interval (default: 1)` | n/a | n/a | admin | brief | ScoreboardService#startUpdateTask |
-| ultiessentials.config.essentials.features.scoreboard.title | The sidebar scoreboard's title line, PlaceholderAPI-or-fallback-substituted and color-coded (validated `@NotEmpty`) | config | `config/essentials.yml: features.scoreboard.title (default: "&6&l" + a Chinese literal — read `EssentialsConfig.java:143` for the exact characters)` | n/a | n/a | admin | none | ScoreboardService#updateScoreboard |
+| ultiessentials.config.essentials.features.scoreboard.title | The sidebar scoreboard's title line, PlaceholderAPI-or-fallback-substituted and color-coded (validated `@NotEmpty`) | config | `config/essentials.yml: features.scoreboard.title (default: "&6&l" + a Chinese literal — read `EssentialsConfig.java:140` for the exact characters)` | n/a | n/a | admin | none | ScoreboardService#updateScoreboard |
 | ultiessentials.config.essentials.features.scoreboard.lines | The sidebar scoreboard's body lines, in display order, each PlaceholderAPI-or-fallback-substituted and color-coded; a duplicate rendered line under 40 characters is disambiguated with an appended invisible `ChatColor`, but `ScoreboardService#ensureUnique` checks the untruncated candidate against already-added (and therefore already-truncated) entries before truncating its own result at the end -- for two lines that are identical only in their first 40+ characters, the collision check never fires, so the second line is truncated to the SAME 40-character string as the first and overwrites it as one `Score` entry rather than appearing as a second line | config | `config/essentials.yml: features.scoreboard.lines (default: 10 lines)` | n/a | n/a | admin | detailed | ScoreboardService#updateScoreboard, ScoreboardService#ensureUnique |
 | ultiessentials.config.essentials.features.scheduled-commands.enabled | Enable the scheduled-console-command feature entirely | config | `config/essentials.yml: features.scheduled-commands.enabled (default: false)` | n/a | n/a | admin | brief | ScheduledCommandService#startTasks |
 | ultiessentials.config.essentials.features.scheduled-commands.commands | The scheduled command list, each entry `interval_seconds:command`; a malformed entry (missing colon, non-numeric or non-positive interval, empty command) is logged and skipped, not rejected as a whole-file validation failure | config | `config/essentials.yml: features.scheduled-commands.commands (default: 2 entries)` | n/a | n/a | admin | detailed | ScheduledCommandService#startTasks |

@@ -108,6 +108,38 @@ public class HideCommand extends BaseEssentialsCommand {
     }
 
     /**
+     * Shows every vanished player to every other online player and forgets all vanish state. Called
+     * when the module is unloaded: every hide is recorded against the {@code UltiTools} Bukkit
+     * plugin, which stays enabled, so without this the hides would outlive the module while the
+     * {@code /hide} command that lifts them and the join listener that keeps later joiners consistent
+     * are gone -- leaving a vanished player hidden from some players, visible to others and unable
+     * to un-vanish.
+     * <p>
+     * Uses the same plugin reference as {@link #toggleHide}, which is what makes each
+     * {@code showPlayer} undo the matching {@code hidePlayer}. The set is emptied even of players who
+     * already left, so a later reinstall starts from a state that matches what Bukkit shows.
+     * <p>
+     * 卸载模块时让所有隐身玩家对所有人重新可见，并清空隐身状态。
+     */
+    public static void revealAllVanished() {
+        if (HIDDEN_PLAYERS.isEmpty()) {
+            return;
+        }
+        Plugin plugin = getBukkitPlugin();
+        for (Player vanished : Bukkit.getOnlinePlayers()) {
+            if (!isHidden(vanished)) {
+                continue;
+            }
+            for (Player viewer : Bukkit.getOnlinePlayers()) {
+                if (!viewer.equals(vanished)) {
+                    viewer.showPlayer(plugin, vanished);
+                }
+            }
+        }
+        HIDDEN_PLAYERS.clear();
+    }
+
+    /**
      * Removes a player from the hidden set.
      * Should be called when a player disconnects.
      *

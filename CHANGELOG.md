@@ -131,6 +131,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Previously `/hide` hid them only from the players online at that moment, so anyone who joined
   later could see them. A joiner holding `ultiessentials.hide.see` still sees vanished players, as
   players online at the time of the `/hide` already did (UltiKits/UltiEssentials#32).
+- `/upm uninstall UltiEssentials` now shows every player vanished with `/hide` to everyone again and
+  forgets the vanish state. Previously the vanish outlived the module — the hides belong to UltiTools
+  itself, which stays enabled — so a vanished player stayed hidden from the players who were online
+  when they vanished, was visible to anyone who joined afterwards, and could not un-vanish until they
+  relogged, because `/hide` had been uninstalled with the module. The vanished player is not told
+  (found by review of UltiKits/UltiEssentials#32).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -212,6 +218,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 使用 `/hide` 隐身的玩家现在对其隐身之后才加入的玩家同样保持隐身。此前 `/hide` 只对当时在线的玩家生效，之后
   加入的任何人都能看见隐身者。持有 `ultiessentials.hide.see` 的加入者仍能看见隐身玩家，与 `/hide` 执行时已在线
   的玩家一致（UltiKits/UltiEssentials#32）。
+- `/upm uninstall UltiEssentials` 现在会让所有使用 `/hide` 隐身的玩家对所有人重新可见，并清空隐身状态。此前隐身
+  效果会在模块卸载后继续存在——这些隐藏记录属于仍处于启用状态的 UltiTools 本身——因此隐身玩家仍对其隐身时在线的
+  玩家不可见，却对之后加入的玩家可见，并且由于 `/hide` 已随模块一起卸载，只能重新登录才能解除隐身。隐身玩家不会
+  收到提示（在审查 UltiKits/UltiEssentials#32 时发现）。
 
 ### Removed
 

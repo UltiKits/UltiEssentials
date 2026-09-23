@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.commands.HideCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.RemovedConfigKeys;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
@@ -143,6 +144,10 @@ public class UltiEssentials extends UltiToolsPlugin {
      * every service is shut down before the throw either way. That path is not operator-reachable
      * today (#506 records the measurement).
      * <p>
+     * Before the services, every vanished player is shown to everyone again and the vanish state is
+     * forgotten ({@link #revealVanishedPlayers()}): the hides belong to the {@code UltiTools} Bukkit
+     * plugin, so they would otherwise outlive the {@code /hide} command that lifts them.
+     * <p>
      * Each service is shut down on its own, and every one is shut down even when an earlier one
      * fails -- a service left running is exactly the defect this hook exists to remove. The first
      * failure is then rethrown with any later one attached to it, so the unload is reported as
@@ -153,7 +158,7 @@ public class UltiEssentials extends UltiToolsPlugin {
      */
     @Override
     protected void onUnregister() {
-        Throwable failure = null;
+        Throwable failure = revealVanishedPlayers();
         failure = shutdownService(failure, ScheduledCommandService.class, ScheduledCommandService::shutdown);
         failure = shutdownService(failure, ScoreboardService.class, ScoreboardService::shutdown);
         failure = shutdownService(failure, NamePrefixService.class, NamePrefixService::shutdown);
@@ -163,6 +168,25 @@ public class UltiEssentials extends UltiToolsPlugin {
         } else if (failure instanceof Error) {
             throw (Error) failure;
         }
+    }
+
+    /**
+     * Shows every vanished player to everyone again and forgets the vanish state, so the unload does
+     * not leave players hidden by a module that is no longer there to un-hide them (gate-1 WR-01 on
+     * UltiKits/UltiEssentials#32). It runs first and inside the same barrier as the service
+     * shutdowns: a failure here is returned to be rethrown once every service has been shut down, and
+     * a service failure cannot stop the reveal.
+     *
+     * @return the failure raised while revealing, or {@code null}
+     */
+    @SuppressWarnings("PMD.AvoidCatchingGenericException") // deliberate cleanup barrier -- see shutdownService
+    private static Throwable revealVanishedPlayers() {
+        try {
+            HideCommand.revealAllVanished();
+        } catch (RuntimeException | Error e) {
+            return e;
+        }
+        return null;
     }
 
     /**

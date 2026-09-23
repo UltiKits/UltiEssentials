@@ -25,12 +25,12 @@ for UAT execution and issue reconciliation — the public description of these f
   `PlaceholderAPI#setPlaceholders`, they do not register their own expansion) and no `gate` rows
   (0 `@ConditionalOnConfig` sites) — all three Kinds stay in the vocabulary for cross-repository
   consistency even though none appears below. This module's one `scheduled` row is NOT backed by
-  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The five rows under
+  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The six rows under
   `## Lifecycle` are `event` rows with no `@EventHandler` site behind them,
   `ultiessentials.lock.protect-whole-container` is an `event` row whose behaviour runs inside every
   `ChestLockListener` handler rather than in one of its own, and `ultiessentials.tpa.clear-on-quit`
   runs in the same `PlayerQuitListener` handler as `ultiessentials.cleanup.on-quit`, so the 22
-  `@EventHandler` sites in the positive control below match the other 22 `event` rows, not all 29: `/ul reload`, an unload and
+  `@EventHandler` sites in the positive control below match the other 22 `event` rows, not all 30: `/ul reload`, an unload and
   start-up are framework-invoked lifecycle steps, not commands this repository maps or config reads,
   so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
@@ -397,8 +397,9 @@ until someone runs the vanilla `team remove` on it. The changelog says so in bot
 container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
 observable the first row below uses. The second row turns name prefixes on through a reload, the
 third turns the scoreboard off through a reload, the fourth reads the warnings a removed setting left
-in the file produces, and the fifth unloads the module and reads whether
-its repeating tasks stopped.
+in the file produces, the fifth unloads the module and reads whether
+its repeating tasks stopped, and the sixth unloads it while a player is vanished and reads that the
+vanish is lifted for everyone.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
@@ -407,6 +408,7 @@ its repeating tasks stopped.
 | ultiessentials.lifecycle.reload-scoreboard-off | After `features.scoreboard.enabled` is changed from `true` to `false`, `/ul reload UltiEssentials` cancels the sidebar update task and returns every player who had a sidebar to the server's main scoreboard, so the sidebar disappears and name prefixes (and any other team on the main scoreboard) become visible to those players without rejoining (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.scoreboard.enabled` to `false` in `config/essentials.yml` | n/a | n/a | admin | brief | ScoreboardService#reload, ScoreboardService#shutdown |
 | ultiessentials.lifecycle.removed-key-warning | At start-up and on every `/ul reload UltiEssentials`, log one WARN line for each setting this module has removed that is still in the operator's `config/essentials.yml` — `features.wild.cooldown` and `features.recall.enabled` (UltiKits/UltiEssentials#27) — naming the module, the file and the key and saying where the setting's job went (`UltiKits/UltiTools-Reborn#531` for the cooldown, `UltiKits/UltiEssentials#53` for `/recall`); a file holding neither key produces no such line, and a configuration that cannot be read produces one line saying the file was not checked rather than none | event | start the server, or run `/ul reload UltiEssentials`, with a removed key left in `plugins/UltiTools/pluginConfig/UltiEssentials/config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#warnAboutRemovedSettings, RemovedConfigKeys#warningsFor |
 | ultiessentials.lifecycle.unload-tasks | `/upm uninstall UltiEssentials` stops every repeating task this module started: configured entries of `features.scheduled-commands.commands` stop being dispatched to the console, the sidebar and name-prefix update tasks stop, and a teleport warmup still counting down is cancelled rather than completed. Players who had a sidebar are returned to the server's main scoreboard and this module's name-prefix team entries are removed, although the now-empty teams stay registered. Before UltiKits/UltiEssentials#43 the module declared no `onUnregister()` hook, so all of these kept running against the uninstalled module until the server was restarted while the uninstall reported success. One-shot delayed tasks are out of scope and are tracked in UltiKits/UltiEssentials#51 | event | `/upm uninstall UltiEssentials` from the server console (framework calls `unregisterSelf()`, which runs `onUnregister()` and then unregisters this module's commands and listeners) | n/a | n/a | admin | brief | UltiEssentials#onUnregister, ScheduledCommandService#shutdown, ScoreboardService#shutdown, NamePrefixService#shutdown, TeleportService#shutdown |
+| ultiessentials.lifecycle.unload-reveals-vanished | `/upm uninstall UltiEssentials` first shows every player vanished with `/hide` to every other online player, using the same `UltiTools` plugin reference `/hide` used to hide them, and forgets all vanish state (including players who already left), so a reinstall starts consistent with what players see. Before gate-1 finding WR-01 on UltiKits/UltiEssentials#32 the hides outlived the module, because they are recorded against the `UltiTools` Bukkit plugin, which stays enabled: a vanished player stayed hidden from the players online when they vanished, became visible to later joiners, and could not un-vanish until they relogged. The vanished player is not messaged | event | `/upm uninstall UltiEssentials` from the server console while a player is vanished | n/a | n/a | admin | brief | UltiEssentials#onUnregister, HideCommand#revealAllVanished |
 
 ## Data Persistence
 

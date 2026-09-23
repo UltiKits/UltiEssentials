@@ -10,6 +10,7 @@ import com.ultikits.ultitools.abstracts.command.CommandContext;
 import com.ultikits.ultitools.abstracts.command.validation.validators.CooldownValidator;
 import com.ultikits.ultitools.annotations.command.CmdCD;
 import com.ultikits.ultitools.context.SimpleContainer;
+import com.ultikits.ultitools.exceptions.ConfigurationException;
 import com.ultikits.ultitools.manager.ConfigManager;
 import com.ultikits.ultitools.manager.PluginManager;
 import org.bukkit.command.Command;
@@ -124,12 +125,14 @@ class WildCooldownBindingTest {
     }
 
     @Test
-    @DisplayName("A negative value refuses the module at load, naming the key")
+    @DisplayName("A negative value refuses the module at load, naming the file and the value")
     void negativeValueIsRefusedAtLoad() throws Exception {
         write("features:\n  wild:\n    cooldown: -1\n");
-        boot();
 
-        assertThatThrownBy(this::resolveBindings).hasMessageContaining("features.wild.cooldown");
+        assertThatThrownBy(this::load)
+                .isInstanceOf(ConfigurationException.class)
+                .hasMessageContaining("config/essentials.yml")
+                .hasMessageContaining("-1");
     }
 
     // ==================== /ul reload ====================
@@ -152,12 +155,12 @@ class WildCooldownBindingTest {
     }
 
     @Test
-    @DisplayName("An invalid value on /ul reload keeps the running cooldown")
+    @DisplayName("An invalid value on /ul reload is refused and the running cooldown is kept")
     void invalidValueOnReloadKeepsTheRunningOne() throws Exception {
         load("features:\n  wild:\n    cooldown: 5\n");
 
         write("features:\n  wild:\n    cooldown: -3\n");
-        configManager.reloadConfigs(plugin);
+        assertThatThrownBy(() -> configManager.reloadConfigs(plugin)).isInstanceOf(ConfigurationException.class);
         new PluginManager().applyReloadedConfigBindings(plugin);
 
         Player player = player();
@@ -188,6 +191,10 @@ class WildCooldownBindingTest {
 
     private void load(String yaml) throws Exception {
         write(yaml);
+        load();
+    }
+
+    private void load() throws Exception {
         boot();
         resolveBindings();
     }
@@ -202,9 +209,12 @@ class WildCooldownBindingTest {
         configManager.register(plugin, config);
 
         wild = new WildCommand(config);
-        EssentialsTestHelper.setField(wild, "plugin", plugin);
         SimpleContainer container = new SimpleContainer();
-        container.registerType(WildCommand.class, wild);
+        container.registerType(UltiToolsPlugin.class, plugin);
+        // A singleton, as the component scan registers an executor: the framework's binding step
+        // enumerates the container's CommandExecutor beans.
+        container.registerSingleton("wildCommand", wild);
+        EssentialsTestHelper.setField(wild, "plugin", plugin);
         plugin.setContext(container);
     }
 

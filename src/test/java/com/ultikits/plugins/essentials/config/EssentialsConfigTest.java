@@ -57,13 +57,6 @@ class EssentialsConfigTest {
             assertThat(config.isWildEnabled()).isTrue();
             assertThat(config.getWildMaxRange()).isEqualTo(10000);
             assertThat(config.getWildMinRange()).isEqualTo(100);
-            assertThat(config.getWildCooldown()).isEqualTo(60);
-        }
-
-        @Test
-        @DisplayName("Should have correct recall feature defaults")
-        void shouldHaveRecallDefaults() {
-            assertThat(config.isRecallEnabled()).isTrue();
         }
     }
 

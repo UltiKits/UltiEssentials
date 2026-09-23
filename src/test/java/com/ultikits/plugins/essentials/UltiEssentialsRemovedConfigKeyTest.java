@@ -1,6 +1,5 @@
 package com.ultikits.plugins.essentials;
 
-import com.ultikits.plugins.essentials.commands.WildCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
@@ -9,12 +8,10 @@ import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.ConfigEntry;
-import com.ultikits.ultitools.annotations.command.CmdCD;
 import com.ultikits.ultitools.context.SimpleContainer;
 import com.ultikits.ultitools.interfaces.impl.logger.PluginLogger;
 import com.ultikits.ultitools.manager.ConfigManager;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,19 +38,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
- * Two settings in {@code config/essentials.yml} never took effect and are removed in 6.3.0
- * (UltiKits/UltiEssentials#27):
- * <ul>
- *   <li>{@code features.wild.cooldown} -- {@code /wild}'s cooldown is the framework's
- *       {@code @CmdCD(60)}, a compile-time constant no configuration read can change. Making it
- *       configurable is a framework capability, requested as UltiKits/UltiTools-Reborn#531;</li>
- *   <li>{@code features.recall.enabled} -- there is no {@code /recall} command to switch.</li>
- * </ul>
+ * {@code features.recall.enabled} in {@code config/essentials.yml} never took effect -- there is no
+ * {@code /recall} command to switch -- and is removed in 6.3.0 (UltiKits/UltiEssentials#27; the
+ * command is feature request UltiKits/UltiEssentials#53).
+ * <p>
+ * {@code features.wild.cooldown}, the other key #27 found unread, is <em>not</em> removed: it is
+ * bound to {@code /wild}'s cooldown through the framework's config-bound {@code @CmdCD}
+ * (UltiKits/UltiTools-Reborn#531), so it is a live key and must never be reported as removed. Its
+ * behaviour is pinned by {@code WildCooldownBindingTest}.
+ * <p>
  * Removing a key from the code does not remove it from an operator's file: the framework writes a
  * missing key's declared default into the file on first load and never deletes a key it no longer
- * declares, so every server that has run this module still carries both. These cases pin the
- * warning that tells that operator, at start-up and again on {@code /ul reload}, and they pin that
- * a fresh install no longer gets either key written into its file.
+ * declares, so every server that has run this module still carries the recall switch. These cases
+ * pin the warning that tells that operator, at start-up and again on {@code /ul reload}, and they
+ * pin that a fresh install no longer gets it written into its file.
  *
  * <h2>Controls</h2>
  * A check that never fires and a server with nothing left over look identical in the log, so the
@@ -95,8 +93,8 @@ class UltiEssentialsRemovedConfigKeyTest {
     // ==================== the declaration ====================
 
     @Test
-    @DisplayName("EssentialsConfig declares neither removed key")
-    void configDeclaresNeitherRemovedKey() {
+    @DisplayName("EssentialsConfig declares the live wild cooldown and not the removed recall switch")
+    void configDeclaresWildCooldownButNotRecall() {
         List<String> declared = new ArrayList<>();
         for (Field field : EssentialsConfig.class.getDeclaredFields()) {
             ConfigEntry entry = field.getAnnotation(ConfigEntry.class);
@@ -106,39 +104,30 @@ class UltiEssentialsRemovedConfigKeyTest {
         }
         // Control: the reflection reads the real declarations -- a key that stays is found.
         assertThat(declared).contains("features.wild.enabled", "features.ban.broadcast-ban");
-        assertThat(declared).doesNotContain(WILD_COOLDOWN, RECALL_ENABLED);
+        assertThat(declared).contains(WILD_COOLDOWN);
+        assertThat(declared).doesNotContain(RECALL_ENABLED);
     }
 
     @Test
-    @DisplayName("A fresh install's file gets neither removed key written into it")
-    void freshInstallFileCarriesNeitherRemovedKey() throws Exception {
+    @DisplayName("A fresh install's file gets the wild cooldown but not the removed recall switch")
+    void freshInstallFileCarriesWildCooldownButNotRecall() throws Exception {
         boot("");
 
         YamlConfiguration written = YamlConfiguration.loadConfiguration(configFile);
         // Control: the framework did write the declared defaults into the empty file.
         assertThat(written.contains("features.wild.enabled")).isTrue();
-        assertThat(written.contains(WILD_COOLDOWN)).isFalse();
+        assertThat(written.contains(WILD_COOLDOWN)).isTrue();
         assertThat(written.contains(RECALL_ENABLED)).isFalse();
-    }
-
-    @Test
-    @DisplayName("/wild's cooldown is the fixed 60 seconds the documentation now states")
-    void wildCooldownIsFixedAtSixtySeconds() throws Exception {
-        Method wild = WildCommand.class.getMethod("wildTeleport", Player.class);
-        CmdCD cooldown = wild.getAnnotation(CmdCD.class);
-
-        assertThat(cooldown).isNotNull();
-        assertThat(cooldown.value()).isEqualTo(60);
     }
 
     // ==================== the residual-key warning at start-up ====================
 
     @Test
-    @DisplayName("Start-up names features.wild.cooldown when it is still in the operator's file")
-    void startUpWarnsAboutResidualWildCooldown() throws Exception {
+    @DisplayName("Start-up does not report features.wild.cooldown: it is a live, bound key")
+    void startUpDoesNotReportTheLiveWildCooldown() throws Exception {
         boot("features:\n  wild:\n    cooldown: 5\n");
 
-        assertOneWarningNaming(startUpWarnings(), WILD_COOLDOWN, "UltiTools-Reborn#531");
+        assertThat(startUpWarnings()).isEmpty();
     }
 
     @Test
@@ -150,15 +139,15 @@ class UltiEssentialsRemovedConfigKeyTest {
     }
 
     @Test
-    @DisplayName("Start-up warns once per residual key when both are left in the file")
-    void startUpWarnsOncePerResidualKey() throws Exception {
+    @DisplayName("With the recall switch and the wild cooldown both in the file, only the recall switch is reported, once")
+    void startUpReportsOnlyTheRemovedKey() throws Exception {
         boot("features:\n  wild:\n    cooldown: 5\n  recall:\n    enabled: true\n");
 
         List<String> warnings = startUpWarnings();
 
-        assertThat(warnings).hasSize(2);
-        assertThat(warnings).filteredOn(line -> line.contains(WILD_COOLDOWN)).hasSize(1);
+        assertThat(warnings).hasSize(1);
         assertThat(warnings).filteredOn(line -> line.contains(RECALL_ENABLED)).hasSize(1);
+        assertThat(warnings).filteredOn(line -> line.contains(WILD_COOLDOWN)).isEmpty();
     }
 
     // ==================== the residual-key warning on /ul reload ====================
@@ -169,17 +158,17 @@ class UltiEssentialsRemovedConfigKeyTest {
         boot("");
         assertThat(startUpWarnings()).isEmpty();
 
-        write("features:\n  wild:\n    cooldown: 5\n");
+        write("features:\n  recall:\n    enabled: false\n");
         configManager.reloadConfigs(plugin);
         List<String> warnings = warningsDuring(() -> invokeOnReload(plugin));
 
-        assertOneWarningNaming(warnings, WILD_COOLDOWN, "UltiTools-Reborn#531");
+        assertOneWarningNaming(warnings, RECALL_ENABLED, "UltiEssentials#53");
     }
 
     @Test
     @DisplayName("Start-up says the file was not checked, rather than staying silent, when the configuration cannot be read")
     void startUpSaysSoWhenTheConfigurationCannotBeRead() throws Exception {
-        boot("features:\n  wild:\n    cooldown: 5\n");
+        boot("features:\n  recall:\n    enabled: false\n");
         plugin.setContext(containerWith(null));
 
         List<String> warnings = startUpWarnings();

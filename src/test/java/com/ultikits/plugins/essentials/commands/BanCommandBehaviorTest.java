@@ -37,6 +37,7 @@ class BanCommandBehaviorTest {
         command = new BanCommand();
         EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
         EssentialsTestHelper.setField(command, "banService", banService);
+        EssentialsTestHelper.setField(command, "config", new com.ultikits.plugins.essentials.config.EssentialsConfig());
         player = EssentialsTestHelper.createMockPlayer("TestPlayer", UUID.randomUUID());
     }
 

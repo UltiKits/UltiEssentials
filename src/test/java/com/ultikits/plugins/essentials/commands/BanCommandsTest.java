@@ -47,6 +47,7 @@ class BanCommandsTest {
             command = new BanCommand();
             EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
             EssentialsTestHelper.setField(command, "banService", banService);
+            EssentialsTestHelper.setField(command, "config", new com.ultikits.plugins.essentials.config.EssentialsConfig());
         }
 
         @Test
@@ -256,6 +257,7 @@ class BanCommandsTest {
             command = new TempBanCommand();
             EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
             EssentialsTestHelper.setField(command, "banService", banService);
+            EssentialsTestHelper.setField(command, "config", new com.ultikits.plugins.essentials.config.EssentialsConfig());
         }
 
         @Test
@@ -361,6 +363,7 @@ class BanCommandsTest {
             command = new UnbanCommand();
             EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
             EssentialsTestHelper.setField(command, "banService", banService);
+            EssentialsTestHelper.setField(command, "config", new com.ultikits.plugins.essentials.config.EssentialsConfig());
         }
 
         @Test

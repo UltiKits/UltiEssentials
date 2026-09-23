@@ -23,13 +23,24 @@ public class HideCommand extends BaseEssentialsCommand {
      */
     private static final Set<UUID> HIDDEN_PLAYERS = new HashSet<>();
 
+    /**
+     * Lets its holder keep seeing vanished players, both when someone vanishes and when the holder
+     * joins later.
+     */
+    private static final String SEE_VANISHED_PERMISSION = "ultiessentials.hide.see";
+
     private final EssentialsConfig config;
 
     public HideCommand(EssentialsConfig config) {
         this.config = config;
     }
 
-    private Plugin getBukkitPlugin() {
+    /**
+     * The Bukkit plugin every hide and show is recorded against. Bukkit keys visibility by plugin,
+     * so the join-time re-hide and the un-vanish in {@link #toggleHide} must use the same one for
+     * the un-vanish to undo it.
+     */
+    private static Plugin getBukkitPlugin() {
         return Bukkit.getPluginManager().getPlugin("UltiTools");
     }
 
@@ -51,7 +62,7 @@ public class HideCommand extends BaseEssentialsCommand {
             // Enable vanish
             HIDDEN_PLAYERS.add(player.getUniqueId());
             for (Player online : Bukkit.getOnlinePlayers()) {
-                if (!online.hasPermission("ultiessentials.hide.see")) {
+                if (!online.hasPermission(SEE_VANISHED_PERMISSION)) {
                     online.hidePlayer(getBukkitPlugin(), player);
                 }
             }
@@ -67,6 +78,33 @@ public class HideCommand extends BaseEssentialsCommand {
      */
     public static boolean isHidden(Player player) {
         return HIDDEN_PLAYERS.contains(player.getUniqueId());
+    }
+
+    /**
+     * Hides every currently vanished player from a player who has just joined, unless the joiner
+     * holds {@code ultiessentials.hide.see} -- the same exemption {@link #toggleHide} applies to
+     * the players online when someone vanishes. Without this, {@code /hide} held only against the
+     * players online at that moment, and anyone who joined later saw the vanished player
+     * (UltiKits/UltiEssentials#32).
+     * <p>
+     * It does not consult {@code features.hide.enabled}: a player already vanished stays hidden
+     * from the players who were online when they vanished whatever that switch now says, so a later
+     * joiner is treated the same way.
+     * <p>
+     * 对刚加入的玩家隐藏所有当前隐身的玩家；持有 ultiessentials.hide.see 的玩家除外。
+     *
+     * @param joiner the player who has just joined
+     */
+    public static void hideVanishedPlayersFrom(Player joiner) {
+        if (HIDDEN_PLAYERS.isEmpty() || joiner.hasPermission(SEE_VANISHED_PERMISSION)) {
+            return;
+        }
+        Plugin plugin = getBukkitPlugin();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.equals(joiner) && isHidden(online)) {
+                joiner.hidePlayer(plugin, online);
+            }
+        }
     }
 
     /**

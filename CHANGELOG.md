@@ -128,6 +128,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   told the request had timed out once the timeout ran out, and a target who ran `/tpaccept` after the
   sender had left was told the sender was offline; now the request is simply gone, so `/tpaccept`
   and `/tpdeny` report that there is no pending request (UltiKits/UltiEssentials#30).
+- A player vanished with `/hide` now stays hidden from players who join after they vanished.
+  Previously `/hide` hid them only from the players online at that moment, so anyone who joined
+  later could see them. A joiner holding `ultiessentials.hide.see` still sees vanished players, as
+  players online at the time of the `/hide` already did (UltiKits/UltiEssentials#32).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -206,6 +210,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   清除时不会向仍在线的一方发送消息：此前超时结束时他们会收到"请求已超时"的提示，而在发送者离开后执行
   `/tpaccept` 的目标会被告知发送者已离线；现在请求直接消失，因此 `/tpaccept` 与 `/tpdeny` 会报告没有待处理的
   请求（UltiKits/UltiEssentials#30）。
+- 使用 `/hide` 隐身的玩家现在对其隐身之后才加入的玩家同样保持隐身。此前 `/hide` 只对当时在线的玩家生效，之后
+  加入的任何人都能看见隐身者。持有 `ultiessentials.hide.see` 的加入者仍能看见隐身玩家，与 `/hide` 执行时已在线
+  的玩家一致（UltiKits/UltiEssentials#32）。
 
 ### Removed
 

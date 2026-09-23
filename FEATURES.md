@@ -29,8 +29,8 @@ for UAT execution and issue reconciliation — the public description of these f
   `## Lifecycle` are `event` rows with no `@EventHandler` site behind them,
   `ultiessentials.lock.protect-whole-container` is an `event` row whose behaviour runs inside every
   `ChestLockListener` handler rather than in one of its own, and `ultiessentials.tpa.clear-on-quit`
-  runs in the same `PlayerQuitListener` handler as `ultiessentials.cleanup.on-quit`, so the 21
-  `@EventHandler` sites in the positive control below match the other 21 `event` rows, not all 28: `/ul reload`, an unload and
+  runs in the same `PlayerQuitListener` handler as `ultiessentials.cleanup.on-quit`, so the 22
+  `@EventHandler` sites in the positive control below match the other 22 `event` rows, not all 29: `/ul reload`, an unload and
   start-up are framework-invoked lifecycle steps, not commands this repository maps or config reads,
   so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
@@ -90,12 +90,15 @@ rather than an error:
 3. **Javadoc and string literals** — requiring the annotation to start its own line (the
    `^[[:space:]]*@` anchor) is what defeats a javadoc mention or a warning-message string literal
    that merely contains the annotation's name as text. This module's naive (unanchored) and
-   line-start counts are identical for every annotation kind measured below.
+   line-start counts are identical for every annotation kind measured below except `@Scheduled`
+   (naive 1) and `@ConditionalOnConfig` (naive 2), whose only occurrences are javadoc mentions in
+   `UltiEssentials.java` — exactly the case the anchor exists to exclude.
 
 **Positive control:** the line-start form returns `@CmdExecutor` = 38 (classes), `@CmdMapping` =
 57 (formats), `@EventListener` = 12 (classes — 11 in `listener/`, 1 in `commands/BackCommand.java`
-which is simultaneously a command executor and an event listener), `@EventHandler` = 21 (handler
-methods across those 12 classes), `@Scheduled` = 0, `@ConditionalOnConfig` = 0, `@ConfigEntity` = 5
+which is simultaneously a command executor and an event listener), `@EventHandler` = 22 (handler
+methods across those 12 classes; `JoinQuitListener#hideVanishedPlayers` became the 22nd with
+UltiKits/UltiEssentials#32), `@Scheduled` = 0, `@ConditionalOnConfig` = 0, `@ConfigEntity` = 5
 (classes), `@ConfigEntry` = 77, `@Table` = 4 (`HomeData`, `WarpData`, `BanData`, `ChestLockData`) —
 confirmed by reading `WhitelistCommand.java` directly (6 `@CmdMapping` sites: `add <player>`,
 `remove <player>`, `list`, `on`, `off`, `status` — the largest single-class mapping count in this
@@ -226,6 +229,7 @@ now holds all four pairs to the rule.
 | ultiessentials.fly.toggle-self | Toggle the sender's own flight allowance; disabling also forces `setFlying(false)` so the sender does not remain airborne with flight revoked | command | `/fly` | ultiessentials.fly | player | player | brief | FlyCommand#toggleFly |
 | ultiessentials.fly.toggle-other | Toggle a named online target's flight allowance — gated by its own elevated node, which a holder of the self-flight node alone does not have (fixed in UltiKits/UltiEssentials#25) | command | `/fly <player>` | ultiessentials.fly.other | player | admin | brief | FlyCommand#toggleFlyOther |
 | ultiessentials.hide.toggle | Toggle the sender's own vanish: on enable, hides the sender from every online player lacking `ultiessentials.hide.see`; on disable, re-shows the sender to everyone. State is a static in-memory set, not persisted (see `## Data Persistence`) | command | `/hide` (alias `/vanish`) | ultiessentials.hide | player | admin | brief | HideCommand#toggleHide |
+| ultiessentials.hide.reapply-on-join | When a player joins, hide from them every player currently vanished with `/hide`, unless the joiner holds `ultiessentials.hide.see` (the same exemption `/hide` applies to the players online when someone vanishes); applies whatever `features.hide.enabled` says, because a player already vanished stays hidden from everyone else too. Before UltiKits/UltiEssentials#32 a vanished player was visible to anyone who joined after they vanished | event | join the server while another player is vanished | n/a | n/a | admin | brief | JoinQuitListener#hideVanishedPlayers, HideCommand#hideVanishedPlayersFrom |
 | ultiessentials.gamemode.set-self | Set the sender's own game mode by numeric (`0-3`), single-letter, or full-name token | command | `/gm <mode>` | ultiessentials.gamemode.self | player | player | brief | GameModeCommand#setGameMode |
 | ultiessentials.gamemode.set-other | Set a named online target's game mode, notifying both sender and target | command | `/gm <mode> <player>` | ultiessentials.gamemode.other | player | admin | brief | GameModeCommand#setGameModeOther |
 | ultiessentials.gamemode.shortcut-creative | Shortcut to set the sender's own game mode to CREATIVE | command | `/gmc` | ultiessentials.gamemode.self | player | player | none | GmCreativeCommand#creative |

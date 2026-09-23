@@ -10,8 +10,8 @@ import java.util.List;
  * Settings this module used to declare in {@code config/essentials.yml} and no longer reads, and the
  * warning that tells an operator whose file still holds one.
  * <p>
- * <b>Why a module needs this at all.</b> Deleting a {@code @ConfigEntry} field removes the key from
- * the code, not from anybody's disk. The framework writes a missing key's declared default into the
+ * <b>Why a module needs this at all.</b> Deleting a configuration field removes the key from the
+ * code, not from anybody's disk. The framework writes a missing key's declared default into the
  * operator's file on first load and never deletes a key it no longer declares
  * ({@code AbstractConfigEntity#init}), so every server that has run this module still has the keys
  * below in its file, carrying whatever value its operator last set. Without this warning an edited

@@ -175,6 +175,26 @@ class WildCooldownBindingTest {
     }
 
     @Test
+    @DisplayName("A reload to 0 keeps a cooldown already running, and a new player meets none")
+    void zeroKeepsARunningCooldown() throws Exception {
+        load("features:\n  wild:\n    cooldown: 60\n");
+        Player player = player();
+        useWild(player);
+
+        write("features:\n  wild:\n    cooldown: 0\n");
+        reload();
+
+        // The running 60 s stamp still holds under a setting of 0 (CmdCD javadoc: "A cooldown
+        // already running keeps the end time it was stamped with").
+        assertThat(validator().validate(context(player)).isValid()).isFalse();
+        assertThat(remaining(player)).isBetween(1L, 61L);
+        // A new player meets no cooldown at 0.
+        Player fresh = player();
+        useWild(fresh);
+        assertThat(validator().validate(context(fresh)).isValid()).isTrue();
+    }
+
+    @Test
     @DisplayName("An invalid value on /ul reload keeps the running cooldown, and the rest of the reload still completes")
     void invalidValueOnReloadKeepsTheRunningOne() throws Exception {
         load("features:\n  wild:\n    cooldown: 5\n");

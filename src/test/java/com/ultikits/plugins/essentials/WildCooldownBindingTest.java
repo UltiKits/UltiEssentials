@@ -2,6 +2,9 @@ package com.ultikits.plugins.essentials;
 
 import com.ultikits.plugins.essentials.commands.WildCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
+import com.ultikits.plugins.essentials.service.NamePrefixService;
+import com.ultikits.plugins.essentials.service.ScheduledCommandService;
+import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.UltiTools;
@@ -11,6 +14,7 @@ import com.ultikits.ultitools.abstracts.command.validation.validators.CooldownVa
 import com.ultikits.ultitools.annotations.command.CmdCD;
 import com.ultikits.ultitools.context.SimpleContainer;
 import com.ultikits.ultitools.exceptions.ConfigurationException;
+import com.ultikits.ultitools.interfaces.impl.logger.PluginLogger;
 import com.ultikits.ultitools.manager.ConfigManager;
 import com.ultikits.ultitools.manager.PluginManager;
 import org.bukkit.command.Command;
@@ -39,6 +43,7 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -74,6 +79,11 @@ class WildCooldownBindingTest {
         TestHelper.mockUltiToolsInstance();
         configManager = new ConfigManager();
         when(UltiTools.getInstance().getConfigManager()).thenReturn(configManager);
+        when(UltiTools.getInstance().getPluginManager()).thenReturn(new PluginManager());
+        // reloadSelf() refreshes the module's language from the framework's own config.yml.
+        YamlConfiguration frameworkConfig = new YamlConfiguration();
+        frameworkConfig.set("language", "en");
+        lenient().when(UltiTools.getInstance().getConfig()).thenReturn(frameworkConfig);
         // The reload step runs only on the main thread.
         lenient().when(EssentialsTestHelper.getMockServer().isPrimaryThread()).thenReturn(true);
         configFile = moduleFolder.resolve("config").resolve("essentials.yml").toFile();
@@ -125,14 +135,25 @@ class WildCooldownBindingTest {
     }
 
     @Test
-    @DisplayName("A negative value refuses the module at load, naming the file and the value")
+    @DisplayName("A negative value refuses the module at load, by the framework's binding check, naming the key and the value")
     void negativeValueIsRefusedAtLoad() throws Exception {
         write("features:\n  wild:\n    cooldown: -1\n");
 
         assertThatThrownBy(this::load)
                 .isInstanceOf(ConfigurationException.class)
-                .hasMessageContaining("config/essentials.yml")
+                .hasMessageContaining("features.wild.cooldown")
                 .hasMessageContaining("-1");
+    }
+
+    @Test
+    @DisplayName("There is no 3600-second ceiling: a bound value of 7200 applies (the binding accepts 0 to Integer.MAX_VALUE)")
+    void valuesAboveTheOldCeilingApply() throws Exception {
+        load("features:\n  wild:\n    cooldown: 7200\n");
+        Player player = player();
+
+        useWild(player);
+
+        assertThat(remaining(player)).isBetween(7200L, 7201L);
     }
 
     // ==================== /ul reload ====================
@@ -145,8 +166,7 @@ class WildCooldownBindingTest {
         useWild(before);
 
         write("features:\n  wild:\n    cooldown: 30\n");
-        configManager.reloadConfigs(plugin);
-        new PluginManager().applyReloadedConfigBindings(plugin);
+        reload();
 
         Player after = player();
         useWild(after);
@@ -155,17 +175,20 @@ class WildCooldownBindingTest {
     }
 
     @Test
-    @DisplayName("An invalid value on /ul reload is refused and the running cooldown is kept")
+    @DisplayName("An invalid value on /ul reload keeps the running cooldown, and the rest of the reload still completes")
     void invalidValueOnReloadKeepsTheRunningOne() throws Exception {
         load("features:\n  wild:\n    cooldown: 5\n");
 
-        write("features:\n  wild:\n    cooldown: -3\n");
-        assertThatThrownBy(() -> configManager.reloadConfigs(plugin)).isInstanceOf(ConfigurationException.class);
-        new PluginManager().applyReloadedConfigBindings(plugin);
+        // Another key changed in the same save, to show the reload is not aborted by the bad value.
+        write("features:\n  wild:\n    cooldown: -3\n    max-range: 20000\n");
+        reload();
 
         Player player = player();
         useWild(player);
         assertThat(remaining(player)).isBetween(5L, 6L);
+        assertThat(config().getWildMaxRange()).isEqualTo(20000);
+        // The module's own reload hook ran: nothing aborted reloadSelf() part-way.
+        verify(plugin).onReload();
     }
 
     // ==================== the declaration ====================
@@ -199,11 +222,25 @@ class WildCooldownBindingTest {
         resolveBindings();
     }
 
+    /**
+     * {@code /ul reload UltiEssentials}: the framework's own final {@code reloadSelf()}, which re-reads
+     * the configuration, applies the reloaded bindings, refreshes the language and runs the
+     * module's {@code onReload()} -- the path a real reload takes, not a re-creation of it.
+     */
+    private void reload() {
+        plugin.reloadSelf();
+    }
+
+    private EssentialsConfig config() {
+        return configManager.getConfigEntities(plugin, EssentialsConfig.class).get(0);
+    }
+
     private void boot() throws Exception {
         plugin = mock(UltiEssentials.class, CALLS_REAL_METHODS);
         setResourceFolderPath(plugin, moduleFolder.toString());
         doReturn("UltiEssentials").when(plugin).getPluginName();
         doReturn(630).when(plugin).getMinUltiToolsVersion();
+        doReturn(mock(PluginLogger.class)).when(plugin).getLogger();
 
         EssentialsConfig config = new EssentialsConfig();
         configManager.register(plugin, config);
@@ -214,6 +251,10 @@ class WildCooldownBindingTest {
         // A singleton, as the component scan registers an executor: the framework's binding step
         // enumerates the container's CommandExecutor beans.
         container.registerSingleton("wildCommand", wild);
+        // The three services onReload() restarts, as no-ops.
+        container.registerType(ScheduledCommandService.class, mock(ScheduledCommandService.class));
+        container.registerType(ScoreboardService.class, mock(ScoreboardService.class));
+        container.registerType(NamePrefixService.class, mock(NamePrefixService.class));
         EssentialsTestHelper.setField(wild, "plugin", plugin);
         plugin.setContext(container);
     }

@@ -90,7 +90,7 @@ features:
     enabled: true          # 启用 /wild 随机传送
     max-range: 10000       # 随机传送最大范围
     min-range: 100         # 随机传送最小范围
-    # /wild 冷却时间固定为 60 秒，没有对应设置 (UltiKits/UltiEssentials#27)
+    cooldown: 60           # 冷却时间 (秒)，0 为不冷却
 
   # ===== 玩家状态 =====
   fly:

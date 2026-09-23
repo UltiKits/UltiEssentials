@@ -37,12 +37,13 @@ public final class RemovedConfigKeys {
     /**
      * One entry per removed key: the key path as it appears in the file, then where its job went.
      * The second element completes the sentence "... and can be deleted from the file -- %s."
+     * <p>
+     * {@code features.wild.cooldown} is deliberately absent: it is a live key, bound to
+     * {@code /wild}'s cooldown through the framework's config-bound {@code @CmdCD}
+     * (UltiKits/UltiTools-Reborn#531), and reporting it here would tell operators to delete a
+     * setting that works.
      */
     private static final String[][] REMOVED = {
-            {"features.wild.cooldown",
-                    "/wild's cooldown is fixed at 60 seconds by the command itself and never read "
-                            + "this setting; making the cooldown configurable is requested as "
-                            + "UltiKits/UltiTools-Reborn#531 (UltiKits/UltiEssentials#27)"},
             {"features.recall.enabled",
                     "this module has no /recall command, so the setting never switched anything; "
                             + "the command is recorded as a feature request in "

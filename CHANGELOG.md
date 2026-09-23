@@ -137,6 +137,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   when they vanished, was visible to anyone who joined afterwards, and could not un-vanish until they
   relogged, because `/hide` had been uninstalled with the module. The vanished player is not told
   (found by review of UltiKits/UltiEssentials#32).
+- `features.wild.cooldown` in `config/essentials.yml` now sets `/wild`'s cooldown, in seconds.
+  Previously the cooldown was a fixed 60 seconds and the key was never read. The default is still
+  `60`, which is what every existing file already holds unless you edited it — an edited value takes
+  effect from this version. `0` means no cooldown. `/ul reload UltiEssentials` applies a new value to
+  the next `/wild`; a cooldown already running keeps the end time it started with. A value below `0`
+  or above `3600` stops the module loading at start-up, and on `/ul reload` the reload is refused and
+  the running value is kept (UltiKits/UltiEssentials#27, through UltiKits/UltiTools-Reborn#531).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -222,6 +229,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   效果会在模块卸载后继续存在——这些隐藏记录属于仍处于启用状态的 UltiTools 本身——因此隐身玩家仍对其隐身时在线的
   玩家不可见，却对之后加入的玩家可见，并且由于 `/hide` 已随模块一起卸载，只能重新登录才能解除隐身。隐身玩家不会
   收到提示（在审查 UltiKits/UltiEssentials#32 时发现）。
+- `config/essentials.yml` 中的 `features.wild.cooldown` 现在决定 `/wild` 的冷却时间（秒）。此前冷却时间固定为
+  60 秒，该配置项从未被读取。默认值仍为 `60`，现有配置文件中除非你改过，本来就是这个值——改过的值从本版本起生效。
+  `0` 表示不冷却。`/ul reload UltiEssentials` 会让新值作用于下一次 `/wild`；已经开始的冷却保持其原有的结束时间。
+  小于 `0` 或大于 `3600` 的值会在启动时阻止模块加载，在 `/ul reload` 时则拒绝本次重载并保留当前值
+  （UltiKits/UltiEssentials#27，依赖 UltiKits/UltiTools-Reborn#531）。
+
+### Changed
+
+- This module now declares `api-version: 630` in its `plugin.yml`, so it loads only on UltiTools
+  6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools
+  it would load with no cooldown at all, silently, so it now refuses to load there instead
+  (UltiKits/UltiEssentials#27, UltiKits/UltiTools-Reborn#531).
+- 本模块的 `plugin.yml` 现在声明 `api-version: 630`，因此只能在 UltiTools 6.3.0 及以上版本加载。其 `/wild` 冷却使用了
+  6.3.0 新增的框架功能；在旧版 UltiTools 上它会在没有任何冷却的情况下静默加载，因此现在改为直接拒绝加载
+  （UltiKits/UltiEssentials#27、UltiKits/UltiTools-Reborn#531）。
 
 ### Removed
 
@@ -230,28 +252,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`UltiEssentials config reloaded!`), together with the two language keys, present in both
   `lang/en.json` and `lang/zh.json`, that translated them. UltiTools 6.3.0 logs one reload line per
   module (`Module 'UltiEssentials' reloaded.`) (UltiKits/UltiEssentials#23).
-- `features.wild.cooldown` in `config/essentials.yml`. It never had any effect: `/wild`'s cooldown
-  is a fixed 60 seconds set in the command itself, and it stays 60 seconds whatever the file says.
-  Reading the cooldown from configuration needs a capability the framework does not have yet, and
-  that is requested as UltiKits/UltiTools-Reborn#531 — removing the setting does not reject it
-  (UltiKits/UltiEssentials#27).
 - `features.recall.enabled` in `config/essentials.yml`. It never had any effect: this module has no
   `/recall` command. The command is recorded as a feature request, UltiKits/UltiEssentials#53 —
   removing the setting does not reject the feature (UltiKits/UltiEssentials#27).
-- If either removed setting is still in your `config/essentials.yml`, which it will be on any server
-  that has run an earlier version, start-up and every `/ul reload UltiEssentials` log one warning per
-  key, naming the module, the file and the key, and saying where the setting went. Deleting the key
+- If the removed setting is still in your `config/essentials.yml`, which it will be on any server
+  that has run an earlier version, start-up and every `/ul reload UltiEssentials` log one warning
+  naming the module, the file and the key, and saying where the setting went. Deleting the key
   from the file silences the warning; leaving it there changes nothing else
   (UltiKits/UltiEssentials#27).
 - 移除本模块卸载时输出的"UltiEssentials 已禁用！"控制台行、`/ul reload UltiEssentials` 时输出的
   "UltiEssentials 配置已重载！"控制台行，以及 `lang/en.json` 与 `lang/zh.json` 中对应的
   `UltiEssentials 已禁用！`、`UltiEssentials 配置已重载！` 两个语言键。UltiTools 6.3.0 会为每个模块输出
   一行重载日志（UltiKits/UltiEssentials#23）。
-- 移除 `config/essentials.yml` 中的 `features.wild.cooldown`。该设置从未生效：`/wild` 的冷却时间固定为命令自身
-  设定的 60 秒，无论文件中填写什么值都保持 60 秒。要从配置中读取冷却时间，需要框架提供目前尚不具备的能力，
-  已作为 UltiKits/UltiTools-Reborn#531 提出——删除该设置并不代表否决这项请求（UltiKits/UltiEssentials#27）。
 - 移除 `config/essentials.yml` 中的 `features.recall.enabled`。该设置从未生效：本模块没有 `/recall` 命令。
   该命令已作为功能请求记录在 UltiKits/UltiEssentials#53——删除设置并不代表否决该功能（UltiKits/UltiEssentials#27）。
-- 若上述任一已删除的设置仍保留在你的 `config/essentials.yml` 中（运行过旧版本的服务器都会如此），启动时以及每次
-  `/ul reload UltiEssentials` 都会为每个键输出一条警告，指明模块、文件和键，并说明该设置的去向。从文件中删除该键
+- 若上述已删除的设置仍保留在你的 `config/essentials.yml` 中（运行过旧版本的服务器都会如此），启动时以及每次
+  `/ul reload UltiEssentials` 都会输出一条警告，指明模块、文件和键，并说明该设置的去向。从文件中删除该键
   即可消除警告；保留它不会产生其他任何影响（UltiKits/UltiEssentials#27）。

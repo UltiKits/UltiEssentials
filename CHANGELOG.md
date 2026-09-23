@@ -110,6 +110,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the container together: if any of them cannot be removed, none is, the container keeps reporting as
   locked, and the failure is reported rather than a half-unlocked container being left behind
   (UltiKits/UltiEssentials#37).
+- `features.ban.broadcast-ban` and `features.ban.broadcast-unban` in `config/essentials.yml` now
+  take effect. Previously `/ban`, `/tempban` and `/unban` announced every successful ban or unban to
+  the whole server whatever these were set to. Both default to `true`, which is what the commands
+  always did, so nothing changes unless one is `false` — and if your file already has one set to
+  `false`, it takes effect from this version. With
+  `features.ban.broadcast-ban: false`, a ban's notice and reason go to whoever issued it instead of to
+  everyone — the notice was the issuer's only confirmation, so it is redirected rather than dropped —
+  and the rest of the server no longer sees it; when a player issues the ban, that includes the
+  console. `/banlist` lists the ban either way. With `features.ban.broadcast-unban: false`, the
+  issuer still gets the unban confirmation they always got, and nothing is broadcast
+  (UltiKits/UltiEssentials#27).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -175,6 +186,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   锁定记录现在都会拒绝他人点击任意一块——此前检查只看被点击的那一块，因此两半记录不一致的容器可以从没有记录的
   一侧打开。解锁时会把保护该容器的所有记录放在同一个事务中一起移除：只要有一条无法移除，就一条都不移除，容器
   继续显示为已锁定，并报告失败，而不会留下解锁了一半的容器（UltiKits/UltiEssentials#37）。
+- `config/essentials.yml` 中的 `features.ban.broadcast-ban` 与 `features.ban.broadcast-unban` 现在会生效。此前
+  `/ban`、`/tempban` 与 `/unban` 无论这两项如何设置，都会把每次成功的封禁或解禁广播给全服。两项默认均为 `true`，
+  与这些命令一直以来的行为相同，因此除非其中一项为 `false`，否则没有任何变化——若你的文件中已将其中一项设为
+  `false`，从本版本起即会生效。设置
+  `features.ban.broadcast-ban: false` 后，封禁通知及原因改为只发送给执行者，而不再发给所有人——该通知是执行者
+  唯一的确认信息，因此是改发而不是丢弃——服务器其他人不再看到它；由玩家执行封禁时，这也包括控制台。无论如何设置，
+  `/banlist` 都会列出该封禁。设置 `features.ban.broadcast-unban: false` 后，执行者仍会收到一直以来的解禁确认，
+  且不再进行任何广播（UltiKits/UltiEssentials#27）。
 
 ### Removed
 

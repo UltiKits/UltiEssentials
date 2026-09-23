@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.BanService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.command.*;
@@ -31,6 +32,10 @@ public class TempBanCommand extends BaseEssentialsCommand {
     
     @Autowired
     private BanService banService;
+    
+    /** Read on every ban for {@code features.ban.broadcast-ban} (UltiKits/UltiEssentials#27). */
+    @Autowired
+    private EssentialsConfig config;
     
     @CmdMapping(format = "<player> <duration>")
     public void tempban(
@@ -77,9 +82,9 @@ public class TempBanCommand extends BaseEssentialsCommand {
         switch (result) {
             case SUCCESS:
                 String durationStr = BanService.formatDuration(durationMillis);
-                Bukkit.broadcastMessage(i18n("§c[临时封禁] §f") + 
-                    target.getName() + " §7被 " + operatorName + " 封禁 " + durationStr);
-                Bukkit.broadcastMessage(i18n("§7原因: §f") + reason);
+                announce(sender, i18n("§c[临时封禁] §f") +
+                    target.getName() + " §7被 " + operatorName + " 封禁 " + durationStr,
+                    i18n("§7原因: §f") + reason);
                 break;
             case ALREADY_BANNED:
                 sender.sendMessage(i18n("§c该玩家已被封禁"));
@@ -90,6 +95,26 @@ public class TempBanCommand extends BaseEssentialsCommand {
         }
     }
     
+    /**
+     * Announces a temporary ban: to everyone when {@code features.ban.broadcast-ban} is on (the
+     * declared default, and this command's behaviour before the switch was read), otherwise to the
+     * issuer alone. The broadcast is the issuer's only confirmation, so with the switch off the same
+     * lines still reach them rather than the ban succeeding in silence (UltiKits/UltiEssentials#27).
+     *
+     * @param sender the command's issuer
+     * @param lines  the announcement, in order
+     */
+    private void announce(CommandSender sender, String... lines) {
+        boolean broadcast = config.isBanBroadcast();
+        for (String line : lines) {
+            if (broadcast) {
+                Bukkit.broadcastMessage(line);
+            } else {
+                sender.sendMessage(line);
+            }
+        }
+    }
+
     @Override
     protected void handleHelp(CommandSender sender) {
         sender.sendMessage(i18n("用法: /tempban <玩家> <时长> [原因]"));

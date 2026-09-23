@@ -56,9 +56,8 @@ for UAT execution and issue reconciliation — the public description of these f
   `commands/` package (0 occurrences), so no row below carries the suffix. `n/a` is for every Kind
   that is not `command`.
 - **Source:** `ClassName#member` — the class and member that actually reads or applies the
-  feature — for every Kind, `config` included: the 77 `config` rows below cite the reading member,
-  not merely the field declaration on the `@ConfigEntity` class (which only binds the key), except
-  the two `features.ban.broadcast-*` rows, which cite their declaration because nothing reads them.
+  feature — for every Kind, `config` included: all 77 `config` rows below cite the reading member,
+  not merely the field declaration on the `@ConfigEntity` class (which only binds the key).
 - **Row order:** by section, then by ID ascending within the section.
 - **No manual prose:** no troubleshooting column, no explanatory paragraphs, no draft page text. A
   hazard noticed while reading becomes a negative checklist row, not a note here. Where a feature's
@@ -263,11 +262,11 @@ report that distinction rather than a false "not banned anywhere".
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
-| ultiessentials.ban.ban | Permanently ban a player (online or previously-seen offline) with a fixed, hardcoded-Chinese default reason (no i18n call — read `BanCommand.java:38` for the exact characters; it reads roughly "no reason given"), kicking them immediately if online, and broadcasting the ban | command | `/ban <player>` (alias `/eban`) | ultiessentials.ban | both | admin | brief | BanCommand#ban |
-| ultiessentials.ban.ban-with-reason | Permanently ban a player with a given reason, kicking them immediately if online, and broadcasting the ban and reason | command | `/ban <player> <reason>` | ultiessentials.ban | both | admin | brief | BanCommand#banWithReason |
-| ultiessentials.ban.tempban | Temporarily ban a player for a parsed duration (`1d`/`2h`/`30m`/`1w`, combinable e.g. `1d12h30m`) with the same fixed, hardcoded-Chinese default reason as `ultiessentials.ban.ban` (see that row), refusing on an unparseable duration | command | `/tempban <player> <duration>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempban |
-| ultiessentials.ban.tempban-with-reason | Temporarily ban a player for a parsed duration with a given reason | command | `/tempban <player> <duration> <reason>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempbanWithReason |
-| ultiessentials.ban.unban | Unban a player by name (this plugin's own record only), reporting one of four distinct outcomes depending on whether the plugin's own record and/or the server's own vanilla ban list currently ban the name (see section note); the two success outcomes are reported only once no active record remains for the name (re-queried after the deactivation, because the framework's `update(T)` returns no affected-row count), so the unban broadcast cannot fire for a ban that is still in force; a ban record that survives the attempt is reported as a failure to lift it, never as a name that was never banned | command | `/unban <player>` (alias `/pardon`) | ultiessentials.unban | both | admin | brief | UnbanCommand#unban |
+| ultiessentials.ban.ban | Permanently ban a player (online or previously-seen offline) with a fixed, hardcoded-Chinese default reason (no i18n call — read `BanCommand.java:38` for the exact characters; it reads roughly "no reason given"), kicking them immediately if online, and announcing the ban — to the whole server, or to the issuer alone when `features.ban.broadcast-ban` is `false` | command | `/ban <player>` (alias `/eban`) | ultiessentials.ban | both | admin | brief | BanCommand#ban |
+| ultiessentials.ban.ban-with-reason | Permanently ban a player with a given reason, kicking them immediately if online, and announcing the ban and reason — to the whole server, or to the issuer alone when `features.ban.broadcast-ban` is `false` | command | `/ban <player> <reason>` | ultiessentials.ban | both | admin | brief | BanCommand#banWithReason |
+| ultiessentials.ban.tempban | Temporarily ban a player for a parsed duration (`1d`/`2h`/`30m`/`1w`, combinable e.g. `1d12h30m`) with the same fixed, hardcoded-Chinese default reason as `ultiessentials.ban.ban` (see that row), refusing on an unparseable duration, and announcing the ban as `ultiessentials.ban.ban` does | command | `/tempban <player> <duration>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempban |
+| ultiessentials.ban.tempban-with-reason | Temporarily ban a player for a parsed duration with a given reason, announcing the ban and reason as `ultiessentials.ban.ban-with-reason` does | command | `/tempban <player> <duration> <reason>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempbanWithReason |
+| ultiessentials.ban.unban | Unban a player by name (this plugin's own record only), reporting one of four distinct outcomes depending on whether the plugin's own record and/or the server's own vanilla ban list currently ban the name (see section note); the two success outcomes are reported only once no active record remains for the name (re-queried after the deactivation, because the framework's `update(T)` returns no affected-row count), so the unban broadcast (sent on the plain-success outcome only, and only while `features.ban.broadcast-unban` is `true`) cannot fire for a ban that is still in force; a ban record that survives the attempt is reported as a failure to lift it, never as a name that was never banned | command | `/unban <player>` (alias `/pardon`) | ultiessentials.unban | both | admin | brief | UnbanCommand#unban |
 | ultiessentials.banlist.list | List active bans, page 1, 10 per page, each entry showing name, permanent-or-remaining-time, reason, and operator | command | `/banlist` (alias `/bans`) | ultiessentials.banlist | both | admin | brief | BanListCommand#banlist |
 | ultiessentials.banlist.list-page | List active bans on a specific page (clamped to `1..totalPages`) | command | `/banlist <page>` | ultiessentials.banlist | both | admin | none | BanListCommand#banlistPage |
 | ultiessentials.ban.login-check | Reject a joining player's login (`KICK_BANNED`) if either their UUID or their connecting IP address currently has an active, unexpired ban record | event | attempt to join while an active UUID or IP ban exists | n/a | n/a | admin | detailed | BanListener#onPlayerLogin |
@@ -459,19 +458,16 @@ warmups, deathpunish sub-toggles) — that row documents the *feature* the key d
 documents the *key* itself, at file-and-key granularity, so the reconciliation table can prove
 every key is accounted for without also making every behavioural row carry a `config` Kind.
 
-**Two keys are declared and shipped with a comment describing their effect, but are never read by
-any production code outside `EssentialsConfig` itself** — confirmed by a repository-wide grep for
-each key's generated getter finding zero call sites beyond the config class's own declaration.
-Each is called out in its own row below with the filed issue number
-(`UltiKits/UltiEssentials#27`) rather than a claim that flipping it changes anything:
-`features.ban.broadcast-ban` and `features.ban.broadcast-unban` (every ban/tempban/unban command
-calls `Bukkit.broadcastMessage(...)` unconditionally; these two keys' values are never consulted).
-Two more keys of the same defect, `features.wild.cooldown` (`/wild`'s cooldown is the fixed
+**Four keys were declared and shipped with a comment describing their effect, but were never read
+by any production code outside `EssentialsConfig` itself** (UltiKits/UltiEssentials#27). In 6.3.0
+two are wired and two are removed. `features.ban.broadcast-ban` and `features.ban.broadcast-unban`
+now decide whether a ban and an unban are announced to the whole server; both default to `true`,
+which is what the commands always did. `features.wild.cooldown` (`/wild`'s cooldown is the fixed
 `@CmdCD(60)` on `WildCommand#wildTeleport`) and `features.recall.enabled` (there is no `/recall`
-command), were **removed** in 6.3.0 (UltiKits/UltiEssentials#27): a copy left in an operator's file
-is reported by `ultiessentials.lifecycle.removed-key-warning`, a configurable `/wild` cooldown is
-requested from the framework as UltiKits/UltiTools-Reborn#531, and `/recall` is recorded as a
-feature request, UltiKits/UltiEssentials#53.
+command) were **removed**: a copy left in an operator's file is reported by
+`ultiessentials.lifecycle.removed-key-warning`, a configurable `/wild` cooldown is requested from the
+framework as UltiKits/UltiTools-Reborn#531, and `/recall` is recorded as a feature request,
+UltiKits/UltiEssentials#53.
 
 **`/ul reload UltiEssentials` re-reads configuration values and restarts this module's
 scheduled-command, scoreboard and name-prefix background tasks.** Since
@@ -544,8 +540,8 @@ affects only itself.
 | ultiessentials.config.essentials.features.warp.enabled | Enable `/warp`, `/setwarp`, `/delwarp`, `/warps` | config | `config/essentials.yml: features.warp.enabled (default: true)` | n/a | n/a | admin | brief | WarpCommand#warp |
 | ultiessentials.config.essentials.features.warp.teleport-warmup | Seconds of warmup before a `/warp <name>` teleport completes, skippable via `ultiessentials.warp.nowarmup` (validated `@Range(0, 60)`) | config | `config/essentials.yml: features.warp.teleport-warmup (default: 3)` | n/a | n/a | admin | brief | WarpService#teleportToWarp |
 | ultiessentials.config.essentials.features.ban.enabled | Gates creating a NEW ban (`/ban`, `/tempban`, via `BanService#banPlayer`) and the login kick check (`BanListener#onPlayerLogin`) -- does NOT gate `/unban` (`BanService#unbanPlayerByName` has no enabled check) or `/banlist` (`BanService#getActiveBans` has no enabled check either), so disabling this key stops new bans from being created or enforced at login but leaves existing bans fully manageable and visible | config | `config/essentials.yml: features.ban.enabled (default: true)` | n/a | n/a | admin | brief | BanService#banPlayer |
-| ultiessentials.config.essentials.features.ban.broadcast-ban | Declared as a toggle for whether a new ban is broadcast server-wide; never read — `/ban` and `/tempban` always call `Bukkit.broadcastMessage(...)` unconditionally on success. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.ban.broadcast-ban (default: true, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#banBroadcast (declared, never read outside this class) |
-| ultiessentials.config.essentials.features.ban.broadcast-unban | Declared as a toggle for whether a successful unban is broadcast server-wide; never read — `/unban` always calls `Bukkit.broadcastMessage(...)` unconditionally on the plain-success outcome. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.ban.broadcast-unban (default: true, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#unbanBroadcast (declared, never read outside this class) |
+| ultiessentials.config.essentials.features.ban.broadcast-ban | Whether a successful `/ban` or `/tempban` announces the ban and its reason to the whole server (`true`) or to the issuer alone (`false`) — never to nobody, because the announcement is the issuer's only confirmation; read on every ban. Before UltiKits/UltiEssentials#27 this key was never read and every ban was broadcast | config | `config/essentials.yml: features.ban.broadcast-ban (default: true)` | n/a | n/a | admin | brief | BanCommand#announce, TempBanCommand#announce |
+| ultiessentials.config.essentials.features.ban.broadcast-unban | Whether a plain-success `/unban` is also announced to the whole server; the issuer's own confirmation is sent either way; read on every unban. Before UltiKits/UltiEssentials#27 this key was never read and every plain-success unban was broadcast | config | `config/essentials.yml: features.ban.broadcast-unban (default: true)` | n/a | n/a | admin | brief | UnbanCommand#unban |
 | ultiessentials.config.essentials.features.scoreboard.enabled | Enable `/scoreboard`/`/sb` and the sidebar-scoreboard update loop | config | `config/essentials.yml: features.scoreboard.enabled (default: true)` | n/a | n/a | admin | brief | ScoreboardService#enableScoreboard |
 | ultiessentials.config.essentials.features.scoreboard.auto-enable | Automatically enable the sidebar scoreboard 1 second after a player joins | config | `config/essentials.yml: features.scoreboard.auto-enable (default: true)` | n/a | n/a | admin | brief | ScoreboardListener#onPlayerJoin |
 | ultiessentials.config.essentials.features.scoreboard.update-interval | Seconds between sidebar-scoreboard content refreshes for every player with it enabled (validated `@Range(1, 60)`) | config | `config/essentials.yml: features.scoreboard.update-interval (default: 1)` | n/a | n/a | admin | brief | ScoreboardService#startUpdateTask |

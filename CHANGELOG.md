@@ -121,6 +121,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   console. `/banlist` lists the ban either way. With `features.ban.broadcast-unban: false`, the
   issuer still gets the unban confirmation they always got, and nothing is broadcast
   (UltiKits/UltiEssentials#27).
+- A pending `/tpa` or `/tpahere` request is now cleared as soon as its sender or its target leaves
+  the server. Previously it stayed pending until `features.tpa.timeout` ran out (30 seconds by
+  default), and for that whole time its target refused every other player's request as already
+  having one. The player who stays online is not messaged when this happens: previously they were
+  told the request had timed out once the timeout ran out, and a target who ran `/tpaccept` after the
+  sender had left was told the sender was offline; now the request is simply gone, so `/tpaccept`
+  and `/tpdeny` report that there is no pending request (UltiKits/UltiEssentials#30).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -194,6 +201,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   唯一的确认信息，因此是改发而不是丢弃——服务器其他人不再看到它；由玩家执行封禁时，这也包括控制台。无论如何设置，
   `/banlist` 都会列出该封禁。设置 `features.ban.broadcast-unban: false` 后，执行者仍会收到一直以来的解禁确认，
   且不再进行任何广播（UltiKits/UltiEssentials#27）。
+- 待处理的 `/tpa` 或 `/tpahere` 请求现在会在其发送者或目标离开服务器时立即清除。此前该请求会一直保留到
+  `features.tpa.timeout`（默认 30 秒）结束，在此期间其目标会以"已有待处理请求"为由拒绝其他所有玩家的请求。
+  清除时不会向仍在线的一方发送消息：此前超时结束时他们会收到"请求已超时"的提示，而在发送者离开后执行
+  `/tpaccept` 的目标会被告知发送者已离线；现在请求直接消失，因此 `/tpaccept` 与 `/tpdeny` 会报告没有待处理的
+  请求（UltiKits/UltiEssentials#30）。
 
 ### Removed
 

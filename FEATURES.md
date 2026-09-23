@@ -26,10 +26,11 @@ for UAT execution and issue reconciliation — the public description of these f
   (0 `@ConditionalOnConfig` sites) — all three Kinds stay in the vocabulary for cross-repository
   consistency even though none appears below. This module's one `scheduled` row is NOT backed by
   the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The five rows under
-  `## Lifecycle` are `event` rows with no `@EventHandler` site behind them, and
+  `## Lifecycle` are `event` rows with no `@EventHandler` site behind them,
   `ultiessentials.lock.protect-whole-container` is an `event` row whose behaviour runs inside every
-  `ChestLockListener` handler rather than in one of its own, so the 21 `@EventHandler` sites in the
-  positive control below match the other 21 `event` rows, not all 27: `/ul reload`, an unload and
+  `ChestLockListener` handler rather than in one of its own, and `ultiessentials.tpa.clear-on-quit`
+  runs in the same `PlayerQuitListener` handler as `ultiessentials.cleanup.on-quit`, so the 21
+  `@EventHandler` sites in the positive control below match the other 21 `event` rows, not all 28: `/ul reload`, an unload and
   start-up are framework-invoked lifecycle steps, not commands this repository maps or config reads,
   so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
@@ -176,11 +177,12 @@ states this is intentional reuse, not an oversight).
 `TpAcceptCommand` (`ultiessentials.tpaccept`), `TpDenyCommand` (`ultiessentials.tpdeny`) — gated
 by `features.tpa.enabled`, backed by `TpaService`. Requests are held in memory only, one pending
 request per target at a time, auto-expiring after `tpa.timeout` seconds via a `BukkitRunnable`
-(not the framework's `@Scheduled`). `TpaService#onPlayerQuit(UUID)` exists to cancel a quitting
-player's requests (as sender or target) immediately, but is never called from any listener in this
-repository — grep confirms zero call sites — so a request involving a player who quits is instead
-cleaned up only when the existing timeout task fires, up to `tpa.timeout` seconds later, not
-instantly on quit.
+(not the framework's `@Scheduled`). A player who quits has every request they sent or received
+cleared at once, and its timeout task cancelled, by `PlayerQuitListener#onPlayerQuit` calling
+`TpaService#onPlayerQuit(UUID)` (`ultiessentials.tpa.clear-on-quit`). Before
+UltiKits/UltiEssentials#30 nothing called that method, so such a request stayed pending until its
+timeout task fired, up to `tpa.timeout` seconds later, and its target refused every other request as
+busy in the meantime. Nobody is messaged when a request is cleared this way.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
@@ -188,6 +190,7 @@ instantly on quit.
 | ultiessentials.tpa.send-here | Send a request asking the named online target to teleport TO the sender; same refusal conditions as `ultiessentials.tpa.send` | command | `/tpahere <player>` (alias `/tphere`) | ultiessentials.tpahere | player | player | brief | TpaHereCommand#sendTpaHere |
 | ultiessentials.tpa.accept | Accept the sender's own pending incoming request, teleporting the original requester (for `/tpa`) or the accepter (for `/tpahere`) accordingly, then clearing the request | command | `/tpaccept` (aliases `/tpyes`, `/tpok`) | ultiessentials.tpaccept | player | player | brief | TpAcceptCommand#acceptTpa |
 | ultiessentials.tpa.deny | Deny the sender's own pending incoming request and notify the original requester if still online | command | `/tpdeny` (aliases `/tpno`, `/tpcancel`) | ultiessentials.tpdeny | player | player | brief | TpDenyCommand#denyTpa |
+| ultiessentials.tpa.clear-on-quit | When a player quits, clear every pending request they sent or received and cancel its timeout task, so its target can take a new request at once; the player who stays online is not messaged (a later `/tpaccept` or `/tpdeny` reports no pending request). Before UltiKits/UltiEssentials#30 such a request stayed pending until `tpa.timeout` ran out | event | quit the server while holding, as sender or target, a pending `/tpa` or `/tpahere` request | n/a | n/a | player | brief | PlayerQuitListener#onPlayerQuit, TpaService#onPlayerQuit |
 
 ## Player Status & Utility
 
@@ -234,7 +237,7 @@ now holds all four pairs to the rule.
 | ultiessentials.scoreboard.auto-enable-on-join | 1 second after join (`runTaskLater(20L)`, re-checking the player is still online), auto-enable the sidebar scoreboard when `scoreboard.auto-enable` is true | event | join the server with `features.scoreboard.enabled` and `scoreboard.auto-enable` both true | n/a | n/a | player | brief | ScoreboardListener#onPlayerJoin |
 | ultiessentials.scoreboard.disable-on-quit | Remove the quitting player from the enabled-scoreboard set unconditionally (independent of whether `scoreboard.enabled` is currently true) | event | quit the server with an active scoreboard | n/a | n/a | internal | none | ScoreboardListener#onPlayerQuit |
 | ultiessentials.commandalias.rewrite | Rewrite the leading command token of a chat-typed command per the `commandalias.aliases` map (e.g. `/gmc` -> `/gamemode creative`) before Bukkit dispatches it, evaluated at `LOWEST` priority | event | type a command whose first token matches a configured alias key | n/a | n/a | player | brief | CommandAliasListener#onPlayerCommand |
-| ultiessentials.cleanup.on-quit | On quit, clear the quitting player's `/back` location and vanish (`/hide`) state from their respective static in-memory maps | event | quit the server as any player holding either state | n/a | n/a | internal | none | PlayerQuitListener#onPlayerQuit |
+| ultiessentials.cleanup.on-quit | On quit, clear the quitting player's `/back` location and vanish (`/hide`) state from their respective static in-memory maps (the same handler also clears their `/tpa` requests — see `ultiessentials.tpa.clear-on-quit`) | event | quit the server as any player holding either state | n/a | n/a | internal | none | PlayerQuitListener#onPlayerQuit |
 
 ## Player Inspection
 

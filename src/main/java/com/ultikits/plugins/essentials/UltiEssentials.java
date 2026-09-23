@@ -1,5 +1,7 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.config.EssentialsConfig;
+import com.ultikits.plugins.essentials.config.RemovedConfigKeys;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
@@ -25,10 +27,11 @@ import java.util.function.Consumer;
  * files (for example {@code config/essentials.yml}) into the running configuration beans, then
  * {@link #onReload()} restarts the scheduled-command, scoreboard and name-prefix services against
  * the re-read values, so their enable flags, intervals and command list apply without a restart
- * (UltiKits/UltiEssentials#28). Unloading it, for example with
- * {@code /upm uninstall UltiEssentials}, runs {@link #onUnregister()} first, which stops every
- * repeating task this module started (UltiKits/UltiEssentials#43), and then the framework's command
- * and listener unregistration.
+ * (UltiKits/UltiEssentials#28). Start-up and every reload also warn about any setting this module
+ * has removed that is still in the operator's file (UltiKits/UltiEssentials#27). Unloading it, for
+ * example with {@code /upm uninstall UltiEssentials}, runs {@link #onUnregister()} first, which
+ * stops every repeating task this module started (UltiKits/UltiEssentials#43), and then the
+ * framework's command and listener unregistration.
  * </p>
  *
  * @author wisdommen
@@ -42,6 +45,7 @@ public class UltiEssentials extends UltiToolsPlugin {
     public boolean registerSelf() {
         // All services are automatically initialized by IoC container via @PostConstruct
         repairStoredPrimaryKeys();
+        warnAboutRemovedSettings();
         getLogger().info(i18n("UltiEssentials 已启用！"));
         return true;
     }
@@ -75,6 +79,21 @@ public class UltiEssentials extends UltiToolsPlugin {
     }
 
     /**
+     * Warns once for each setting this module has removed that is still in the operator's
+     * {@code config/essentials.yml}, naming the key and where its job went (UltiKits/UltiEssentials#27).
+     * <p>
+     * Runs at start-up and again on every {@code /ul reload}, after the framework has re-read the
+     * file, so a removed key copied back in from an old backup is reported without a restart.
+     * <p>
+     * 启动与每次重载时，对运维文件中仍残留的已删除配置项各报一条警告。
+     */
+    private void warnAboutRemovedSettings() {
+        for (String warning : RemovedConfigKeys.warningsFor(getContext().getBean(EssentialsConfig.class))) {
+            getLogger().warn(warning);
+        }
+    }
+
+    /**
      * Restarts the three task-owning services against the configuration the framework has just
      * re-read. Each service's {@code reload()} cancels its running tasks and starts them again only
      * if its feature is still enabled, so turning a feature on, off, or changing its interval or
@@ -88,6 +107,7 @@ public class UltiEssentials extends UltiToolsPlugin {
      */
     @Override
     protected void onReload() {
+        warnAboutRemovedSettings();
         reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
         reloadService(ScoreboardService.class, ScoreboardService::reload);
         reloadService(NamePrefixService.class, NamePrefixService::reload);

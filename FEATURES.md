@@ -25,11 +25,13 @@ for UAT execution and issue reconciliation — the public description of these f
   `PlaceholderAPI#setPlaceholders`, they do not register their own expansion) and no `gate` rows
   (0 `@ConditionalOnConfig` sites) — all three Kinds stay in the vocabulary for cross-repository
   consistency even though none appears below. This module's one `scheduled` row is NOT backed by
-  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The one row under
-  `## Lifecycle` is an `event` row with no `@EventHandler` site behind it, so the 21
-  `@EventHandler` sites in the positive control below match the other 21 `event` rows, not all
-  22: `/ul reload` is a framework-invoked lifecycle step, not a command this repository maps or a
-  config read, so `event` is the closest-fitting Kind.
+  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The five rows under
+  `## Lifecycle` are `event` rows with no `@EventHandler` site behind them, and
+  `ultiessentials.lock.protect-whole-container` is an `event` row whose behaviour runs inside every
+  `ChestLockListener` handler rather than in one of its own, so the 21 `@EventHandler` sites in the
+  positive control below match the other 21 `event` rows, not all 27: `/ul reload`, an unload and
+  start-up are framework-invoked lifecycle steps, not commands this repository maps or config reads,
+  so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
   from whether it carries a permission string — most command executors in this repository carry
   one, so judging by the string alone would make nearly everything `admin`. This module's core
@@ -54,8 +56,9 @@ for UAT execution and issue reconciliation — the public description of these f
   `commands/` package (0 occurrences), so no row below carries the suffix. `n/a` is for every Kind
   that is not `command`.
 - **Source:** `ClassName#member` — the class and member that actually reads or applies the
-  feature — for every Kind, `config` included: all 79 `config` rows below cite the reading member,
-  not merely the field declaration on the `@ConfigEntity` class (which only binds the key).
+  feature — for every Kind, `config` included: the 77 `config` rows below cite the reading member,
+  not merely the field declaration on the `@ConfigEntity` class (which only binds the key), except
+  the two `features.ban.broadcast-*` rows, which cite their declaration because nothing reads them.
 - **Row order:** by section, then by ID ascending within the section.
 - **No manual prose:** no troubleshooting column, no explanatory paragraphs, no draft page text. A
   hazard noticed while reading becomes a negative checklist row, not a note here. Where a feature's
@@ -93,7 +96,7 @@ rather than an error:
 57 (formats), `@EventListener` = 12 (classes — 11 in `listener/`, 1 in `commands/BackCommand.java`
 which is simultaneously a command executor and an event listener), `@EventHandler` = 21 (handler
 methods across those 12 classes), `@Scheduled` = 0, `@ConditionalOnConfig` = 0, `@ConfigEntity` = 5
-(classes), `@ConfigEntry` = 79, `@Table` = 4 (`HomeData`, `WarpData`, `BanData`, `ChestLockData`) —
+(classes), `@ConfigEntry` = 77, `@Table` = 4 (`HomeData`, `WarpData`, `BanData`, `ChestLockData`) —
 confirmed by reading `WhitelistCommand.java` directly (6 `@CmdMapping` sites: `add <player>`,
 `remove <player>`, `list`, `on`, `off`, `status` — the largest single-class mapping count in this
 module) and `ChestLockListener.java` (7 `@EventHandler` sites: `onPlayerInteract`, `onBlockBreak`,
@@ -107,9 +110,10 @@ verify in plan 10-08 Task 1, which fails a table that reports 38 (classes) inste
 
 `SpawnCommand`/`SetSpawnCommand` (class permission `ultiessentials.spawn.teleport` /
 `ultiessentials.spawn.set`), `LobbyCommand`/`SetLobbyCommand` (`ultiessentials.lobby.teleport` /
-`ultiessentials.lobby.set`), `WildCommand` (`ultiessentials.wild`, `@CmdCD(60)` — a 60-second
-per-player cooldown is enforced by the framework's own cooldown validator, independently of the
-declared-but-dead `features.wild.cooldown` config key — see `## Configuration`), and
+`ultiessentials.lobby.set`), `WildCommand` (`ultiessentials.wild`, `@CmdCD(60)` — a fixed
+60-second per-player cooldown enforced by the framework's own cooldown validator, with no setting:
+the never-read `features.wild.cooldown` key was removed in 6.3.0 (UltiKits/UltiEssentials#27), and
+a configurable cooldown needs UltiKits/UltiTools-Reborn#531), and
 `BackCommand` (`ultiessentials.back`, simultaneously a command executor and, via `@EventListener`,
 an event listener). `RespawnListener` and `JoinQuitListener` back the automatic spawn-teleport
 behaviours.
@@ -347,7 +351,9 @@ rather than renamed, and it prints no reload or unload line of its own. It decla
 refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
 per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
 `reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
-(see `## Configuration` for what each restart does), warning by name for any it cannot resolve
+(see `## Configuration` for what each restart does) after first repeating the start-up check for
+removed settings left in `config/essentials.yml` (`ultiessentials.lifecycle.removed-key-warning`),
+warning by name for any it cannot resolve
 rather than skipping it silently. That warning, and the unload's matching failure, cannot be
 produced on a stock install and are not checklist material: all four services are unconditional
 `@Service` beans and this module declares no `@ConditionalOnConfig`, so `getBean` returns null
@@ -381,7 +387,8 @@ until someone runs the vanilla `team remove` on it. The changelog says so in bot
 `ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
 container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
 observable the first row below uses. The second row turns name prefixes on through a reload, the
-third turns the scoreboard off through a reload, and the fourth unloads the module and reads whether
+third turns the scoreboard off through a reload, the fourth reads the warnings a removed setting left
+in the file produces, and the fifth unloads the module and reads whether
 its repeating tasks stopped.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
@@ -389,6 +396,7 @@ its repeating tasks stopped.
 | ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module prints no reload line of its own. On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
 | ultiessentials.lifecycle.reload-nameprefix | After `features.nameprefix.enabled` is changed from `false` to `true`, `/ul reload UltiEssentials` restarts `NamePrefixService` with the main scoreboard, so the restarted update task applies the configured prefix to every online player about 1 second after the reload and a player who joins afterwards gets it 0.5 seconds after joining, with no exception from `NamePrefixService#updatePlayer` (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.nameprefix.enabled` to `true` in `config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#onReload, NamePrefixService#reload |
 | ultiessentials.lifecycle.reload-scoreboard-off | After `features.scoreboard.enabled` is changed from `true` to `false`, `/ul reload UltiEssentials` cancels the sidebar update task and returns every player who had a sidebar to the server's main scoreboard, so the sidebar disappears and name prefixes (and any other team on the main scoreboard) become visible to those players without rejoining (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.scoreboard.enabled` to `false` in `config/essentials.yml` | n/a | n/a | admin | brief | ScoreboardService#reload, ScoreboardService#shutdown |
+| ultiessentials.lifecycle.removed-key-warning | At start-up and on every `/ul reload UltiEssentials`, log one WARN line for each setting this module has removed that is still in the operator's `config/essentials.yml` — `features.wild.cooldown` and `features.recall.enabled` (UltiKits/UltiEssentials#27) — naming the module, the file and the key and saying where the setting's job went (`UltiKits/UltiTools-Reborn#531` for the cooldown, `UltiKits/UltiEssentials#53` for `/recall`); a file holding neither key produces no such line, and a configuration that cannot be read produces one line saying the file was not checked rather than none | event | start the server, or run `/ul reload UltiEssentials`, with a removed key left in `plugins/UltiTools/pluginConfig/UltiEssentials/config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#warnAboutRemovedSettings, RemovedConfigKeys#warningsFor |
 | ultiessentials.lifecycle.unload-tasks | `/upm uninstall UltiEssentials` stops every repeating task this module started: configured entries of `features.scheduled-commands.commands` stop being dispatched to the console, the sidebar and name-prefix update tasks stop, and a teleport warmup still counting down is cancelled rather than completed. Players who had a sidebar are returned to the server's main scoreboard and this module's name-prefix team entries are removed, although the now-empty teams stay registered. Before UltiKits/UltiEssentials#43 the module declared no `onUnregister()` hook, so all of these kept running against the uninstalled module until the server was restarted while the uninstall reported success. One-shot delayed tasks are out of scope and are tracked in UltiKits/UltiEssentials#51 | event | `/upm uninstall UltiEssentials` from the server console (framework calls `unregisterSelf()`, which runs `onUnregister()` and then unregisters this module's commands and listeners) | n/a | n/a | admin | brief | UltiEssentials#onUnregister, ScheduledCommandService#shutdown, ScoreboardService#shutdown, NamePrefixService#shutdown, TeleportService#shutdown |
 
 ## Data Persistence
@@ -441,27 +449,29 @@ per this plan's zero-code rule).
 
 ## Configuration
 
-Every `@ConfigEntry`-annotated field across this module's five `@ConfigEntity` classes (79 keys
-total: `EssentialsConfig` 60, `SpawnConfig` 8, `LobbyConfig` 6, `MotdConfig` 3, `TabBarConfig` 2 —
-matching the reconciliation table's own `@ConfigEntry` count of 79 exactly; `EssentialsConfig` gained
-`features.data-repair.enabled` with UltiKits/UltiEssentials#34). Several of these keys
+Every `@ConfigEntry`-annotated field across this module's five `@ConfigEntity` classes (77 keys
+total: `EssentialsConfig` 58, `SpawnConfig` 8, `LobbyConfig` 6, `MotdConfig` 3, `TabBarConfig` 2 —
+matching the reconciliation table's own `@ConfigEntry` count of 77 exactly; `EssentialsConfig` gained
+`features.data-repair.enabled` with UltiKits/UltiEssentials#34 and lost `features.wild.cooldown` and
+`features.recall.enabled` with UltiKits/UltiEssentials#27). Several of these keys
 already have a behavioural row above (the various `features.*.enabled` toggles, home/warp/tpa
 warmups, deathpunish sub-toggles) — that row documents the *feature* the key drives, this row
 documents the *key* itself, at file-and-key granularity, so the reconciliation table can prove
 every key is accounted for without also making every behavioural row carry a `config` Kind.
 
-**Four keys are declared, `@Range`/`@NotEmpty`-validated where applicable, and shipped with a
-comment describing their effect, but are never read by any production code outside
-`EssentialsConfig` itself** — confirmed by a repository-wide grep for each key's generated
-getter (`isX()`/`getX()`) finding zero call sites beyond the config class's own declaration.
+**Two keys are declared and shipped with a comment describing their effect, but are never read by
+any production code outside `EssentialsConfig` itself** — confirmed by a repository-wide grep for
+each key's generated getter finding zero call sites beyond the config class's own declaration.
 Each is called out in its own row below with the filed issue number
 (`UltiKits/UltiEssentials#27`) rather than a claim that flipping it changes anything:
-`features.recall.enabled` (there is no `/recall` command anywhere in this module's source at
-all — the key describes a feature that does not exist), `features.wild.cooldown` (`/wild`'s real
-cooldown is the hardcoded `@CmdCD(60)` on `WildCommand#wildTeleport`, entirely independent of this
-key's value), `features.ban.broadcast-ban`, and `features.ban.broadcast-unban` (every ban/tempban/
-unban command calls `Bukkit.broadcastMessage(...)` unconditionally; these two keys' values are
-never consulted).
+`features.ban.broadcast-ban` and `features.ban.broadcast-unban` (every ban/tempban/unban command
+calls `Bukkit.broadcastMessage(...)` unconditionally; these two keys' values are never consulted).
+Two more keys of the same defect, `features.wild.cooldown` (`/wild`'s cooldown is the fixed
+`@CmdCD(60)` on `WildCommand#wildTeleport`) and `features.recall.enabled` (there is no `/recall`
+command), were **removed** in 6.3.0 (UltiKits/UltiEssentials#27): a copy left in an operator's file
+is reported by `ultiessentials.lifecycle.removed-key-warning`, a configurable `/wild` cooldown is
+requested from the framework as UltiKits/UltiTools-Reborn#531, and `/recall` is recorded as a
+feature request, UltiKits/UltiEssentials#53.
 
 **`/ul reload UltiEssentials` re-reads configuration values and restarts this module's
 scheduled-command, scoreboard and name-prefix background tasks.** Since
@@ -513,8 +523,6 @@ affects only itself.
 | ultiessentials.config.essentials.features.wild.enabled | Enable `/wild` | config | `config/essentials.yml: features.wild.enabled (default: true)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
 | ultiessentials.config.essentials.features.wild.max-range | The outer radius, in blocks, of `/wild`'s random-point search (validated `@Range(100, 100000)`) | config | `config/essentials.yml: features.wild.max-range (default: 10000)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
 | ultiessentials.config.essentials.features.wild.min-range | The inner radius, in blocks, of `/wild`'s random-point search (validated `@Range(10, 10000)`); `/wild` refuses outright if this is >= `max-range` | config | `config/essentials.yml: features.wild.min-range (default: 100)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
-| ultiessentials.config.essentials.features.wild.cooldown | Declared as `/wild`'s per-player cooldown in seconds (validated `@Range(0, 3600)`); never read — the real cooldown is the hardcoded `@CmdCD(60)` on the command method, unaffected by this key's value. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.wild.cooldown (default: 60, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#wildCooldown (declared, never read outside this class) |
-| ultiessentials.config.essentials.features.recall.enabled | Declared as a toggle for a "`/recall`" command; no `/recall` command, or any other reader of this key, exists anywhere in this module's source. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.recall.enabled (default: true, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#recallEnabled (declared, never read outside this class) |
 | ultiessentials.config.essentials.features.fly.enabled | Enable `/fly` (both self and other-player mappings) | config | `config/essentials.yml: features.fly.enabled (default: true)` | n/a | n/a | admin | brief | FlyCommand#toggleFly |
 | ultiessentials.config.essentials.features.heal.enabled | Enable `/heal` (both self and other-player mappings; also gates `/feed`, which shares this class's config check) | config | `config/essentials.yml: features.heal.enabled (default: true)` | n/a | n/a | admin | brief | HealCommand#healSelf, FeedCommand#feedSelf |
 | ultiessentials.config.essentials.features.speed.enabled | Enable `/speed` (both mappings) | config | `config/essentials.yml: features.speed.enabled (default: true)` | n/a | n/a | admin | brief | SpeedCommand#setSpeed |

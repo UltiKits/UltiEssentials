@@ -38,12 +38,9 @@ public class EssentialsConfig extends AbstractConfigEntity {
     @ConfigEntry(path = "features.wild.min-range", comment = "随机传送最小范围")
     private int wildMinRange = 100;
 
-    @Range(min = 0, max = 3600)
-    @ConfigEntry(path = "features.wild.cooldown", comment = "随机传送冷却时间(秒)")
-    private int wildCooldown = 60;
-
-    @ConfigEntry(path = "features.recall.enabled", comment = "启用 /recall 召回命令")
-    private boolean recallEnabled = true;
+    // features.wild.cooldown and features.recall.enabled were removed in 6.3.0: /wild's cooldown is
+    // the fixed @CmdCD(60) on WildCommand, and there is no /recall command. A copy left in an
+    // operator's file is reported by RemovedConfigKeys (UltiKits/UltiEssentials#27).
 
     // ============ 玩家状态功能 ============
     @ConfigEntry(path = "features.fly.enabled", comment = "启用 /fly 飞行命令")

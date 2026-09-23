@@ -183,7 +183,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`UltiEssentials config reloaded!`), together with the two language keys, present in both
   `lang/en.json` and `lang/zh.json`, that translated them. UltiTools 6.3.0 logs one reload line per
   module (`Module 'UltiEssentials' reloaded.`) (UltiKits/UltiEssentials#23).
+- `features.wild.cooldown` in `config/essentials.yml`. It never had any effect: `/wild`'s cooldown
+  is a fixed 60 seconds set in the command itself, and it stays 60 seconds whatever the file says.
+  Reading the cooldown from configuration needs a capability the framework does not have yet, and
+  that is requested as UltiKits/UltiTools-Reborn#531 — removing the setting does not reject it
+  (UltiKits/UltiEssentials#27).
+- `features.recall.enabled` in `config/essentials.yml`. It never had any effect: this module has no
+  `/recall` command. The command is recorded as a feature request, UltiKits/UltiEssentials#53 —
+  removing the setting does not reject the feature (UltiKits/UltiEssentials#27).
+- If either removed setting is still in your `config/essentials.yml`, which it will be on any server
+  that has run an earlier version, start-up and every `/ul reload UltiEssentials` log one warning per
+  key, naming the module, the file and the key, and saying where the setting went. Deleting the key
+  from the file silences the warning; leaving it there changes nothing else
+  (UltiKits/UltiEssentials#27).
 - 移除本模块卸载时输出的"UltiEssentials 已禁用！"控制台行、`/ul reload UltiEssentials` 时输出的
   "UltiEssentials 配置已重载！"控制台行，以及 `lang/en.json` 与 `lang/zh.json` 中对应的
   `UltiEssentials 已禁用！`、`UltiEssentials 配置已重载！` 两个语言键。UltiTools 6.3.0 会为每个模块输出
   一行重载日志（UltiKits/UltiEssentials#23）。
+- 移除 `config/essentials.yml` 中的 `features.wild.cooldown`。该设置从未生效：`/wild` 的冷却时间固定为命令自身
+  设定的 60 秒，无论文件中填写什么值都保持 60 秒。要从配置中读取冷却时间，需要框架提供目前尚不具备的能力，
+  已作为 UltiKits/UltiTools-Reborn#531 提出——删除该设置并不代表否决这项请求（UltiKits/UltiEssentials#27）。
+- 移除 `config/essentials.yml` 中的 `features.recall.enabled`。该设置从未生效：本模块没有 `/recall` 命令。
+  该命令已作为功能请求记录在 UltiKits/UltiEssentials#53——删除设置并不代表否决该功能（UltiKits/UltiEssentials#27）。
+- 若上述任一已删除的设置仍保留在你的 `config/essentials.yml` 中（运行过旧版本的服务器都会如此），启动时以及每次
+  `/ul reload UltiEssentials` 都会为每个键输出一条警告，指明模块、文件和键，并说明该设置的去向。从文件中删除该键
+  即可消除警告；保留它不会产生其他任何影响（UltiKits/UltiEssentials#27）。

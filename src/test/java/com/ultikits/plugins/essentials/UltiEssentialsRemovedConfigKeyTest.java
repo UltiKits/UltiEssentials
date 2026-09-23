@@ -176,6 +176,21 @@ class UltiEssentialsRemovedConfigKeyTest {
         assertOneWarningNaming(warnings, WILD_COOLDOWN, "UltiTools-Reborn#531");
     }
 
+    @Test
+    @DisplayName("Start-up says the file was not checked, rather than staying silent, when the configuration cannot be read")
+    void startUpSaysSoWhenTheConfigurationCannotBeRead() throws Exception {
+        boot("features:\n  wild:\n    cooldown: 5\n");
+        plugin.setContext(containerWith(null));
+
+        List<String> warnings = startUpWarnings();
+
+        assertThat(warnings).hasSize(1);
+        assertThat(warnings.get(0))
+                .contains("UltiEssentials")
+                .contains(CONFIG_FILE)
+                .contains("could not read");
+    }
+
     // ==================== controls ====================
 
     @Test
@@ -227,15 +242,25 @@ class UltiEssentialsRemovedConfigKeyTest {
         configManager = new ConfigManager();
         configManager.register(plugin, config);
 
+        plugin.setContext(containerWith(config));
+    }
+
+    /**
+     * The module's container with the given configuration bean ({@code null} for none), plus the
+     * start-up data repair and the three services a reload restarts as no-op beans.
+     */
+    private static SimpleContainer containerWith(EssentialsConfig configBean) {
         SimpleContainer container = new SimpleContainer();
-        container.registerType(EssentialsConfig.class, config);
+        if (configBean != null) {
+            container.registerType(EssentialsConfig.class, configBean);
+        }
         container.registerType(EntityIdBackfillService.class, mock(EntityIdBackfillService.class));
         // The three services onReload() restarts, as no-ops, so a reload logs no "could not reach"
         // warning of its own and the only warnings left are the ones under test.
         container.registerType(ScheduledCommandService.class, mock(ScheduledCommandService.class));
         container.registerType(ScoreboardService.class, mock(ScoreboardService.class));
         container.registerType(NamePrefixService.class, mock(NamePrefixService.class));
-        plugin.setContext(container);
+        return container;
     }
 
     private List<String> startUpWarnings() throws Exception {

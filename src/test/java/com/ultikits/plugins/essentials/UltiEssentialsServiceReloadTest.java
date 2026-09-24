@@ -477,6 +477,9 @@ class UltiEssentialsServiceReloadTest {
     private void registerServices(ScheduledCommandService scheduled, ScoreboardService scoreboard,
                                   NamePrefixService namePrefix) {
         SimpleContainer container = new SimpleContainer();
+        // The module's configuration bean is in the real container too; onReload() reads it to
+        // report removed settings left in the file (UltiKits/UltiEssentials#27).
+        container.registerType(EssentialsConfig.class, config);
         container.registerType(ScheduledCommandService.class, scheduled);
         container.registerType(ScoreboardService.class, scoreboard);
         container.registerType(NamePrefixService.class, namePrefix);

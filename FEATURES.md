@@ -25,11 +25,14 @@ for UAT execution and issue reconciliation — the public description of these f
   `PlaceholderAPI#setPlaceholders`, they do not register their own expansion) and no `gate` rows
   (0 `@ConditionalOnConfig` sites) — all three Kinds stay in the vocabulary for cross-repository
   consistency even though none appears below. This module's one `scheduled` row is NOT backed by
-  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The one row under
-  `## Lifecycle` is an `event` row with no `@EventHandler` site behind it, so the 21
-  `@EventHandler` sites in the positive control below match the other 21 `event` rows, not all
-  22: `/ul reload` is a framework-invoked lifecycle step, not a command this repository maps or a
-  config read, so `event` is the closest-fitting Kind.
+  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The six rows under
+  `## Lifecycle` are `event` rows with no `@EventHandler` site behind them,
+  `ultiessentials.lock.protect-whole-container` is an `event` row whose behaviour runs inside every
+  `ChestLockListener` handler rather than in one of its own, and `ultiessentials.tpa.clear-on-quit`
+  runs in the same `PlayerQuitListener` handler as `ultiessentials.cleanup.on-quit`, so the 22
+  `@EventHandler` sites in the positive control below match the other 22 `event` rows, not all 30: `/ul reload`, an unload and
+  start-up are framework-invoked lifecycle steps, not commands this repository maps or config reads,
+  so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
   from whether it carries a permission string — most command executors in this repository carry
   one, so judging by the string alone would make nearly everything `admin`. This module's core
@@ -54,7 +57,7 @@ for UAT execution and issue reconciliation — the public description of these f
   `commands/` package (0 occurrences), so no row below carries the suffix. `n/a` is for every Kind
   that is not `command`.
 - **Source:** `ClassName#member` — the class and member that actually reads or applies the
-  feature — for every Kind, `config` included: all 79 `config` rows below cite the reading member,
+  feature — for every Kind, `config` included: all 78 `config` rows below cite the reading member,
   not merely the field declaration on the `@ConfigEntity` class (which only binds the key).
 - **Row order:** by section, then by ID ascending within the section.
 - **No manual prose:** no troubleshooting column, no explanatory paragraphs, no draft page text. A
@@ -87,29 +90,38 @@ rather than an error:
 3. **Javadoc and string literals** — requiring the annotation to start its own line (the
    `^[[:space:]]*@` anchor) is what defeats a javadoc mention or a warning-message string literal
    that merely contains the annotation's name as text. This module's naive (unanchored) and
-   line-start counts are identical for every annotation kind measured below.
+   line-start counts are identical for every annotation kind measured below except `@Scheduled`
+   (naive 1) and `@ConditionalOnConfig` (naive 2), whose only occurrences are javadoc mentions in
+   `UltiEssentials.java` — exactly the case the anchor exists to exclude.
 
 **Positive control:** the line-start form returns `@CmdExecutor` = 38 (classes), `@CmdMapping` =
 57 (formats), `@EventListener` = 12 (classes — 11 in `listener/`, 1 in `commands/BackCommand.java`
-which is simultaneously a command executor and an event listener), `@EventHandler` = 21 (handler
-methods across those 12 classes), `@Scheduled` = 0, `@ConditionalOnConfig` = 0, `@ConfigEntity` = 5
-(classes), `@ConfigEntry` = 79, `@Table` = 4 (`HomeData`, `WarpData`, `BanData`, `ChestLockData`) —
+which is simultaneously a command executor and an event listener), `@EventHandler` = 22 (handler
+methods across those 12 classes; `JoinQuitListener#hideVanishedPlayers` became the 22nd with
+UltiKits/UltiEssentials#32), `@Scheduled` = 0, `@ConditionalOnConfig` = 0, `@ConfigEntity` = 5
+(classes), `@ConfigEntry` = 78, `@Table` = 4 (`HomeData`, `WarpData`, `BanData`, `ChestLockData`) —
 confirmed by reading `WhitelistCommand.java` directly (6 `@CmdMapping` sites: `add <player>`,
 `remove <player>`, `list`, `on`, `off`, `status` — the largest single-class mapping count in this
 module) and `ChestLockListener.java` (7 `@EventHandler` sites: `onPlayerInteract`, `onBlockBreak`,
 `onEntityExplode`, `onBlockExplode`, `onPistonExtend`, `onPistonRetract`, `onInventoryMove` — the
 largest single-class handler count). `ultiessentials.whitelist.add` (`WhitelistCommand#add`) is
-this module's standing positive control for the command-row count: 57 `@CmdMapping` sites and 57
-`command`-Kind rows below, checked by identity, not merely by count — see the acceptance-criteria
-verify in plan 10-08 Task 1, which fails a table that reports 38 (classes) instead of 57 (formats).
+this module's standing positive control for the command-row count: 57 `@CmdMapping` sites, each the
+Source of exactly one `command`-Kind row below, checked by identity, not merely by count — see the
+acceptance-criteria verify in plan 10-08 Task 1, which fails a table that reports 38 (classes) instead
+of 57 (formats). There are 58 `command` rows: the 58th, `ultiessentials.home.set-named.outcome-verified`,
+is a second row on `/sethome <name>` whose Source is `HomeService#setHome`, not a mapping (re-measured
+when the `@EventHandler` count above was updated; the earlier figure of 57 rows predates that row).
 
 ## Teleportation & World Presence
 
 `SpawnCommand`/`SetSpawnCommand` (class permission `ultiessentials.spawn.teleport` /
 `ultiessentials.spawn.set`), `LobbyCommand`/`SetLobbyCommand` (`ultiessentials.lobby.teleport` /
-`ultiessentials.lobby.set`), `WildCommand` (`ultiessentials.wild`, `@CmdCD(60)` — a 60-second
-per-player cooldown is enforced by the framework's own cooldown validator, independently of the
-declared-but-dead `features.wild.cooldown` config key — see `## Configuration`), and
+`ultiessentials.lobby.set`), `WildCommand` (`ultiessentials.wild`,
+`@CmdCD(config = EssentialsConfig.class, key = "features.wild.cooldown")` — a per-player cooldown
+enforced by the framework's own cooldown validator and read from `features.wild.cooldown`, default
+60 seconds, `0` for none, at load and at `/ul reload`; before UltiKits/UltiEssentials#27 the key was
+never read and the cooldown was a fixed 60 seconds, and binding it needs the framework's
+config-bound `@CmdCD`, UltiKits/UltiTools-Reborn#531, hence this module's `api-version: 630`), and
 `BackCommand` (`ultiessentials.back`, simultaneously a command executor and, via `@EventListener`,
 an event listener). `RespawnListener` and `JoinQuitListener` back the automatic spawn-teleport
 behaviours.
@@ -122,7 +134,7 @@ behaviours.
 | ultiessentials.spawn.on-first-join | On a player's genuinely first join (`Player#hasPlayedBefore()` false), teleport them to the configured spawn point (gated by both `features.spawn.enabled` and `spawn.teleport-on-first-join`) | event | join the server for the first time ever | n/a | n/a | player | brief | JoinQuitListener#onPlayerJoin |
 | ultiessentials.lobby.teleport | Teleport the sender to the configured lobby/hub location, refusing if the lobby world is not loaded | command | `/lobby` (alias `/hub`) | ultiessentials.lobby.teleport | player | player | brief | LobbyCommand#teleportToLobby |
 | ultiessentials.lobby.set | Set the server lobby/hub location to the sender's current position and persist it to `config/lobby.yml` | command | `/setlobby` (alias `/sethub`) | ultiessentials.lobby.set | player | admin | brief | SetLobbyCommand#setLobby |
-| ultiessentials.wild.teleport | Randomly teleport the sender within the configured min/max range of their current position, trying up to 10 candidate points and rejecting any that land on a solid ceiling/floor mismatch or on lava/water; refuses outright if `wild.min-range` >= `wild.max-range` | command | `/wild` (alias `/rtp`) | ultiessentials.wild | player | player | brief | WildCommand#wildTeleport |
+| ultiessentials.wild.teleport | Randomly teleport the sender within the configured min/max range of their current position, trying up to 10 candidate points and rejecting any that land on a solid ceiling/floor mismatch or on lava/water; refuses outright if `wild.min-range` >= `wild.max-range`; a second use within `features.wild.cooldown` seconds is refused by the framework's cooldown validator | command | `/wild` (alias `/rtp`) | ultiessentials.wild | player | player | brief | WildCommand#wildTeleport |
 | ultiessentials.back.teleport | Teleport the sender to the location recorded before their most recent COMMAND- or PLUGIN-caused teleport; refuses if no location is recorded for them yet | command | `/back` | ultiessentials.back | player | player | brief | BackCommand#back |
 | ultiessentials.back.track | Record the sender's pre-teleport location on every `PlayerTeleportEvent` whose cause is `COMMAND` or `PLUGIN` (MONITOR priority, `ignoreCancelled = true`), so a later `/back` returns to it; a teleport of any other cause (a portal, an ender pearl, a plugin using a different cause) is not tracked | event | run any command-triggered teleport, or trigger one of this plugin's own plugin-caused teleports (`/home`, `/warp`, `/spawn`, `/lobby`, `/wild`, an accepted `/tpa`) | n/a | n/a | player | brief | BackCommand#onPlayerTeleport |
 | ultiessentials.back.cleanup-on-quit | Remove the quitting player's recorded back-location from the in-memory map on quit; `PlayerQuitListener#onPlayerQuit` (see `## Player Status & Utility`) performs the identical removal via `BackCommand.removePlayer(uuid)` on the SAME event, so this specific cleanup runs twice per quit — redundant but harmless, since removing an already-absent map key is a no-op | event | quit the server as any player who has a recorded back-location | n/a | n/a | internal | none | BackCommand#onPlayerQuit |
@@ -173,11 +185,12 @@ states this is intentional reuse, not an oversight).
 `TpAcceptCommand` (`ultiessentials.tpaccept`), `TpDenyCommand` (`ultiessentials.tpdeny`) — gated
 by `features.tpa.enabled`, backed by `TpaService`. Requests are held in memory only, one pending
 request per target at a time, auto-expiring after `tpa.timeout` seconds via a `BukkitRunnable`
-(not the framework's `@Scheduled`). `TpaService#onPlayerQuit(UUID)` exists to cancel a quitting
-player's requests (as sender or target) immediately, but is never called from any listener in this
-repository — grep confirms zero call sites — so a request involving a player who quits is instead
-cleaned up only when the existing timeout task fires, up to `tpa.timeout` seconds later, not
-instantly on quit.
+(not the framework's `@Scheduled`). A player who quits has every request they sent or received
+cleared at once, and its timeout task cancelled, by `PlayerQuitListener#onPlayerQuit` calling
+`TpaService#onPlayerQuit(UUID)` (`ultiessentials.tpa.clear-on-quit`). Before
+UltiKits/UltiEssentials#30 nothing called that method, so such a request stayed pending until its
+timeout task fired, up to `tpa.timeout` seconds later, and its target refused every other request as
+busy in the meantime. Nobody is messaged when a request is cleared this way.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
@@ -185,6 +198,7 @@ instantly on quit.
 | ultiessentials.tpa.send-here | Send a request asking the named online target to teleport TO the sender; same refusal conditions as `ultiessentials.tpa.send` | command | `/tpahere <player>` (alias `/tphere`) | ultiessentials.tpahere | player | player | brief | TpaHereCommand#sendTpaHere |
 | ultiessentials.tpa.accept | Accept the sender's own pending incoming request, teleporting the original requester (for `/tpa`) or the accepter (for `/tpahere`) accordingly, then clearing the request | command | `/tpaccept` (aliases `/tpyes`, `/tpok`) | ultiessentials.tpaccept | player | player | brief | TpAcceptCommand#acceptTpa |
 | ultiessentials.tpa.deny | Deny the sender's own pending incoming request and notify the original requester if still online | command | `/tpdeny` (aliases `/tpno`, `/tpcancel`) | ultiessentials.tpdeny | player | player | brief | TpDenyCommand#denyTpa |
+| ultiessentials.tpa.clear-on-quit | When a player quits, clear every pending request they sent or received and cancel its timeout task, so its target can take a new request at once; the player who stays online is not messaged (a later `/tpaccept` or `/tpdeny` reports no pending request). Before UltiKits/UltiEssentials#30 such a request stayed pending until `tpa.timeout` ran out | event | quit the server while holding, as sender or target, a pending `/tpa` or `/tpahere` request | n/a | n/a | player | brief | PlayerQuitListener#onPlayerQuit, TpaService#onPlayerQuit |
 
 ## Player Status & Utility
 
@@ -220,6 +234,7 @@ now holds all four pairs to the rule.
 | ultiessentials.fly.toggle-self | Toggle the sender's own flight allowance; disabling also forces `setFlying(false)` so the sender does not remain airborne with flight revoked | command | `/fly` | ultiessentials.fly | player | player | brief | FlyCommand#toggleFly |
 | ultiessentials.fly.toggle-other | Toggle a named online target's flight allowance — gated by its own elevated node, which a holder of the self-flight node alone does not have (fixed in UltiKits/UltiEssentials#25) | command | `/fly <player>` | ultiessentials.fly.other | player | admin | brief | FlyCommand#toggleFlyOther |
 | ultiessentials.hide.toggle | Toggle the sender's own vanish: on enable, hides the sender from every online player lacking `ultiessentials.hide.see`; on disable, re-shows the sender to everyone. State is a static in-memory set, not persisted (see `## Data Persistence`) | command | `/hide` (alias `/vanish`) | ultiessentials.hide | player | admin | brief | HideCommand#toggleHide |
+| ultiessentials.hide.reapply-on-join | When a player joins, hide from them every player currently vanished with `/hide`, unless the joiner holds `ultiessentials.hide.see` (the same exemption `/hide` applies to the players online when someone vanishes); applies whatever `features.hide.enabled` says, because a player already vanished stays hidden from everyone else too. Before UltiKits/UltiEssentials#32 a vanished player was visible to anyone who joined after they vanished | event | join the server while another player is vanished | n/a | n/a | admin | brief | JoinQuitListener#hideVanishedPlayers, HideCommand#hideVanishedPlayersFrom |
 | ultiessentials.gamemode.set-self | Set the sender's own game mode by numeric (`0-3`), single-letter, or full-name token | command | `/gm <mode>` | ultiessentials.gamemode.self | player | player | brief | GameModeCommand#setGameMode |
 | ultiessentials.gamemode.set-other | Set a named online target's game mode, notifying both sender and target | command | `/gm <mode> <player>` | ultiessentials.gamemode.other | player | admin | brief | GameModeCommand#setGameModeOther |
 | ultiessentials.gamemode.shortcut-creative | Shortcut to set the sender's own game mode to CREATIVE | command | `/gmc` | ultiessentials.gamemode.self | player | player | none | GmCreativeCommand#creative |
@@ -231,7 +246,7 @@ now holds all four pairs to the rule.
 | ultiessentials.scoreboard.auto-enable-on-join | 1 second after join (`runTaskLater(20L)`, re-checking the player is still online), auto-enable the sidebar scoreboard when `scoreboard.auto-enable` is true | event | join the server with `features.scoreboard.enabled` and `scoreboard.auto-enable` both true | n/a | n/a | player | brief | ScoreboardListener#onPlayerJoin |
 | ultiessentials.scoreboard.disable-on-quit | Remove the quitting player from the enabled-scoreboard set unconditionally (independent of whether `scoreboard.enabled` is currently true) | event | quit the server with an active scoreboard | n/a | n/a | internal | none | ScoreboardListener#onPlayerQuit |
 | ultiessentials.commandalias.rewrite | Rewrite the leading command token of a chat-typed command per the `commandalias.aliases` map (e.g. `/gmc` -> `/gamemode creative`) before Bukkit dispatches it, evaluated at `LOWEST` priority | event | type a command whose first token matches a configured alias key | n/a | n/a | player | brief | CommandAliasListener#onPlayerCommand |
-| ultiessentials.cleanup.on-quit | On quit, clear the quitting player's `/back` location and vanish (`/hide`) state from their respective static in-memory maps | event | quit the server as any player holding either state | n/a | n/a | internal | none | PlayerQuitListener#onPlayerQuit |
+| ultiessentials.cleanup.on-quit | On quit, clear the quitting player's `/back` location and vanish (`/hide`) state from their respective static in-memory maps (the same handler also clears their `/tpa` requests — see `ultiessentials.tpa.clear-on-quit`) | event | quit the server as any player holding either state | n/a | n/a | internal | none | PlayerQuitListener#onPlayerQuit |
 
 ## Player Inspection
 
@@ -259,11 +274,11 @@ report that distinction rather than a false "not banned anywhere".
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
-| ultiessentials.ban.ban | Permanently ban a player (online or previously-seen offline) with a fixed, hardcoded-Chinese default reason (no i18n call — read `BanCommand.java:38` for the exact characters; it reads roughly "no reason given"), kicking them immediately if online, and broadcasting the ban | command | `/ban <player>` (alias `/eban`) | ultiessentials.ban | both | admin | brief | BanCommand#ban |
-| ultiessentials.ban.ban-with-reason | Permanently ban a player with a given reason, kicking them immediately if online, and broadcasting the ban and reason | command | `/ban <player> <reason>` | ultiessentials.ban | both | admin | brief | BanCommand#banWithReason |
-| ultiessentials.ban.tempban | Temporarily ban a player for a parsed duration (`1d`/`2h`/`30m`/`1w`, combinable e.g. `1d12h30m`) with the same fixed, hardcoded-Chinese default reason as `ultiessentials.ban.ban` (see that row), refusing on an unparseable duration | command | `/tempban <player> <duration>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempban |
-| ultiessentials.ban.tempban-with-reason | Temporarily ban a player for a parsed duration with a given reason | command | `/tempban <player> <duration> <reason>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempbanWithReason |
-| ultiessentials.ban.unban | Unban a player by name (this plugin's own record only), reporting one of four distinct outcomes depending on whether the plugin's own record and/or the server's own vanilla ban list currently ban the name (see section note); the two success outcomes are reported only once no active record remains for the name (re-queried after the deactivation, because the framework's `update(T)` returns no affected-row count), so the unban broadcast cannot fire for a ban that is still in force; a ban record that survives the attempt is reported as a failure to lift it, never as a name that was never banned | command | `/unban <player>` (alias `/pardon`) | ultiessentials.unban | both | admin | brief | UnbanCommand#unban |
+| ultiessentials.ban.ban | Permanently ban a player (online or previously-seen offline) with a fixed, hardcoded-Chinese default reason (no i18n call — read `BanCommand.java:43` for the exact characters; it reads roughly "no reason given"), kicking them immediately if online, and announcing the ban — to the whole server, or to the issuer alone when `features.ban.broadcast-ban` is `false` | command | `/ban <player>` (alias `/eban`) | ultiessentials.ban | both | admin | brief | BanCommand#ban |
+| ultiessentials.ban.ban-with-reason | Permanently ban a player with a given reason, kicking them immediately if online, and announcing the ban and reason — to the whole server, or to the issuer alone when `features.ban.broadcast-ban` is `false` | command | `/ban <player> <reason>` | ultiessentials.ban | both | admin | brief | BanCommand#banWithReason |
+| ultiessentials.ban.tempban | Temporarily ban a player for a parsed duration (`1d`/`2h`/`30m`/`1w`, combinable e.g. `1d12h30m`) with the same fixed, hardcoded-Chinese default reason as `ultiessentials.ban.ban` (see that row), refusing on an unparseable duration, and announcing the ban as `ultiessentials.ban.ban` does | command | `/tempban <player> <duration>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempban |
+| ultiessentials.ban.tempban-with-reason | Temporarily ban a player for a parsed duration with a given reason, announcing the ban and reason as `ultiessentials.ban.ban-with-reason` does | command | `/tempban <player> <duration> <reason>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempbanWithReason |
+| ultiessentials.ban.unban | Unban a player by name (this plugin's own record only), reporting one of four distinct outcomes depending on whether the plugin's own record and/or the server's own vanilla ban list currently ban the name (see section note); the two success outcomes are reported only once no active record remains for the name (re-queried after the deactivation, because the framework's `update(T)` returns no affected-row count), so the unban broadcast (sent on the plain-success outcome only, and only while `features.ban.broadcast-unban` is `true`) cannot fire for a ban that is still in force; a ban record that survives the attempt is reported as a failure to lift it, never as a name that was never banned | command | `/unban <player>` (alias `/pardon`) | ultiessentials.unban | both | admin | brief | UnbanCommand#unban |
 | ultiessentials.banlist.list | List active bans, page 1, 10 per page, each entry showing name, permanent-or-remaining-time, reason, and operator | command | `/banlist` (alias `/bans`) | ultiessentials.banlist | both | admin | brief | BanListCommand#banlist |
 | ultiessentials.banlist.list-page | List active bans on a specific page (clamped to `1..totalPages`) | command | `/banlist <page>` | ultiessentials.banlist | both | admin | none | BanListCommand#banlistPage |
 | ultiessentials.ban.login-check | Reject a joining player's login (`KICK_BANNED`) if either their UUID or their connecting IP address currently has an active, unexpired ban record | event | attempt to join while an active UUID or IP ban exists | n/a | n/a | admin | detailed | BanListener#onPlayerLogin |
@@ -304,7 +319,7 @@ disabled; only locking a NEW container is actually gated.
 | ultiessentials.chestlock.protect-explode-entity | Remove from an entity explosion's (TNT, creeper, etc.) block-destruction list any block belonging to a locked container, including the unrecorded half of a double chest — an explosion drops that half's contents exactly as a break does | event | detonate an entity explosion near a locked container | n/a | n/a | internal | none | ChestLockListener#onEntityExplode |
 | ultiessentials.chestlock.protect-explode-block | Remove from a block explosion's (bed/respawn-anchor misuse, etc.) block-destruction list any block belonging to a locked container, container-scoped as for entity explosions | event | trigger a block explosion near a locked container | n/a | n/a | internal | none | ChestLockListener#onBlockExplode |
 | ultiessentials.chestlock.protect-piston-extend | Cancel a piston-extend event outright if any block it would move belongs to a locked container (container-scoped for consistency). **No real-machine row exercises this guard, because vanilla forecloses the path** — measured in `paper-1.21.11-132.jar`: `PistonBaseBlock.isPushable` ends `return !state.hasBlockEntity()`, `hasBlockEntity()` is `getBlock() instanceof EntityBlock`, and every block class behind `ChestLockService.LOCKABLE_BLOCKS` is an `EntityBlock`, so no lockable container can ever be a member of `getBlocks()`. The guard is kept anyway: "no known route" was equally true of breaking until gate 2 round 3 looked for one, and the cost of the lookup is one map probe. Its behaviour is covered by `ChestLockListenerTest$PistonExtendTests`; the checklist row of the same ID verifies only the platform rule this unreachability rests on, so that the rule changing is noticed | event | extend a piston toward a locked container | n/a | n/a | internal | none | ChestLockListener#onPistonExtend, ChestLockListenerTest$PistonExtendTests |
-| ultiessentials.chestlock.protect-piston-retract | Cancel a piston-retract event outright if any block it would move belongs to a locked container, container-scoped as for piston-extend. Unreachable in vanilla for the same measured reason — `isPushable` gates retraction through the same `PistonStructureResolver` — kept for the same reason, and covered by `ChestLockListenerTest$PistonRetractTests` rather than by a real-machine row | event | retract a sticky piston pulling a locked container | n/a | n/a | internal | none | ChestLockListener#onPistonRetract, ChestLockListenerTest$PistonRetractTests |
+| ultiessentials.chestlock.protect-piston-retract | Cancel a piston-retract event outright if any block it would move belongs to a locked container, container-scoped as for piston-extend. Unreachable in vanilla for the same measured reason — `isPushable` gates retraction too: a sticky piston's `PistonBaseBlock.triggerEvent` tests the block two ahead of it with `isPushable` and, when that fails, only removes its own head without calling `moveBlocks`, so a container is never pulled and never listed — kept for the same reason, and covered by `ChestLockListenerTest$PistonRetractTests` rather than by a real-machine row | event | retract a sticky piston pulling a locked container | n/a | n/a | internal | none | ChestLockListener#onPistonRetract, ChestLockListenerTest$PistonRetractTests |
 | ultiessentials.chestlock.protect-hopper | Cancel an `InventoryMoveItemEvent` whose source inventory belongs to a locked container, preventing a hopper from siphoning items out of it. The source is resolved from the inventory's HOLDER, which for a double chest is a `DoubleChest` — not a `org.bukkit.block.Container` and not a block state at all, so a holder type-test against `Container` skipped every double chest and left even a fully-recorded one drainable. `getDestination()` is deliberately not checked: inserting items does not expose a container's contents, and cancelling insertion would stop an owner's own hopper feeding their own locked chest | event | place a hopper feeding from a locked container, single or double | n/a | n/a | internal | none | ChestLockListener#onInventoryMove, ChestLockService#isContainerLocked(InventoryHolder) |
 
 ## Server Presentation
@@ -347,7 +362,9 @@ rather than renamed, and it prints no reload or unload line of its own. It decla
 refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
 per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
 `reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
-(see `## Configuration` for what each restart does), warning by name for any it cannot resolve
+(see `## Configuration` for what each restart does) after first repeating the start-up check for
+removed settings left in `config/essentials.yml` (`ultiessentials.lifecycle.removed-key-warning`),
+warning by name for any it cannot resolve
 rather than skipping it silently. That warning, and the unload's matching failure, cannot be
 produced on a stock install and are not checklist material: all four services are unconditional
 `@Service` beans and this module declares no `@ConditionalOnConfig`, so `getBean` returns null
@@ -381,15 +398,19 @@ until someone runs the vanilla `team remove` on it. The changelog says so in bot
 `ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
 container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
 observable the first row below uses. The second row turns name prefixes on through a reload, the
-third turns the scoreboard off through a reload, and the fourth unloads the module and reads whether
-its repeating tasks stopped.
+third turns the scoreboard off through a reload, the fourth reads the warnings a removed setting left
+in the file produces, the fifth unloads the module and reads whether
+its repeating tasks stopped, and the sixth unloads it while a player is vanished and reads that the
+vanish is lifted for everyone.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module prints no reload line of its own. On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
 | ultiessentials.lifecycle.reload-nameprefix | After `features.nameprefix.enabled` is changed from `false` to `true`, `/ul reload UltiEssentials` restarts `NamePrefixService` with the main scoreboard, so the restarted update task applies the configured prefix to every online player about 1 second after the reload and a player who joins afterwards gets it 0.5 seconds after joining, with no exception from `NamePrefixService#updatePlayer` (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.nameprefix.enabled` to `true` in `config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#onReload, NamePrefixService#reload |
 | ultiessentials.lifecycle.reload-scoreboard-off | After `features.scoreboard.enabled` is changed from `true` to `false`, `/ul reload UltiEssentials` cancels the sidebar update task and returns every player who had a sidebar to the server's main scoreboard, so the sidebar disappears and name prefixes (and any other team on the main scoreboard) become visible to those players without rejoining (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.scoreboard.enabled` to `false` in `config/essentials.yml` | n/a | n/a | admin | brief | ScoreboardService#reload, ScoreboardService#shutdown |
+| ultiessentials.lifecycle.removed-key-warning | At start-up and on every `/ul reload UltiEssentials`, log one WARN line for each setting this module has removed that is still in the operator's `config/essentials.yml` — `features.recall.enabled` (UltiKits/UltiEssentials#27) — naming the module, the file and the key and saying where the setting's job went (`UltiKits/UltiEssentials#53`, the `/recall` feature request); `features.wild.cooldown` is a live key and is never reported; a file without the removed key produces no such line, and a configuration that cannot be read produces one line saying the file was not checked rather than none | event | start the server, or run `/ul reload UltiEssentials`, with a removed key left in `plugins/UltiTools/pluginConfig/UltiEssentials/config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#warnAboutRemovedSettings, RemovedConfigKeys#warningsFor |
 | ultiessentials.lifecycle.unload-tasks | `/upm uninstall UltiEssentials` stops every repeating task this module started: configured entries of `features.scheduled-commands.commands` stop being dispatched to the console, the sidebar and name-prefix update tasks stop, and a teleport warmup still counting down is cancelled rather than completed. Players who had a sidebar are returned to the server's main scoreboard and this module's name-prefix team entries are removed, although the now-empty teams stay registered. Before UltiKits/UltiEssentials#43 the module declared no `onUnregister()` hook, so all of these kept running against the uninstalled module until the server was restarted while the uninstall reported success. One-shot delayed tasks are out of scope and are tracked in UltiKits/UltiEssentials#51 | event | `/upm uninstall UltiEssentials` from the server console (framework calls `unregisterSelf()`, which runs `onUnregister()` and then unregisters this module's commands and listeners) | n/a | n/a | admin | brief | UltiEssentials#onUnregister, ScheduledCommandService#shutdown, ScoreboardService#shutdown, NamePrefixService#shutdown, TeleportService#shutdown |
+| ultiessentials.lifecycle.unload-reveals-vanished | `/upm uninstall UltiEssentials` first shows every player vanished with `/hide` to every other online player, using the same `UltiTools` plugin reference `/hide` used to hide them, and forgets all vanish state (including players who already left), so a reinstall starts consistent with what players see. Before gate-1 finding WR-01 on UltiKits/UltiEssentials#32 the hides outlived the module, because they are recorded against the `UltiTools` Bukkit plugin, which stays enabled: a vanished player stayed hidden from the players online when they vanished, became visible to later joiners, and could not un-vanish until they relogged. The vanished player is not messaged | event | `/upm uninstall UltiEssentials` from the server console while a player is vanished | n/a | n/a | admin | brief | UltiEssentials#onUnregister, HideCommand#revealAllVanished |
 
 ## Data Persistence
 
@@ -418,8 +439,10 @@ and reload console lines). `Language#getLocalizedText`'s only
 fallback for an unmatched key is to return the key itself unchanged — so `language: en` has
 literally no effect on any of this text; it renders in Chinese on an English-configured server
 exactly as it would on a Chinese-configured one. A minority of messages (all of
-`BanListCommand`, most of `UnbanCommand`, the base disabled-feature / player-not-found i18n key pair used
-throughout (both DO have real English translations, keyed `feature_disabled` and a Chinese-literal key respectively — read `lang/en.json` for the exact strings), and the handful of `teleport_*`-style keys) DO have real English translations and
+`BanListCommand`, most of `UnbanCommand`, the disabled-feature / player-not-found i18n keys used
+throughout (Chinese-sentence keys that DO have real English translations — read `lang/en.json` for
+the exact strings; the separate `feature_disabled` key has had no reader since
+UltiKits/UltiEssentials#29 removed the unused base-command helper that used it), and the handful of `teleport_*`-style keys) DO have real English translations and
 behave correctly. `BanService#formatKickMessage`/`#formatDuration` do not call `i18n(...)` at all
 — their Chinese text is a compile-time literal with no lookup step, not merely an unmatched key.
 Filed as UltiKits/UltiEssentials#26 (scope: catalogue the affected call sites; do not translate,
@@ -441,27 +464,26 @@ per this plan's zero-code rule).
 
 ## Configuration
 
-Every `@ConfigEntry`-annotated field across this module's five `@ConfigEntity` classes (79 keys
-total: `EssentialsConfig` 60, `SpawnConfig` 8, `LobbyConfig` 6, `MotdConfig` 3, `TabBarConfig` 2 —
-matching the reconciliation table's own `@ConfigEntry` count of 79 exactly; `EssentialsConfig` gained
-`features.data-repair.enabled` with UltiKits/UltiEssentials#34). Several of these keys
+Every `@ConfigEntry`-annotated field across this module's five `@ConfigEntity` classes (78 keys
+total: `EssentialsConfig` 59, `SpawnConfig` 8, `LobbyConfig` 6, `MotdConfig` 3, `TabBarConfig` 2 —
+matching the reconciliation table's own `@ConfigEntry` count of 78 exactly; `EssentialsConfig` gained
+`features.data-repair.enabled` with UltiKits/UltiEssentials#34 and lost `features.recall.enabled`
+with UltiKits/UltiEssentials#27). Several of these keys
 already have a behavioural row above (the various `features.*.enabled` toggles, home/warp/tpa
 warmups, deathpunish sub-toggles) — that row documents the *feature* the key drives, this row
 documents the *key* itself, at file-and-key granularity, so the reconciliation table can prove
 every key is accounted for without also making every behavioural row carry a `config` Kind.
 
-**Four keys are declared, `@Range`/`@NotEmpty`-validated where applicable, and shipped with a
-comment describing their effect, but are never read by any production code outside
-`EssentialsConfig` itself** — confirmed by a repository-wide grep for each key's generated
-getter (`isX()`/`getX()`) finding zero call sites beyond the config class's own declaration.
-Each is called out in its own row below with the filed issue number
-(`UltiKits/UltiEssentials#27`) rather than a claim that flipping it changes anything:
-`features.recall.enabled` (there is no `/recall` command anywhere in this module's source at
-all — the key describes a feature that does not exist), `features.wild.cooldown` (`/wild`'s real
-cooldown is the hardcoded `@CmdCD(60)` on `WildCommand#wildTeleport`, entirely independent of this
-key's value), `features.ban.broadcast-ban`, and `features.ban.broadcast-unban` (every ban/tempban/
-unban command calls `Bukkit.broadcastMessage(...)` unconditionally; these two keys' values are
-never consulted).
+**Four keys were declared and shipped with a comment describing their effect, but were never read
+by any production code outside `EssentialsConfig` itself** (UltiKits/UltiEssentials#27). In 6.3.0
+three are wired and one is removed. `features.ban.broadcast-ban` and `features.ban.broadcast-unban`
+now decide whether a ban and an unban are announced to the whole server; both default to `true`,
+which is what the commands always did. `features.wild.cooldown` is now `/wild`'s cooldown, bound
+through the framework's config-bound `@CmdCD` (UltiKits/UltiTools-Reborn#531); its default, 60, is
+what the command always enforced. `features.recall.enabled` (there is no `/recall` command) was
+**removed**: a copy left in an operator's file is reported by
+`ultiessentials.lifecycle.removed-key-warning`, and `/recall` is recorded as a feature request,
+UltiKits/UltiEssentials#53.
 
 **`/ul reload UltiEssentials` re-reads configuration values and restarts this module's
 scheduled-command, scoreboard and name-prefix background tasks.** Since
@@ -513,8 +535,7 @@ affects only itself.
 | ultiessentials.config.essentials.features.wild.enabled | Enable `/wild` | config | `config/essentials.yml: features.wild.enabled (default: true)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
 | ultiessentials.config.essentials.features.wild.max-range | The outer radius, in blocks, of `/wild`'s random-point search (validated `@Range(100, 100000)`) | config | `config/essentials.yml: features.wild.max-range (default: 10000)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
 | ultiessentials.config.essentials.features.wild.min-range | The inner radius, in blocks, of `/wild`'s random-point search (validated `@Range(10, 10000)`); `/wild` refuses outright if this is >= `max-range` | config | `config/essentials.yml: features.wild.min-range (default: 100)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
-| ultiessentials.config.essentials.features.wild.cooldown | Declared as `/wild`'s per-player cooldown in seconds (validated `@Range(0, 3600)`); never read — the real cooldown is the hardcoded `@CmdCD(60)` on the command method, unaffected by this key's value. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.wild.cooldown (default: 60, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#wildCooldown (declared, never read outside this class) |
-| ultiessentials.config.essentials.features.recall.enabled | Declared as a toggle for a "`/recall`" command; no `/recall` command, or any other reader of this key, exists anywhere in this module's source. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.recall.enabled (default: true, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#recallEnabled (declared, never read outside this class) |
+| ultiessentials.config.essentials.features.wild.cooldown | Seconds a player must wait between two `/wild` uses (`0` means no cooldown; no module `@Range` -- the framework binding accepts 0 to 2147483647), resolved by the framework's config-bound `@CmdCD` at load and again at `/ul reload UltiEssentials`; a cooldown already running keeps its end time, also when the new value is `0`; a negative value refuses the module at load (the error names the key and the value), and on reload is not applied -- the framework logs a WARNING naming the key, the running value is kept, and the rest of the reload completes. Before UltiKits/UltiEssentials#27 this key was never read and the cooldown was a fixed 60 seconds | config | `config/essentials.yml: features.wild.cooldown (default: 60)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
 | ultiessentials.config.essentials.features.fly.enabled | Enable `/fly` (both self and other-player mappings) | config | `config/essentials.yml: features.fly.enabled (default: true)` | n/a | n/a | admin | brief | FlyCommand#toggleFly |
 | ultiessentials.config.essentials.features.heal.enabled | Enable `/heal` (both self and other-player mappings; also gates `/feed`, which shares this class's config check) | config | `config/essentials.yml: features.heal.enabled (default: true)` | n/a | n/a | admin | brief | HealCommand#healSelf, FeedCommand#feedSelf |
 | ultiessentials.config.essentials.features.speed.enabled | Enable `/speed` (both mappings) | config | `config/essentials.yml: features.speed.enabled (default: true)` | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
@@ -536,12 +557,12 @@ affects only itself.
 | ultiessentials.config.essentials.features.warp.enabled | Enable `/warp`, `/setwarp`, `/delwarp`, `/warps` | config | `config/essentials.yml: features.warp.enabled (default: true)` | n/a | n/a | admin | brief | WarpCommand#warp |
 | ultiessentials.config.essentials.features.warp.teleport-warmup | Seconds of warmup before a `/warp <name>` teleport completes, skippable via `ultiessentials.warp.nowarmup` (validated `@Range(0, 60)`) | config | `config/essentials.yml: features.warp.teleport-warmup (default: 3)` | n/a | n/a | admin | brief | WarpService#teleportToWarp |
 | ultiessentials.config.essentials.features.ban.enabled | Gates creating a NEW ban (`/ban`, `/tempban`, via `BanService#banPlayer`) and the login kick check (`BanListener#onPlayerLogin`) -- does NOT gate `/unban` (`BanService#unbanPlayerByName` has no enabled check) or `/banlist` (`BanService#getActiveBans` has no enabled check either), so disabling this key stops new bans from being created or enforced at login but leaves existing bans fully manageable and visible | config | `config/essentials.yml: features.ban.enabled (default: true)` | n/a | n/a | admin | brief | BanService#banPlayer |
-| ultiessentials.config.essentials.features.ban.broadcast-ban | Declared as a toggle for whether a new ban is broadcast server-wide; never read — `/ban` and `/tempban` always call `Bukkit.broadcastMessage(...)` unconditionally on success. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.ban.broadcast-ban (default: true, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#banBroadcast (declared, never read outside this class) |
-| ultiessentials.config.essentials.features.ban.broadcast-unban | Declared as a toggle for whether a successful unban is broadcast server-wide; never read — `/unban` always calls `Bukkit.broadcastMessage(...)` unconditionally on the plain-success outcome. Known product defect, UltiKits/UltiEssentials#27 | config | `config/essentials.yml: features.ban.broadcast-unban (default: true, has no effect, see UltiKits/UltiEssentials#27)` | n/a | n/a | admin | brief | EssentialsConfig#unbanBroadcast (declared, never read outside this class) |
+| ultiessentials.config.essentials.features.ban.broadcast-ban | Whether a successful `/ban` or `/tempban` announces the ban and its reason to the whole server (`true`) or to the issuer alone (`false`) — never to nobody, because the announcement is the issuer's only confirmation; read on every ban. Before UltiKits/UltiEssentials#27 this key was never read and every ban was broadcast | config | `config/essentials.yml: features.ban.broadcast-ban (default: true)` | n/a | n/a | admin | brief | BanCommand#announce, TempBanCommand#announce |
+| ultiessentials.config.essentials.features.ban.broadcast-unban | Whether a plain-success `/unban` is also announced to the whole server; the issuer's own confirmation is sent either way; read on every unban. Before UltiKits/UltiEssentials#27 this key was never read and every plain-success unban was broadcast | config | `config/essentials.yml: features.ban.broadcast-unban (default: true)` | n/a | n/a | admin | brief | UnbanCommand#unban |
 | ultiessentials.config.essentials.features.scoreboard.enabled | Enable `/scoreboard`/`/sb` and the sidebar-scoreboard update loop | config | `config/essentials.yml: features.scoreboard.enabled (default: true)` | n/a | n/a | admin | brief | ScoreboardService#enableScoreboard |
 | ultiessentials.config.essentials.features.scoreboard.auto-enable | Automatically enable the sidebar scoreboard 1 second after a player joins | config | `config/essentials.yml: features.scoreboard.auto-enable (default: true)` | n/a | n/a | admin | brief | ScoreboardListener#onPlayerJoin |
 | ultiessentials.config.essentials.features.scoreboard.update-interval | Seconds between sidebar-scoreboard content refreshes for every player with it enabled (validated `@Range(1, 60)`) | config | `config/essentials.yml: features.scoreboard.update-interval (default: 1)` | n/a | n/a | admin | brief | ScoreboardService#startUpdateTask |
-| ultiessentials.config.essentials.features.scoreboard.title | The sidebar scoreboard's title line, PlaceholderAPI-or-fallback-substituted and color-coded (validated `@NotEmpty`) | config | `config/essentials.yml: features.scoreboard.title (default: "&6&l" + a Chinese literal — read `EssentialsConfig.java:143` for the exact characters)` | n/a | n/a | admin | none | ScoreboardService#updateScoreboard |
+| ultiessentials.config.essentials.features.scoreboard.title | The sidebar scoreboard's title line, PlaceholderAPI-or-fallback-substituted and color-coded (validated `@NotEmpty`) | config | `config/essentials.yml: features.scoreboard.title (default: "&6&l" + a Chinese literal — read `EssentialsConfig.java:149` for the exact characters)` | n/a | n/a | admin | none | ScoreboardService#updateScoreboard |
 | ultiessentials.config.essentials.features.scoreboard.lines | The sidebar scoreboard's body lines, in display order, each PlaceholderAPI-or-fallback-substituted and color-coded; a duplicate rendered line under 40 characters is disambiguated with an appended invisible `ChatColor`, but `ScoreboardService#ensureUnique` checks the untruncated candidate against already-added (and therefore already-truncated) entries before truncating its own result at the end -- for two lines that are identical only in their first 40+ characters, the collision check never fires, so the second line is truncated to the SAME 40-character string as the first and overwrites it as one `Score` entry rather than appearing as a second line | config | `config/essentials.yml: features.scoreboard.lines (default: 10 lines)` | n/a | n/a | admin | detailed | ScoreboardService#updateScoreboard, ScoreboardService#ensureUnique |
 | ultiessentials.config.essentials.features.scheduled-commands.enabled | Enable the scheduled-console-command feature entirely | config | `config/essentials.yml: features.scheduled-commands.enabled (default: false)` | n/a | n/a | admin | brief | ScheduledCommandService#startTasks |
 | ultiessentials.config.essentials.features.scheduled-commands.commands | The scheduled command list, each entry `interval_seconds:command`; a malformed entry (missing colon, non-numeric or non-positive interval, empty command) is logged and skipped, not rejected as a whole-file validation failure | config | `config/essentials.yml: features.scheduled-commands.commands (default: 2 entries)` | n/a | n/a | admin | detailed | ScheduledCommandService#startTasks |

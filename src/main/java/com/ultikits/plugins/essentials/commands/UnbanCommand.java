@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
 import com.ultikits.plugins.essentials.service.BanService;
 import com.ultikits.ultitools.annotations.Autowired;
@@ -32,6 +33,10 @@ public class UnbanCommand extends BaseEssentialsCommand {
     @Autowired
     private BanService banService;
     
+    /** Read on every unban for {@code features.ban.broadcast-unban} (UltiKits/UltiEssentials#27). */
+    @Autowired
+    private EssentialsConfig config;
+    
     @CmdMapping(format = "<player>")
     public void unban(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
         BanService.UnbanResult outcome = banService.unbanPlayerByName(playerName);
@@ -58,8 +63,12 @@ public class UnbanCommand extends BaseEssentialsCommand {
         } else if (success) {
             sender.sendMessage(i18n("§a已解除 ") + playerName +
                 i18n(" 的封禁"));
-            Bukkit.broadcastMessage(i18n("§a[解禁] §f") +
-                playerName + " §7的封禁已被解除");
+            // features.ban.broadcast-unban (UltiKits/UltiEssentials#27). The issuer has just been
+            // told above, so with the switch off nothing is lost but the server-wide line.
+            if (config.isUnbanBroadcast()) {
+                Bukkit.broadcastMessage(i18n("§a[解禁] §f") +
+                    playerName + " §7的封禁已被解除");
+            }
         } else if (banService.isBannedInServerBanList(playerName)) {
             // banPlayer() never writes to the server's own ban list, so a name absent from this
             // plugin's own records may still be banned there (e.g. a vanilla /ban). Reporting

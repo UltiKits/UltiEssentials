@@ -27,7 +27,11 @@ public class WildCommand extends BaseEssentialsCommand {
     }
 
     @CmdMapping(format = "")
-    @CmdCD(60) // 60 seconds cooldown
+    // The cooldown is features.wild.cooldown in config/essentials.yml (default 60 seconds, 0 for none),
+    // resolved by the framework at load and again at /ul reload (UltiKits/UltiEssentials#27,
+    // UltiKits/UltiTools-Reborn#531). No literal here: the default lives only in EssentialsConfig,
+    // and a literal beside the binding is refused at load.
+    @CmdCD(config = EssentialsConfig.class, key = "features.wild.cooldown")
     public void wildTeleport(@CmdSender Player player) {
         if (!config.isWildEnabled()) {
             player.sendMessage(i18n("该功能已禁用"));

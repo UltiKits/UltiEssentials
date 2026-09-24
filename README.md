@@ -90,7 +90,7 @@ features:
     enabled: true          # 启用 /wild 随机传送
     max-range: 10000       # 随机传送最大范围
     min-range: 100         # 随机传送最小范围
-    cooldown: 60           # 冷却时间 (秒)
+    cooldown: 60           # 冷却时间 (秒)，0 为不冷却
 
   # ===== 玩家状态 =====
   fly:

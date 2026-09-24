@@ -311,8 +311,12 @@ class OtherListenersTest {
         private PlayerQuitListener listener;
 
         @BeforeEach
-        void setUp() {
+        void setUp() throws Exception {
             listener = new PlayerQuitListener();
+            // The listener also clears the quitter's /tpa requests (UltiKits/UltiEssentials#30);
+            // PlayerQuitListenerTpaCleanupTest covers that against the real TpaService.
+            EssentialsTestHelper.setField(listener, "tpaService",
+                    mock(com.ultikits.plugins.essentials.service.TpaService.class));
         }
 
         @Test

@@ -1,5 +1,8 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.commands.HideCommand;
+import com.ultikits.plugins.essentials.config.EssentialsConfig;
+import com.ultikits.plugins.essentials.config.RemovedConfigKeys;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
@@ -25,10 +28,11 @@ import java.util.function.Consumer;
  * files (for example {@code config/essentials.yml}) into the running configuration beans, then
  * {@link #onReload()} restarts the scheduled-command, scoreboard and name-prefix services against
  * the re-read values, so their enable flags, intervals and command list apply without a restart
- * (UltiKits/UltiEssentials#28). Unloading it, for example with
- * {@code /upm uninstall UltiEssentials}, runs {@link #onUnregister()} first, which stops every
- * repeating task this module started (UltiKits/UltiEssentials#43), and then the framework's command
- * and listener unregistration.
+ * (UltiKits/UltiEssentials#28). Start-up and every reload also warn about any setting this module
+ * has removed that is still in the operator's file (UltiKits/UltiEssentials#27). Unloading it, for
+ * example with {@code /upm uninstall UltiEssentials}, runs {@link #onUnregister()} first, which
+ * stops every repeating task this module started (UltiKits/UltiEssentials#43), and then the
+ * framework's command and listener unregistration.
  * </p>
  *
  * @author wisdommen
@@ -42,6 +46,7 @@ public class UltiEssentials extends UltiToolsPlugin {
     public boolean registerSelf() {
         // All services are automatically initialized by IoC container via @PostConstruct
         repairStoredPrimaryKeys();
+        warnAboutRemovedSettings();
         getLogger().info(i18n("UltiEssentials 已启用！"));
         return true;
     }
@@ -75,6 +80,21 @@ public class UltiEssentials extends UltiToolsPlugin {
     }
 
     /**
+     * Warns once for each setting this module has removed that is still in the operator's
+     * {@code config/essentials.yml}, naming the key and where its job went (UltiKits/UltiEssentials#27).
+     * <p>
+     * Runs at start-up and again on every {@code /ul reload}, after the framework has re-read the
+     * file, so a removed key copied back in from an old backup is reported without a restart.
+     * <p>
+     * 启动与每次重载时，对运维文件中仍残留的已删除配置项各报一条警告。
+     */
+    private void warnAboutRemovedSettings() {
+        for (String warning : RemovedConfigKeys.warningsFor(getContext().getBean(EssentialsConfig.class))) {
+            getLogger().warn(warning);
+        }
+    }
+
+    /**
      * Restarts the three task-owning services against the configuration the framework has just
      * re-read. Each service's {@code reload()} cancels its running tasks and starts them again only
      * if its feature is still enabled, so turning a feature on, off, or changing its interval or
@@ -88,6 +108,7 @@ public class UltiEssentials extends UltiToolsPlugin {
      */
     @Override
     protected void onReload() {
+        warnAboutRemovedSettings();
         reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
         reloadService(ScoreboardService.class, ScoreboardService::reload);
         reloadService(NamePrefixService.class, NamePrefixService::reload);
@@ -123,6 +144,10 @@ public class UltiEssentials extends UltiToolsPlugin {
      * every service is shut down before the throw either way. That path is not operator-reachable
      * today (#506 records the measurement).
      * <p>
+     * Before the services, every vanished player is shown to everyone again and the vanish state is
+     * forgotten ({@link #revealVanishedPlayers()}): the hides belong to the {@code UltiTools} Bukkit
+     * plugin, so they would otherwise outlive the {@code /hide} command that lifts them.
+     * <p>
      * Each service is shut down on its own, and every one is shut down even when an earlier one
      * fails -- a service left running is exactly the defect this hook exists to remove. The first
      * failure is then rethrown with any later one attached to it, so the unload is reported as
@@ -133,7 +158,7 @@ public class UltiEssentials extends UltiToolsPlugin {
      */
     @Override
     protected void onUnregister() {
-        Throwable failure = null;
+        Throwable failure = revealVanishedPlayers();
         failure = shutdownService(failure, ScheduledCommandService.class, ScheduledCommandService::shutdown);
         failure = shutdownService(failure, ScoreboardService.class, ScoreboardService::shutdown);
         failure = shutdownService(failure, NamePrefixService.class, NamePrefixService::shutdown);
@@ -143,6 +168,25 @@ public class UltiEssentials extends UltiToolsPlugin {
         } else if (failure instanceof Error) {
             throw (Error) failure;
         }
+    }
+
+    /**
+     * Shows every vanished player to everyone again and forgets the vanish state, so the unload does
+     * not leave players hidden by a module that is no longer there to un-hide them (gate-1 WR-01 on
+     * UltiKits/UltiEssentials#32). It runs first and inside the same barrier as the service
+     * shutdowns: a failure here is returned to be rethrown once every service has been shut down, and
+     * a service failure cannot stop the reveal.
+     *
+     * @return the failure raised while revealing, or {@code null}
+     */
+    @SuppressWarnings("PMD.AvoidCatchingGenericException") // deliberate cleanup barrier -- see shutdownService
+    private static Throwable revealVanishedPlayers() {
+        try {
+            HideCommand.revealAllVanished();
+        } catch (RuntimeException | Error e) {
+            return e;
+        }
+        return null;
     }
 
     /**

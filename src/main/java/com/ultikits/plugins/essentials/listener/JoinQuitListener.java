@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.listener;
 
+import com.ultikits.plugins.essentials.commands.HideCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.SpawnConfig;
 import com.ultikits.ultitools.annotations.Autowired;
@@ -11,7 +12,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 /**
- * Listener for first-join spawn teleport.
+ * Listener for first-join spawn teleport, and for keeping vanished players hidden from players who
+ * join after they vanished.
  * <p>
  * Chat-related join/quit messages, welcome messages, and titles have been
  * moved to the UltiChat module.
@@ -38,5 +40,16 @@ public class JoinQuitListener implements Listener {
                 player.teleport(spawnConfig.getSpawnLocation());
             }
         }
+    }
+
+    /**
+     * Hides every player vanished with {@code /hide} from the player who has just joined, unless
+     * the joiner may see vanished players (UltiKits/UltiEssentials#32).
+     *
+     * @param event the join
+     */
+    @EventHandler
+    public void hideVanishedPlayers(PlayerJoinEvent event) {
+        HideCommand.hideVanishedPlayersFrom(event.getPlayer());
     }
 }

@@ -6,6 +6,9 @@ import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.abstracts.command.CommandContext;
+import com.ultikits.ultitools.abstracts.command.ConfigBoundCooldownState;
+import com.ultikits.ultitools.abstracts.command.validation.validators.CooldownValidator;
+import com.ultikits.ultitools.annotations.command.CmdCD;
 import com.ultikits.ultitools.abstracts.command.validation.CommandValidator;
 import com.ultikits.ultitools.annotations.command.RunAsync;
 import org.bukkit.Bukkit;
@@ -21,6 +24,7 @@ import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -107,6 +111,16 @@ class WildCommandThreadSafetyTest {
         EssentialsTestHelper.setField(command, "plugin", frameworkPlugin);
 
         handlerMethod = WildCommand.class.getMethod("wildTeleport", Player.class);
+        // /wild's cooldown is config-bound (UltiKits/UltiEssentials#27). A module load resolves the
+        // binding onto the executor; this test builds the executor directly, so it stores the
+        // declared default the way that load step does. WildCooldownBindingTest drives the real
+        // load step; this class is about threading, not about where the value comes from.
+        CmdCD cooldown = handlerMethod.getAnnotation(CmdCD.class);
+        String bindingKey = CooldownValidator.bindingKey(cooldown);
+        if (bindingKey != null) {
+            // 60 is features.wild.cooldown's declared default (pinned by WildCooldownBindingTest).
+            ConfigBoundCooldownState.setSeconds(command, Collections.singletonMap(bindingKey, 60));
+        }
         handlerIsAsync = handlerMethod.isAnnotationPresent(RunAsync.class);
     }
 
@@ -173,6 +187,7 @@ class WildCommandThreadSafetyTest {
                 .matchedMethod(handlerMethod)
                 .matchedFormat("")
                 .executorClass(WildCommand.class)
+                .executor(command)
                 .build();
     }
 

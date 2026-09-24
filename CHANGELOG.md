@@ -110,6 +110,44 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the container together: if any of them cannot be removed, none is, the container keeps reporting as
   locked, and the failure is reported rather than a half-unlocked container being left behind
   (UltiKits/UltiEssentials#37).
+- `features.ban.broadcast-ban` and `features.ban.broadcast-unban` in `config/essentials.yml` now
+  take effect. Previously `/ban`, `/tempban` and `/unban` announced every successful ban or unban to
+  the whole server whatever these were set to. Both default to `true`, which is what the commands
+  always did, so nothing changes unless one is `false` — and if your file already has one set to
+  `false`, it takes effect from this version. With `features.ban.broadcast-ban: false`, a ban's
+  notice and reason go to whoever issued it instead of to everyone — the notice was the issuer's
+  only confirmation, so it is redirected rather than dropped — and the rest of the server no longer
+  sees it. `/banlist` lists the ban either way. With `features.ban.broadcast-unban: false`, the
+  issuer still gets the unban confirmation they always got, and nothing is broadcast
+  (UltiKits/UltiEssentials#27).
+- A pending `/tpa` or `/tpahere` request is now cleared as soon as its sender or its target leaves
+  the server. Previously it stayed pending until `features.tpa.timeout` ran out (30 seconds by
+  default), and for that whole time its target refused every other player's request as already
+  having one. The player who stays online is not messaged when this happens: previously they were
+  told the request had timed out once the timeout ran out, and a target who ran `/tpaccept` after the
+  sender had left was told the sender was offline; now the request is simply gone, so `/tpaccept`
+  and `/tpdeny` report that there is no pending request (UltiKits/UltiEssentials#30).
+- A player vanished with `/hide` now stays hidden from players who join after they vanished.
+  Previously `/hide` hid them only from the players online at that moment, so anyone who joined
+  later could see them. A joiner holding `ultiessentials.hide.see` still sees vanished players, as
+  players online at the time of the `/hide` already did (UltiKits/UltiEssentials#32).
+- `/upm uninstall UltiEssentials` now shows every player vanished with `/hide` to everyone again and
+  forgets the vanish state. Previously the vanish outlived the module — the hides belong to UltiTools
+  itself, which stays enabled — so a vanished player stayed hidden from the players who were online
+  when they vanished, was visible to anyone who joined afterwards, and could not un-vanish until they
+  relogged, because `/hide` had been uninstalled with the module. The vanished player is not told
+  (found by review of UltiKits/UltiEssentials#32).
+- `features.wild.cooldown` in `config/essentials.yml` now sets `/wild`'s cooldown, in seconds.
+  Previously the cooldown was a fixed 60 seconds and the key was never read. The default is still
+  `60`, which is what every existing file already holds unless you edited it — an edited value takes
+  effect from this version. `0` means no cooldown. `/ul reload UltiEssentials` applies a new value to
+  the next `/wild`; a cooldown already running keeps the end time it started with, also when the new
+  value is `0`. A negative value stops the module loading at start-up, with an error naming the key
+  and the value. On `/ul reload UltiEssentials` a negative value is not applied: the console shows a
+  warning naming the key, `/wild` keeps the cooldown it was using, and the rest of the reload —
+  other settings in the file, the service restarts — completes as usual. The setting used to be
+  declared with a 3600-second maximum; that limit is gone, and any value up to 2147483647 seconds is
+  accepted (UltiKits/UltiEssentials#27, through UltiKits/UltiTools-Reborn#531).
 - 重载本模块（`/ul reload UltiEssentials`）现在会重新读取其配置文件并刷新语言文件，修改后的
   `features.speed.max-speed` 等配置无需重启即可生效。此前本模块的重载方法替换了框架的重载方法且只输出
   一行日志，这两步都不会执行。UltiTools 6.3.0 还会在此时报告 `@ConditionalOnConfig` 漂移并输出框架自身的
@@ -175,6 +213,43 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   锁定记录现在都会拒绝他人点击任意一块——此前检查只看被点击的那一块，因此两半记录不一致的容器可以从没有记录的
   一侧打开。解锁时会把保护该容器的所有记录放在同一个事务中一起移除：只要有一条无法移除，就一条都不移除，容器
   继续显示为已锁定，并报告失败，而不会留下解锁了一半的容器（UltiKits/UltiEssentials#37）。
+- `config/essentials.yml` 中的 `features.ban.broadcast-ban` 与 `features.ban.broadcast-unban` 现在会生效。此前
+  `/ban`、`/tempban` 与 `/unban` 无论这两项如何设置，都会把每次成功的封禁或解禁广播给全服。两项默认均为 `true`，
+  与这些命令一直以来的行为相同，因此除非其中一项为 `false`，否则没有任何变化——若你的文件中已将其中一项设为
+  `false`，从本版本起即会生效。设置
+  `features.ban.broadcast-ban: false` 后，封禁通知及原因改为只发送给执行者，而不再发给所有人——该通知是执行者
+  唯一的确认信息，因此是改发而不是丢弃——服务器其他人不再看到它。无论如何设置，
+  `/banlist` 都会列出该封禁。设置 `features.ban.broadcast-unban: false` 后，执行者仍会收到一直以来的解禁确认，
+  且不再进行任何广播（UltiKits/UltiEssentials#27）。
+- 待处理的 `/tpa` 或 `/tpahere` 请求现在会在其发送者或目标离开服务器时立即清除。此前该请求会一直保留到
+  `features.tpa.timeout`（默认 30 秒）结束，在此期间其目标会以"已有待处理请求"为由拒绝其他所有玩家的请求。
+  清除时不会向仍在线的一方发送消息：此前超时结束时他们会收到"请求已超时"的提示，而在发送者离开后执行
+  `/tpaccept` 的目标会被告知发送者已离线；现在请求直接消失，因此 `/tpaccept` 与 `/tpdeny` 会报告没有待处理的
+  请求（UltiKits/UltiEssentials#30）。
+- 使用 `/hide` 隐身的玩家现在对其隐身之后才加入的玩家同样保持隐身。此前 `/hide` 只对当时在线的玩家生效，之后
+  加入的任何人都能看见隐身者。持有 `ultiessentials.hide.see` 的加入者仍能看见隐身玩家，与 `/hide` 执行时已在线
+  的玩家一致（UltiKits/UltiEssentials#32）。
+- `/upm uninstall UltiEssentials` 现在会让所有使用 `/hide` 隐身的玩家对所有人重新可见，并清空隐身状态。此前隐身
+  效果会在模块卸载后继续存在——这些隐藏记录属于仍处于启用状态的 UltiTools 本身——因此隐身玩家仍对其隐身时在线的
+  玩家不可见，却对之后加入的玩家可见，并且由于 `/hide` 已随模块一起卸载，只能重新登录才能解除隐身。隐身玩家不会
+  收到提示（在审查 UltiKits/UltiEssentials#32 时发现）。
+- `config/essentials.yml` 中的 `features.wild.cooldown` 现在决定 `/wild` 的冷却时间（秒）。此前冷却时间固定为
+  60 秒，该配置项从未被读取。默认值仍为 `60`，现有配置文件中除非你改过，本来就是这个值——改过的值从本版本起生效。
+  `0` 表示不冷却。`/ul reload UltiEssentials` 会让新值作用于下一次 `/wild`；已经开始的冷却保持其原有的结束时间，
+  新值为 `0` 时也是如此。负数会在启动时阻止模块加载，错误信息会指明该配置项和数值。在
+  `/ul reload UltiEssentials` 时负数不会生效：控制台会输出一条指明该配置项的警告，`/wild` 继续使用原来的冷却时间，
+  重载的其余部分——文件中的其他设置、各服务的重启——照常完成。该设置原先声明了 3600 秒的上限，该上限已取消，
+  最大可接受 2147483647 秒（UltiKits/UltiEssentials#27，依赖 UltiKits/UltiTools-Reborn#531）。
+
+### Changed
+
+- This module now declares `api-version: 630` in its `plugin.yml`, so it loads only on UltiTools
+  6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools
+  it would load with no cooldown at all, silently, so it now refuses to load there instead
+  (UltiKits/UltiEssentials#27, UltiKits/UltiTools-Reborn#531).
+- 本模块的 `plugin.yml` 现在声明 `api-version: 630`，因此只能在 UltiTools 6.3.0 及以上版本加载。其 `/wild` 冷却使用了
+  6.3.0 新增的框架功能；在旧版 UltiTools 上它会在没有任何冷却的情况下静默加载，因此现在改为直接拒绝加载
+  （UltiKits/UltiEssentials#27、UltiKits/UltiTools-Reborn#531）。
 
 ### Removed
 
@@ -183,7 +258,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`UltiEssentials config reloaded!`), together with the two language keys, present in both
   `lang/en.json` and `lang/zh.json`, that translated them. UltiTools 6.3.0 logs one reload line per
   module (`Module 'UltiEssentials' reloaded.`) (UltiKits/UltiEssentials#23).
+- `features.recall.enabled` in `config/essentials.yml`. It never had any effect: this module has no
+  `/recall` command. The command is recorded as a feature request, UltiKits/UltiEssentials#53 —
+  removing the setting does not reject the feature (UltiKits/UltiEssentials#27).
+- If the removed setting is still in your `config/essentials.yml`, which it will be on any server
+  that has run an earlier version, start-up and every `/ul reload UltiEssentials` log one warning
+  naming the module, the file and the key, and saying where the setting went. Deleting the key
+  from the file silences the warning; leaving it there changes nothing else
+  (UltiKits/UltiEssentials#27).
 - 移除本模块卸载时输出的"UltiEssentials 已禁用！"控制台行、`/ul reload UltiEssentials` 时输出的
   "UltiEssentials 配置已重载！"控制台行，以及 `lang/en.json` 与 `lang/zh.json` 中对应的
   `UltiEssentials 已禁用！`、`UltiEssentials 配置已重载！` 两个语言键。UltiTools 6.3.0 会为每个模块输出
   一行重载日志（UltiKits/UltiEssentials#23）。
+- 移除 `config/essentials.yml` 中的 `features.recall.enabled`。该设置从未生效：本模块没有 `/recall` 命令。
+  该命令已作为功能请求记录在 UltiKits/UltiEssentials#53——删除设置并不代表否决该功能（UltiKits/UltiEssentials#27）。
+- 若上述已删除的设置仍保留在你的 `config/essentials.yml` 中（运行过旧版本的服务器都会如此），启动时以及每次
+  `/ul reload UltiEssentials` 都会输出一条警告，指明模块、文件和键，并说明该设置的去向。从文件中删除该键
+  即可消除警告；保留它不会产生其他任何影响（UltiKits/UltiEssentials#27）。

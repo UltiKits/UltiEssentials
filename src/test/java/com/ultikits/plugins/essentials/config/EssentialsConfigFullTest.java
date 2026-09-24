@@ -60,13 +60,6 @@ class EssentialsConfigFullTest {
         void shouldHaveWildDefaults() {
             assertThat(config.getWildMaxRange()).isEqualTo(10000);
             assertThat(config.getWildMinRange()).isEqualTo(100);
-            assertThat(config.getWildCooldown()).isEqualTo(60);
-        }
-
-        @Test
-        @DisplayName("Should have recall enabled by default")
-        void shouldHaveRecallEnabled() {
-            assertThat(config.isRecallEnabled()).isTrue();
         }
 
         @Test
@@ -78,8 +71,6 @@ class EssentialsConfigFullTest {
             config.setWildEnabled(false);
             config.setWildMaxRange(5000);
             config.setWildMinRange(50);
-            config.setWildCooldown(120);
-            config.setRecallEnabled(false);
 
             assertThat(config.isBackEnabled()).isFalse();
             assertThat(config.isSpawnEnabled()).isFalse();
@@ -87,8 +78,6 @@ class EssentialsConfigFullTest {
             assertThat(config.isWildEnabled()).isFalse();
             assertThat(config.getWildMaxRange()).isEqualTo(5000);
             assertThat(config.getWildMinRange()).isEqualTo(50);
-            assertThat(config.getWildCooldown()).isEqualTo(120);
-            assertThat(config.isRecallEnabled()).isFalse();
         }
     }
 

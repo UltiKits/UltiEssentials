@@ -39,6 +39,7 @@ class TempBanCommandTest {
         banService = mock(BanService.class);
         EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
         EssentialsTestHelper.setField(command, "banService", banService);
+        EssentialsTestHelper.setField(command, "config", new com.ultikits.plugins.essentials.config.EssentialsConfig());
 
         playerUuid = UUID.randomUUID();
         player = EssentialsTestHelper.createMockPlayer("TestPlayer", playerUuid);

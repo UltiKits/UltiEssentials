@@ -38,12 +38,18 @@ public class EssentialsConfig extends AbstractConfigEntity {
     @ConfigEntry(path = "features.wild.min-range", comment = "随机传送最小范围")
     private int wildMinRange = 100;
 
-    @Range(min = 0, max = 3600)
-    @ConfigEntry(path = "features.wild.cooldown", comment = "随机传送冷却时间(秒)")
+    // Seconds between two /wild uses by one player; 0 means no cooldown. Bound to /wild through the
+    // framework's config-bound @CmdCD on WildCommand#wildTeleport, so this field is the only place
+    // the default lives, and /ul reload applies a new value (UltiKits/UltiEssentials#27,
+    // UltiKits/UltiTools-Reborn#531). Must stay an int: the binding accepts only integral fields.
+    // Deliberately no @Range: the binding owns the range (0 to Integer.MAX_VALUE), refusing the
+    // module at load and keeping the running value with a WARNING on reload. A module @Range would
+    // pre-empt that on reload by aborting the whole reload part-way (maintainer ruling 2026-09-23).
+    @ConfigEntry(path = "features.wild.cooldown", comment = "随机传送冷却时间(秒)，0 为不冷却")
     private int wildCooldown = 60;
 
-    @ConfigEntry(path = "features.recall.enabled", comment = "启用 /recall 召回命令")
-    private boolean recallEnabled = true;
+    // features.recall.enabled was removed in 6.3.0: there is no /recall command. A copy left in an
+    // operator's file is reported by RemovedConfigKeys (UltiKits/UltiEssentials#27).
 
     // ============ 玩家状态功能 ============
     @ConfigEntry(path = "features.fly.enabled", comment = "启用 /fly 飞行命令")

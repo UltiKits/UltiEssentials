@@ -296,10 +296,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
-- Seven language entries no code has displayed since wave 2 removed the helpers that used them
+- Seven language entries no code has displayed since an earlier change in this release removed the
+  helpers that used them
   (`feature_disabled` and six `teleport_*` messages) were removed from both language files. Nothing
   an operator or player sees changes.
-- 从两份语言文件中删除了七条自 wave 2 删除其调用方以来就不再显示的条目（`feature_disabled` 与六条 `teleport_*`
+- 从两份语言文件中删除了七条自本版本早先的改动删除其调用方以来就不再显示的条目（`feature_disabled` 与六条 `teleport_*`
   消息）。运维和玩家看到的内容没有任何变化。
 
 - The module's own "disabled" console line on unload (`UltiEssentials disabled!` under

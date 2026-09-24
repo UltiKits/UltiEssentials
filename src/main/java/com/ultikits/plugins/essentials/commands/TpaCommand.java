@@ -60,7 +60,7 @@ public class TpaCommand extends BaseEssentialsCommand {
                 break;
             case ON_COOLDOWN:
                 int remaining = tpaService.getRemainingCooldown(sender.getUniqueId());
-                sender.sendMessage(i18n("essentials.tpa.cooldown") + " (" + remaining + "s)");
+                sender.sendMessage(String.format(i18n("essentials.tpa.cooldown"), remaining));
                 break;
             case CROSS_WORLD_DISABLED:
                 sender.sendMessage(i18n("essentials.tpa.cross_world"));

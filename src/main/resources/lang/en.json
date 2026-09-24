@@ -222,7 +222,7 @@
   "essentials.tpa.hint": "Use /tpaccept to accept or /tpdeny to deny",
   "essentials.tpa.self": "You cannot send a teleport request to yourself",
   "essentials.tpa.target_has_pending": "That player already has a pending teleport request",
-  "essentials.tpa.cooldown": "Please wait before sending another request",
+  "essentials.tpa.cooldown": "Please wait before sending another request (%ds)",
   "essentials.tpa.cross_world": "Teleporting across worlds is not allowed",
   "essentials.command.tpahere.description": "Ask a player to teleport to you",
   "essentials.tpa.request_here": "%s wants you to teleport to them",

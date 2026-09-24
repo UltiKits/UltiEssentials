@@ -272,7 +272,7 @@
   "essentials.deathpunish.items": "%d items dropped",
   "essentials.deathpunish.exp": "-%d EXP",
   "essentials.log.ban_update_failed": "Failed to update ban record",
-  "essentials.log.unban_still_active": "{} still has {} active ban record(s) after an unban of {} record(s); reporting the unban as failed",
+  "essentials.log.unban_still_active": "{} still has {} active ban record(s) after an attempt to unban {} record(s); reporting the unban as failed",
   "essentials.ban.kick.title": "§cYou have been banned",
   "essentials.ban.kick.reason": "§7Reason: §f%s",
   "essentials.ban.kick.operator": "§7Banned by: §f%s",

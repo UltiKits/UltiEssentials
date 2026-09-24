@@ -272,7 +272,7 @@
   "essentials.deathpunish.items": "%d件物品掉落",
   "essentials.deathpunish.exp": "-%d经验",
   "essentials.log.ban_update_failed": "更新封禁记录失败",
-  "essentials.log.unban_still_active": "{} 仍有 {} 条生效的封禁记录（已解除 {} 条）；报告解封失败",
+  "essentials.log.unban_still_active": "{} 仍有 {} 条生效的封禁记录（本次尝试解除 {} 条）；报告解封失败",
   "essentials.ban.kick.title": "§c你已被封禁",
   "essentials.ban.kick.reason": "§7原因: §f%s",
   "essentials.ban.kick.operator": "§7操作者: §f%s",

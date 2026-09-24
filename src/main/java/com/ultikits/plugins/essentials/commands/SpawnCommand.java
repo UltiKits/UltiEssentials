@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
  * Command to teleport player to the server spawn point.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"spawn"}, permission = "ultiessentials.spawn.teleport", description = "传送到出生点")
+@CmdExecutor(alias = {"spawn"}, permission = "ultiessentials.spawn.teleport", description = "essentials.command.spawn.description")
 public class SpawnCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -25,22 +25,22 @@ public class SpawnCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void teleportToSpawn(@CmdSender Player player) {
         if (!config.isSpawnEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         Location spawn = spawnConfig.getSpawnLocation();
         if (spawn.getWorld() == null) {
-            player.sendMessage(i18n("出生点世界不存在"));
+            player.sendMessage(i18n("essentials.spawn.world_not_found"));
             return;
         }
 
         player.teleport(spawn);
-        player.sendMessage(i18n("已传送到出生点"));
+        player.sendMessage(i18n("essentials.spawn.success"));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /spawn 传送到出生点"));
+        sender.sendMessage(i18n("essentials.help.spawn"));
     }
 }

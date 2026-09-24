@@ -15,7 +15,7 @@ import java.util.Random;
  * Command to randomly teleport player within a configured range.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"wild", "rtp"}, permission = "ultiessentials.wild", description = "随机传送")
+@CmdExecutor(alias = {"wild", "rtp"}, permission = "ultiessentials.wild", description = "essentials.command.wild.description")
 public class WildCommand extends BaseEssentialsCommand {
 
     private static final Random RANDOM = new Random();
@@ -34,7 +34,7 @@ public class WildCommand extends BaseEssentialsCommand {
     @CmdCD(config = EssentialsConfig.class, key = "features.wild.cooldown")
     public void wildTeleport(@CmdSender Player player) {
         if (!config.isWildEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
@@ -46,11 +46,11 @@ public class WildCommand extends BaseEssentialsCommand {
         // not their relationship, so a misconfigured server could otherwise reach
         // RANDOM.nextInt(maxRange - minRange) with a non-positive bound and throw.
         if (minRange >= maxRange) {
-            player.sendMessage(i18n("随机传送范围配置无效，请联系管理员"));
+            player.sendMessage(i18n("essentials.wild.misconfigured"));
             return;
         }
 
-        player.sendMessage(i18n("正在寻找安全位置..."));
+        player.sendMessage(i18n("essentials.wild.searching"));
 
         // Try up to 10 times to find a safe location
         for (int attempt = 0; attempt < 10; attempt++) {
@@ -65,12 +65,12 @@ public class WildCommand extends BaseEssentialsCommand {
 
             if (isSafeLocation(target)) {
                 player.teleport(target);
-                player.sendMessage(String.format(i18n("已随机传送到 X:%d Y:%d Z:%d"), x, y, z));
+                player.sendMessage(String.format(i18n("essentials.wild.success"), x, y, z));
                 return;
             }
         }
 
-        player.sendMessage(i18n("未能找到安全位置，请稍后再试"));
+        player.sendMessage(i18n("essentials.wild.no_safe_location"));
     }
 
     /**
@@ -104,6 +104,6 @@ public class WildCommand extends BaseEssentialsCommand {
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /wild 随机传送到野外"));
+        sender.sendMessage(i18n("essentials.help.wild"));
     }
 }

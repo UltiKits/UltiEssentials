@@ -22,7 +22,7 @@ import java.util.List;
 @CmdExecutor(
     alias = {"unlock", "ul"},
     permission = "ultiessentials.lock",
-    description = "解锁容器"
+    description = "essentials.command.unlock.description"
 )
 public class UnlockCommand extends BaseEssentialsCommand {
     
@@ -34,7 +34,7 @@ public class UnlockCommand extends BaseEssentialsCommand {
         Block target = player.getTargetBlockExact(5);
         
         if (target == null) {
-            player.sendMessage(i18n("§c请看向一个容器"));
+            player.sendMessage(i18n("essentials.lock.look_at_container"));
             return;
         }
         
@@ -42,18 +42,18 @@ public class UnlockCommand extends BaseEssentialsCommand {
         
         switch (result) {
             case SUCCESS:
-                player.sendMessage(i18n("§a已解锁该容器"));
+                player.sendMessage(i18n("essentials.unlock.unlocked"));
                 break;
             case NOT_LOCKED:
-                player.sendMessage(i18n("§c该容器未被锁定"));
+                player.sendMessage(i18n("essentials.unlock.not_locked"));
                 break;
             case NOT_OWNER:
-                player.sendMessage(i18n("§c你不是该容器的主人"));
+                player.sendMessage(i18n("essentials.unlock.not_owner"));
                 break;
             case FAILED:
                 // The lock record could not be removed from storage, so the container is still
                 // locked. Reporting success here is the defect UltiKits/UltiEssentials#37 reports.
-                player.sendMessage(i18n("§c解锁失败，该容器的锁定记录无法移除，请联系管理员"));
+                player.sendMessage(i18n("essentials.unlock.failed"));
                 break;
         }
     }
@@ -63,7 +63,7 @@ public class UnlockCommand extends BaseEssentialsCommand {
         Block target = player.getTargetBlockExact(5);
         
         if (target == null) {
-            player.sendMessage(i18n("§c请看向一个容器"));
+            player.sendMessage(i18n("essentials.lock.look_at_container"));
             return;
         }
         
@@ -75,12 +75,12 @@ public class UnlockCommand extends BaseEssentialsCommand {
         List<ChestLockData> locks = chestLockService.locksProtecting(target);
 
         if (locks.isEmpty()) {
-            player.sendMessage(i18n("§7该容器未被锁定"));
+            player.sendMessage(i18n("essentials.unlock.info_not_locked"));
         } else {
-            player.sendMessage(i18n("§6=== 容器锁定信息 ==="));
+            player.sendMessage(i18n("essentials.unlock.info_header"));
             for (ChestLockData lock : locks) {
-                player.sendMessage(i18n("§7主人: §f") + lock.getOwnerName());
-                player.sendMessage(i18n("§7位置: §f") +
+                player.sendMessage(i18n("essentials.unlock.info_owner") + lock.getOwnerName());
+                player.sendMessage(i18n("essentials.unlock.info_location") +
                     lock.getWorld() + " (" + lock.getX() + ", " + lock.getY() + ", " + lock.getZ() + ")");
             }
         }
@@ -88,8 +88,8 @@ public class UnlockCommand extends BaseEssentialsCommand {
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /unlock"));
-        sender.sendMessage(i18n("看向一个容器并使用此命令来解锁它"));
-        sender.sendMessage(i18n("/unlock info - 查看锁定信息"));
+        sender.sendMessage(i18n("essentials.help.unlock.usage"));
+        sender.sendMessage(i18n("essentials.help.unlock"));
+        sender.sendMessage(i18n("essentials.help.unlock.info"));
     }
 }

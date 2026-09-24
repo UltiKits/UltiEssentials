@@ -10,7 +10,7 @@ import org.bukkit.entity.Player;
  * Command to change player game mode.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"gm"}, permission = "ultiessentials.gamemode.self", description = "切换游戏模式")
+@CmdExecutor(alias = {"gm"}, permission = "ultiessentials.gamemode.self", description = "essentials.command.gamemode.description")
 public class GameModeCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -22,18 +22,18 @@ public class GameModeCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<mode>")
     public void setGameMode(@CmdSender Player player, @CmdParam("mode") String mode) {
         if (!config.isGamemodeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         GameMode gameMode = parseGameMode(mode);
         if (gameMode == null) {
-            player.sendMessage(i18n("无效的游戏模式，可用: 0/s/survival, 1/c/creative, 2/a/adventure, 3/sp/spectator"));
+            player.sendMessage(i18n("essentials.gamemode.invalid_with_options"));
             return;
         }
 
         player.setGameMode(gameMode);
-        player.sendMessage(String.format(i18n("游戏模式已切换为 %s"), gameMode.name()));
+        player.sendMessage(String.format(i18n("essentials.gamemode.changed"), gameMode.name()));
     }
 
     @CmdMapping(format = "<mode> <player>", permission = "ultiessentials.gamemode.other")
@@ -43,24 +43,24 @@ public class GameModeCommand extends BaseEssentialsCommand {
             @CmdParam("player") Player target) {
 
         if (!config.isGamemodeEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在或不在线"));
+            sender.sendMessage(i18n("essentials.error.player_not_found_or_offline"));
             return;
         }
 
         GameMode gameMode = parseGameMode(mode);
         if (gameMode == null) {
-            sender.sendMessage(i18n("无效的游戏模式"));
+            sender.sendMessage(i18n("essentials.gamemode.invalid"));
             return;
         }
 
         target.setGameMode(gameMode);
-        sender.sendMessage(String.format(i18n("已将 %s 的游戏模式切换为 %s"), target.getName(), gameMode.name()));
-        target.sendMessage(String.format(i18n("你的游戏模式已被切换为 %s"), gameMode.name()));
+        sender.sendMessage(String.format(i18n("essentials.gamemode.changed_other"), target.getName(), gameMode.name()));
+        target.sendMessage(String.format(i18n("essentials.gamemode.changed_target"), gameMode.name()));
     }
 
     /**
@@ -94,6 +94,6 @@ public class GameModeCommand extends BaseEssentialsCommand {
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /gm <模式> 切换游戏模式"));
+        sender.sendMessage(i18n("essentials.help.gamemode"));
     }
 }

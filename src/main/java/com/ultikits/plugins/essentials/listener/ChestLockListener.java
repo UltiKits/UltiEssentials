@@ -86,7 +86,7 @@ public class ChestLockListener implements Listener {
      * The refusal a player gets when a lock stops them reaching a container's contents.
      */
     private String accessRefusal(ChestLockData lock) {
-        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定");
+        return plugin.i18n("essentials.lock.refusal_prefix") + lock.getOwnerName() + plugin.i18n("essentials.lock.refusal_open_suffix");
     }
 
     /**
@@ -97,7 +97,7 @@ public class ChestLockListener implements Listener {
      * wording cannot drift between the route a player takes and the route a plugin takes.
      */
     private String breakRefusal(ChestLockData lock) {
-        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定，无法破坏");
+        return plugin.i18n("essentials.lock.refusal_prefix") + lock.getOwnerName() + plugin.i18n("essentials.lock.refusal_break_suffix");
     }
     
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

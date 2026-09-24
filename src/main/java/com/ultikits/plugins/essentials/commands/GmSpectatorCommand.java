@@ -10,7 +10,7 @@ import org.bukkit.entity.Player;
  * Shortcut command to switch to spectator mode.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"gmsp"}, permission = "ultiessentials.gamemode.self", description = "切换到旁观模式")
+@CmdExecutor(alias = {"gmsp"}, permission = "ultiessentials.gamemode.self", description = "essentials.command.gmsp.description")
 public class GmSpectatorCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -22,15 +22,15 @@ public class GmSpectatorCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void spectator(@CmdSender Player player) {
         if (!config.isGamemodeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         player.setGameMode(GameMode.SPECTATOR);
-        player.sendMessage(i18n("游戏模式已切换为 SPECTATOR"));
+        player.sendMessage(i18n("essentials.gamemode.changed_spectator"));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /gmsp 切换到旁观模式"));
+        sender.sendMessage(i18n("essentials.help.gmsp"));
     }
 }

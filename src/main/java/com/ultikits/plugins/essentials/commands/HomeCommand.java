@@ -17,7 +17,7 @@ import java.util.List;
  * 传送到家的命令。
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"home", "h"}, permission = "ultiessentials.home", description = "传送到家")
+@CmdExecutor(alias = {"home", "h"}, permission = "ultiessentials.home", description = "essentials.command.home.description")
 @I18n("home.description")
 public class HomeCommand extends BaseEssentialsCommand {
     
@@ -33,7 +33,7 @@ public class HomeCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void teleportToDefaultHome(@CmdSender Player player) {
         if (!config.isHomeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         
@@ -44,7 +44,7 @@ public class HomeCommand extends BaseEssentialsCommand {
             // Try first home
             List<HomeData> homes = homeService.getHomes(player.getUniqueId());
             if (homes.isEmpty()) {
-                player.sendMessage(i18n("你还没有设置任何家"));
+                player.sendMessage(i18n("essentials.home.none"));
                 return;
             }
             result = homeService.teleportToHome(player, homes.get(0).getName());
@@ -59,7 +59,7 @@ public class HomeCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<name>")
     public void teleportToHome(@CmdSender Player player, @CmdParam("name") String name) {
         if (!config.isHomeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         
@@ -70,22 +70,22 @@ public class HomeCommand extends BaseEssentialsCommand {
     private void handleTeleportResult(Player player, TeleportResult result) {
         switch (result) {
             case SUCCESS:
-                player.sendMessage(i18n("传送成功！"));
+                player.sendMessage(i18n("essentials.teleport.success"));
                 break;
             case WARMUP_STARTED:
-                player.sendMessage(i18n("传送预热中，请不要移动..."));
+                player.sendMessage(i18n("essentials.teleport.warmup_do_not_move"));
                 break;
             case NOT_FOUND:
-                player.sendMessage(i18n("找不到该家"));
+                player.sendMessage(i18n("essentials.home.not_found"));
                 break;
             case WORLD_NOT_FOUND:
-                player.sendMessage(i18n("目标世界不存在"));
+                player.sendMessage(i18n("essentials.teleport.world_not_found"));
                 break;
             case ALREADY_TELEPORTING:
-                player.sendMessage(i18n("你正在传送中"));
+                player.sendMessage(i18n("essentials.teleport.in_progress"));
                 break;
             case DISABLED:
-                player.sendMessage(i18n("该功能已禁用"));
+                player.sendMessage(i18n("essentials.error.feature_disabled"));
                 break;
         }
     }

@@ -12,7 +12,7 @@ import org.bukkit.inventory.ItemStack;
  * Command to view another player's armor and offhand.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"armorsee"}, permission = "ultiessentials.armorsee", description = "查看玩家装备")
+@CmdExecutor(alias = {"armorsee"}, permission = "ultiessentials.armorsee", description = "essentials.command.armorsee.description")
 public class ArmorseeCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -24,18 +24,18 @@ public class ArmorseeCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<player>")
     public void armorsee(@CmdSender Player sender, @CmdParam("player") Player target) {
         if (!config.isInvseeEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在或不在线"));
+            sender.sendMessage(i18n("essentials.error.player_not_found_or_offline"));
             return;
         }
 
         // Create a temporary display inventory
         Inventory armorInventory = Bukkit.createInventory(null, 9,
-                String.format(i18n("%s 的装备"), target.getName()));
+                String.format(i18n("essentials.armorsee.title"), target.getName()));
 
         ItemStack[] armor = target.getInventory().getArmorContents();
         // Place in reverse order: helmet, chestplate, leggings, boots
@@ -47,11 +47,11 @@ public class ArmorseeCommand extends BaseEssentialsCommand {
         armorInventory.setItem(5, target.getInventory().getItemInOffHand());
 
         sender.openInventory(armorInventory);
-        sender.sendMessage(String.format(i18n("正在查看 %s 的装备"), target.getName()));
+        sender.sendMessage(String.format(i18n("essentials.armorsee.viewing"), target.getName()));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /armorsee <玩家> 查看玩家装备"));
+        sender.sendMessage(i18n("essentials.help.armorsee"));
     }
 }

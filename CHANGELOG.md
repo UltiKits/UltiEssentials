@@ -243,6 +243,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Language keys were renamed from Chinese sentences to ASCII keys (for example `essentials.home.set`).
+  An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
+  the new keys; until then the renamed messages show the new built-in text. A server whose language
+  files were never edited needs no action.
+- 语言键已从中文句子改为 ASCII 键（例如 `essentials.home.set`）。改过本模块 `lang/en.json` 或
+  `lang/zh.json` 的运维需要把改动重新套到新键上；在此之前，这些消息显示新的内置文本。从未改过语言文件的服务器无需任何操作。
+
 - This module now declares `api-version: 630` in its `plugin.yml`, so it loads only on UltiTools
   6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools
   it would load with no cooldown at all, silently, so it now refuses to load there instead

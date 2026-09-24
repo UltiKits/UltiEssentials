@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @CmdExecutor(
     alias = {"delwarp", "deletewarp", "rmwarp", "removewarp"},
     permission = "ultiessentials.warp.delete",
-    description = "删除地标点"
+    description = "essentials.command.delwarp.description"
 )
 public class DelWarpCommand extends BaseEssentialsCommand {
     
@@ -33,23 +33,23 @@ public class DelWarpCommand extends BaseEssentialsCommand {
     public void delWarp(@CmdSender Player player, @CmdParam("name") String name) {
         switch (warpService.deleteWarp(name)) {
             case REMOVED:
-                player.sendMessage(i18n("已删除地标点: ") + name);
+                player.sendMessage(i18n("essentials.warp.deleted") + name);
                 break;
             case NOT_FOUND:
-                player.sendMessage(i18n("地标点不存在: ") + name);
+                player.sendMessage(i18n("essentials.warp.not_found") + name);
                 break;
             case FAILED:
                 // Distinct from NOT_FOUND: the warp is still there and still usable by everyone
                 // (gate 1 MAJOR-03).
-                player.sendMessage(i18n("§c删除失败，该地标点的记录无法从存储中移除，请联系管理员") + " (" + name + ")");
+                player.sendMessage(i18n("essentials.warp.delete_failed") + " (" + name + ")");
                 break;
         }
     }
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /delwarp <名称>"));
-        sender.sendMessage(i18n("删除指定的地标点"));
+        sender.sendMessage(i18n("essentials.help.delwarp.usage"));
+        sender.sendMessage(i18n("essentials.help.delwarp"));
     }
     
     @Override

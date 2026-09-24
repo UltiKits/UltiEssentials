@@ -10,7 +10,7 @@ import org.bukkit.entity.Player;
  * Command to restore player health.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"heal"}, permission = "ultiessentials.heal.self", description = "恢复生命值")
+@CmdExecutor(alias = {"heal"}, permission = "ultiessentials.heal.self", description = "essentials.command.heal.description")
 public class HealCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -22,13 +22,13 @@ public class HealCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void healSelf(@CmdSender Player player) {
         if (!config.isHealEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         double maxHealth = player.getAttribute(XAttribute.MAX_HEALTH.get()).getValue();
         player.setHealth(maxHealth);
-        player.sendMessage(i18n("生命值已恢复"));
+        player.sendMessage(i18n("essentials.heal.self"));
     }
 
     @CmdMapping(format = "<player>", permission = "ultiessentials.heal.other")
@@ -37,23 +37,23 @@ public class HealCommand extends BaseEssentialsCommand {
             @CmdParam("player") Player target) {
 
         if (!config.isHealEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在或不在线"));
+            sender.sendMessage(i18n("essentials.error.player_not_found_or_offline"));
             return;
         }
 
         double maxHealth = target.getAttribute(XAttribute.MAX_HEALTH.get()).getValue();
         target.setHealth(maxHealth);
-        sender.sendMessage(String.format(i18n("已恢复 %s 的生命值"), target.getName()));
-        target.sendMessage(i18n("你的生命值已被恢复"));
+        sender.sendMessage(String.format(i18n("essentials.heal.other"), target.getName()));
+        target.sendMessage(i18n("essentials.heal.target"));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /heal 恢复生命值"));
+        sender.sendMessage(i18n("essentials.help.heal"));
     }
 }

@@ -47,7 +47,7 @@ public class UltiEssentials extends UltiToolsPlugin {
         // All services are automatically initialized by IoC container via @PostConstruct
         repairStoredPrimaryKeys();
         warnAboutRemovedSettings();
-        getLogger().info(i18n("UltiEssentials 已启用！"));
+        getLogger().info(i18n("essentials.log.enabled"));
         return true;
     }
 

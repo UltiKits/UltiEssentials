@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Also acts as an event listener to track teleport locations.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"back"}, permission = "ultiessentials.back", description = "返回上一个传送点")
+@CmdExecutor(alias = {"back"}, permission = "ultiessentials.back", description = "essentials.command.back.description")
 @I18n("back.description")
 @EventListener
 public class BackCommand extends BaseEssentialsCommand implements Listener {
@@ -42,18 +42,18 @@ public class BackCommand extends BaseEssentialsCommand implements Listener {
     @CmdMapping(format = "")
     public void back(@CmdSender Player player) {
         if (!config.isBackEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         Location lastLocation = LAST_LOCATIONS.get(player.getUniqueId());
         if (lastLocation == null) {
-            player.sendMessage(i18n("没有可返回的位置"));
+            player.sendMessage(i18n("essentials.back.no_location"));
             return;
         }
 
         player.teleport(lastLocation);
-        player.sendMessage(i18n("已传送到上一个位置"));
+        player.sendMessage(i18n("essentials.back.success"));
     }
 
     /**
@@ -111,6 +111,6 @@ public class BackCommand extends BaseEssentialsCommand implements Listener {
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /back 返回上一个传送点"));
+        sender.sendMessage(i18n("essentials.help.back"));
     }
 }

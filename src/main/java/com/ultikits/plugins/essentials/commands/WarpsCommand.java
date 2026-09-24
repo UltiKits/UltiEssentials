@@ -21,7 +21,7 @@ import java.util.List;
 @CmdExecutor(
     alias = {"warps", "warplist", "listwarp"},
     permission = "ultiessentials.warp.list",
-    description = "列出所有地标点"
+    description = "essentials.command.warps.description"
 )
 public class WarpsCommand extends BaseEssentialsCommand {
     
@@ -33,11 +33,11 @@ public class WarpsCommand extends BaseEssentialsCommand {
         List<WarpData> accessibleWarps = warpService.getAccessibleWarps(player);
         
         if (accessibleWarps.isEmpty()) {
-            player.sendMessage(i18n("没有可用的地标点"));
+            player.sendMessage(i18n("essentials.warps.empty"));
             return;
         }
         
-        player.sendMessage(i18n("§6=== 地标点列表 ==="));
+        player.sendMessage(i18n("essentials.warps.header"));
         
         for (WarpData warp : accessibleWarps) {
             StringBuilder info = new StringBuilder();
@@ -54,13 +54,13 @@ public class WarpsCommand extends BaseEssentialsCommand {
             player.sendMessage(info.toString());
         }
         
-        player.sendMessage(i18n("§7共 ") + accessibleWarps.size() + 
-            i18n(" 个可用地标点"));
+        player.sendMessage(i18n("essentials.list.total_prefix") + accessibleWarps.size() + 
+            i18n("essentials.warps.total_suffix"));
     }
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /warps"));
-        sender.sendMessage(i18n("列出所有你可以访问的地标点"));
+        sender.sendMessage(i18n("essentials.help.warps.usage"));
+        sender.sendMessage(i18n("essentials.help.warps"));
     }
 }

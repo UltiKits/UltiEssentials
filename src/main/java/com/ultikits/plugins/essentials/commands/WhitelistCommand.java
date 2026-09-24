@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
  * Command to manage server whitelist.
  */
 @CmdTarget(CmdTarget.CmdTargetType.BOTH)
-@CmdExecutor(alias = {"wl"}, permission = "ultiessentials.whitelist.manage", description = "白名单管理")
+@CmdExecutor(alias = {"wl"}, permission = "ultiessentials.whitelist.manage", description = "essentials.command.whitelist.description")
 public class WhitelistCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -33,7 +33,7 @@ public class WhitelistCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "add <player>")
     public void add(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
         if (!config.isWhitelistEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
@@ -47,18 +47,18 @@ public class WhitelistCommand extends BaseEssentialsCommand {
         OfflinePlayer target = Bukkit.getOfflinePlayer(trimmedName);
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在"));
+            sender.sendMessage(i18n("essentials.whitelist.player_not_found"));
             return;
         }
 
         target.setWhitelisted(true);
-        sender.sendMessage(String.format(i18n("已将 %s 添加到白名单"), target.getName()));
+        sender.sendMessage(String.format(i18n("essentials.whitelist.added"), target.getName()));
     }
 
     @CmdMapping(format = "remove <player>")
     public void remove(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
         if (!config.isWhitelistEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
@@ -79,12 +79,12 @@ public class WhitelistCommand extends BaseEssentialsCommand {
                 .orElse(null);
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在"));
+            sender.sendMessage(i18n("essentials.whitelist.player_not_found"));
             return;
         }
 
         target.setWhitelisted(false);
-        sender.sendMessage(String.format(i18n("已将 %s 从白名单移除"), target.getName()));
+        sender.sendMessage(String.format(i18n("essentials.whitelist.removed"), target.getName()));
     }
 
     /**
@@ -104,10 +104,10 @@ public class WhitelistCommand extends BaseEssentialsCommand {
      */
     private String rejectInvalidPlayerName(String playerName) {
         if (playerName == null || playerName.isEmpty()) {
-            return i18n("玩家名不能为空");
+            return i18n("essentials.whitelist.name_empty");
         }
         if (playerName.length() > MAX_PLAYER_NAME_LENGTH) {
-            return i18n("玩家名过长，最多 16 个字符");
+            return i18n("essentials.whitelist.name_too_long");
         }
         return null;
     }
@@ -115,13 +115,13 @@ public class WhitelistCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "list")
     public void list(@CmdSender CommandSender sender) {
         if (!config.isWhitelistEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         Set<OfflinePlayer> whitelisted = Bukkit.getWhitelistedPlayers();
         if (whitelisted.isEmpty()) {
-            sender.sendMessage(i18n("白名单为空"));
+            sender.sendMessage(i18n("essentials.whitelist.empty"));
             return;
         }
 
@@ -129,52 +129,52 @@ public class WhitelistCommand extends BaseEssentialsCommand {
                 .map(OfflinePlayer::getName)
                 .collect(Collectors.joining(", "));
 
-        sender.sendMessage(String.format(i18n("白名单 (%d): %s"), whitelisted.size(), names));
+        sender.sendMessage(String.format(i18n("essentials.whitelist.list"), whitelisted.size(), names));
     }
 
     @CmdMapping(format = "on")
     public void enable(@CmdSender CommandSender sender) {
         if (!config.isWhitelistEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         Bukkit.setWhitelist(true);
-        sender.sendMessage(i18n("白名单已启用"));
+        sender.sendMessage(i18n("essentials.whitelist.enabled"));
     }
 
     @CmdMapping(format = "off")
     public void disable(@CmdSender CommandSender sender) {
         if (!config.isWhitelistEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         Bukkit.setWhitelist(false);
-        sender.sendMessage(i18n("白名单已禁用"));
+        sender.sendMessage(i18n("essentials.whitelist.disabled"));
     }
 
     @CmdMapping(format = "status")
     public void status(@CmdSender CommandSender sender) {
         if (!config.isWhitelistEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         boolean enabled = Bukkit.hasWhitelist();
         int count = Bukkit.getWhitelistedPlayers().size();
 
-        sender.sendMessage(String.format(i18n("白名单状态: %s, 人数: %d"),
-                enabled ? i18n("已启用") : i18n("已禁用"), count));
+        sender.sendMessage(String.format(i18n("essentials.whitelist.status"),
+                enabled ? i18n("essentials.whitelist.state_on") : i18n("essentials.whitelist.state_off"), count));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("白名单命令帮助:"));
-        sender.sendMessage(i18n("/wl add <玩家> - 添加玩家到白名单"));
-        sender.sendMessage(i18n("/wl remove <玩家> - 从白名单移除玩家"));
-        sender.sendMessage(i18n("/wl list - 查看白名单列表"));
-        sender.sendMessage(i18n("/wl on/off - 启用/禁用白名单"));
-        sender.sendMessage(i18n("/wl status - 查看白名单状态"));
+        sender.sendMessage(i18n("essentials.help.whitelist.header"));
+        sender.sendMessage(i18n("essentials.help.whitelist.add"));
+        sender.sendMessage(i18n("essentials.help.whitelist.remove"));
+        sender.sendMessage(i18n("essentials.help.whitelist.list"));
+        sender.sendMessage(i18n("essentials.help.whitelist.toggle"));
+        sender.sendMessage(i18n("essentials.help.whitelist.status"));
     }
 }

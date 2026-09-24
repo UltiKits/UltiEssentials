@@ -27,7 +27,7 @@ import java.util.UUID;
 @CmdExecutor(
     alias = {"ban", "eban"},
     permission = "ultiessentials.ban",
-    description = "封禁玩家"
+    description = "essentials.command.ban.description"
 )
 public class BanCommand extends BaseEssentialsCommand {
     
@@ -51,7 +51,7 @@ public class BanCommand extends BaseEssentialsCommand {
     ) {
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
         if (target.getUniqueId() == null && !target.hasPlayedBefore()) {
-            sender.sendMessage(i18n("§c玩家不存在: ") + playerName);
+            sender.sendMessage(i18n("essentials.ban.player_not_found") + playerName);
             return;
         }
         
@@ -68,15 +68,15 @@ public class BanCommand extends BaseEssentialsCommand {
         
         switch (result) {
             case SUCCESS:
-                announce(sender, i18n("§c[封禁] §f") +
+                announce(sender, i18n("essentials.ban.broadcast_prefix") +
                     target.getName() + " §7被 " + operatorName + " 永久封禁",
-                    i18n("§7原因: §f") + reason);
+                    i18n("essentials.ban.reason") + reason);
                 break;
             case ALREADY_BANNED:
-                sender.sendMessage(i18n("§c该玩家已被封禁"));
+                sender.sendMessage(i18n("essentials.ban.already_banned"));
                 break;
             case DISABLED:
-                sender.sendMessage(i18n("§c封禁功能已禁用"));
+                sender.sendMessage(i18n("essentials.ban.disabled"));
                 break;
             default:
                 // Handle unexpected result types
@@ -106,8 +106,8 @@ public class BanCommand extends BaseEssentialsCommand {
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /ban <玩家> [原因]"));
-        sender.sendMessage(i18n("永久封禁一个玩家"));
+        sender.sendMessage(i18n("essentials.help.ban.usage"));
+        sender.sendMessage(i18n("essentials.help.ban"));
     }
     
     @Override

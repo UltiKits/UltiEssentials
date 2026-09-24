@@ -26,7 +26,7 @@ import java.util.UUID;
 @CmdExecutor(
     alias = {"tempban", "tban"},
     permission = "ultiessentials.ban.temp",
-    description = "临时封禁玩家"
+    description = "essentials.command.tempban.description"
 )
 public class TempBanCommand extends BaseEssentialsCommand {
     
@@ -55,14 +55,14 @@ public class TempBanCommand extends BaseEssentialsCommand {
     ) {
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
         if (target.getUniqueId() == null && !target.hasPlayedBefore()) {
-            sender.sendMessage(i18n("§c玩家不存在: ") + playerName);
+            sender.sendMessage(i18n("essentials.ban.player_not_found") + playerName);
             return;
         }
         
         long durationMillis = BanService.parseDuration(duration);
         if (durationMillis <= 0) {
-            sender.sendMessage(i18n("§c无效的时长格式"));
-            sender.sendMessage(i18n("§7示例: 1d, 2h, 30m, 1w, 1d12h30m"));
+            sender.sendMessage(i18n("essentials.tempban.invalid_duration"));
+            sender.sendMessage(i18n("essentials.tempban.duration_example"));
             return;
         }
         
@@ -82,15 +82,15 @@ public class TempBanCommand extends BaseEssentialsCommand {
         switch (result) {
             case SUCCESS:
                 String durationStr = BanService.formatDuration(durationMillis);
-                announce(sender, i18n("§c[临时封禁] §f") +
+                announce(sender, i18n("essentials.tempban.broadcast_prefix") +
                     target.getName() + " §7被 " + operatorName + " 封禁 " + durationStr,
-                    i18n("§7原因: §f") + reason);
+                    i18n("essentials.ban.reason") + reason);
                 break;
             case ALREADY_BANNED:
-                sender.sendMessage(i18n("§c该玩家已被封禁"));
+                sender.sendMessage(i18n("essentials.ban.already_banned"));
                 break;
             case DISABLED:
-                sender.sendMessage(i18n("§c封禁功能已禁用"));
+                sender.sendMessage(i18n("essentials.ban.disabled"));
                 break;
         }
     }
@@ -117,10 +117,10 @@ public class TempBanCommand extends BaseEssentialsCommand {
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /tempban <玩家> <时长> [原因]"));
-        sender.sendMessage(i18n("临时封禁一个玩家"));
-        sender.sendMessage(i18n("§7时长格式: 1d(天), 2h(小时), 30m(分钟), 1w(周)"));
-        sender.sendMessage(i18n("§7可组合: 1d12h30m = 1天1小时30分钟"));
+        sender.sendMessage(i18n("essentials.help.tempban.usage"));
+        sender.sendMessage(i18n("essentials.help.tempban"));
+        sender.sendMessage(i18n("essentials.help.tempban.format"));
+        sender.sendMessage(i18n("essentials.help.tempban.combined"));
     }
     
     @Override

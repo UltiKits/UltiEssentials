@@ -132,6 +132,26 @@ class EssentialsLanguageTest {
     }
 
     @Test
+    @DisplayName("/tpa on cooldown under language: en gives the wait in English, unit included")
+    void tpaCooldown() throws Exception {
+        TpaService tpa = mock(TpaService.class);
+        Player sender = EssentialsTestHelper.createMockPlayer("Alice", UUID.randomUUID());
+        Player target = EssentialsTestHelper.createMockPlayer("Bob", UUID.randomUUID());
+        when(target.isOnline()).thenReturn(true);
+        when(server.getPlayer(eq("Bob"))).thenReturn(target);
+        when(tpa.sendTpaRequest(sender, target)).thenReturn(TpaService.TpaResult.ON_COOLDOWN);
+        when(tpa.getRemainingCooldown(sender.getUniqueId())).thenReturn(5);
+        TpaCommand command = new TpaCommand();
+        EssentialsTestHelper.setField(command, "plugin", en);
+        EssentialsTestHelper.setField(command, "tpaService", tpa);
+        EssentialsTestHelper.setField(command, "config", new EssentialsConfig());
+
+        command.sendTpa(sender, "Bob");
+
+        assertThat(said(sender)).containsExactly("Please wait before sending another request (5s)");
+    }
+
+    @Test
     @DisplayName("the kick screen and a ban's remaining time under language: en are English")
     void kickScreen() throws Exception {
         BanService bans = new BanService();

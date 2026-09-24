@@ -177,7 +177,7 @@ states this is intentional reuse, not an oversight).
 | ultiessentials.warp.create | Create a warp at the sender's position with no access restriction, refusing if the (lowercased, trimmed) name is empty/over 32 characters or already exists | command | `/setwarp <name>` (aliases `/swarp`, `/addwarp`) | ultiessentials.warp.set | player | admin | brief | SetWarpCommand#setWarp |
 | ultiessentials.warp.create-with-permission | Create a warp at the sender's position gated behind the given permission node string, which is stored verbatim and checked later by `WarpService#canAccess` — no validation that the string is a syntactically well-formed or already-granted permission node | command | `/setwarp <name> <permission>` | ultiessentials.warp.set | player | admin | brief | SetWarpCommand#setWarpWithPermission |
 | ultiessentials.warp.delete | Delete a warp by name (server-wide — any holder of `warp.delete` may delete any warp, not only ones they created), reporting success only once the record is confirmed gone from the store (re-queried after the delete, because the framework's `delById` returns no affected-row count) and the not-found message otherwise. Three outcomes, not two: a record that is still there after the attempt is reported differently from one that was never there, because "no such record" tells the operator to stop looking while the record is still in force. | command | `/delwarp <name>` (aliases `/deletewarp`, `/rmwarp`, `/removewarp`) | ultiessentials.warp.delete | player | admin | brief | DelWarpCommand#delWarp |
-| ultiessentials.warp.list | List every warp the sender can access (owning no access permission or holding the warp's own), with world, one-decimal coordinates, and a `[Permission required]` marker on permission-gated entries (in the server's language since wave 3, UltiKits/UltiEssentials#26) | command | `/warps` (aliases `/warplist`, `/listwarp`) | ultiessentials.warp.list | player | player | brief | WarpsCommand#listWarps |
+| ultiessentials.warp.list | List every warp the sender can access (owning no access permission or holding the warp's own), with world, one-decimal coordinates, and a `[Permission required]` marker on permission-gated entries (in the server's language since this fix, UltiKits/UltiEssentials#26) | command | `/warps` (aliases `/warplist`, `/listwarp`) | ultiessentials.warp.list | player | player | brief | WarpsCommand#listWarps |
 
 ## TPA (Teleport Ask)
 
@@ -426,7 +426,7 @@ UltiEssentials — so every row's `Covers` column throughout this document is le
 
 **Language, `ultiessentials.i18n.language`:** every chat, kick-screen and console line this module
 writes goes through its language catalogue with an ASCII key (`essentials.home.set`), so it follows
-the framework's `language` setting. Before wave 3 most of this text rendered Chinese whatever
+the framework's `language` setting. Before this fix most of this text rendered Chinese whatever
 `language` said: 162 of the keys the source passed were Chinese sentences missing from both
 catalogues, and the kick screen, ban durations, lock refusals, the death-penalty summary and the
 ban broadcasts were Chinese literals (UltiKits/UltiEssentials#26). Two JUnit guards
@@ -599,5 +599,5 @@ Every chat, kick-screen and console line follows the framework-wide `language` s
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
-| ultiessentials.i18n.language | All of this module's chat, kick-screen and console text in the server's language: `lang/en.json` under `language: en`, `lang/zh.json` under `language: zh`, including the 162 messages that rendered Chinese in every language before wave 3 (UltiKits/UltiEssentials#26) | config | framework `config.yml: language` | n/a | both | admin | none | `lang/en.json`, `lang/zh.json`, every `i18n(...)` call |
+| ultiessentials.i18n.language | All of this module's chat, kick-screen and console text in the server's language: `lang/en.json` under `language: en`, `lang/zh.json` under `language: zh`, including the 162 messages that rendered Chinese in every language before this fix (UltiKits/UltiEssentials#26) | config | framework `config.yml: language` | n/a | both | admin | none | `lang/en.json`, `lang/zh.json`, every `i18n(...)` call |
 | ultiessentials.config.legacy-text-defaults | On start-up and `/ul reload`, a scoreboard title, scoreboard line list, tab-list header or tab-list footer that exactly equals the Chinese default an earlier version shipped is blanked and the file saved, so the language file's text is shown in the server's language; any other value is kept (maintainer ruling 2026-09-24 (d)) | config | start the server with an unedited 1.0.0 `config/essentials.yml` / `config/tabbar.yml` | n/a | n/a | admin | brief | EssentialsConfig#migrateLegacyDefaults, TabBarConfig#migrateLegacyDefaults, UltiEssentials#blankShippedTextDefaults |

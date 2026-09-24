@@ -38,10 +38,10 @@ for real-machine verification, not user-facing documentation.
   file rather than citing a single one of them.
 - **Shipped default language is `zh`.** Every row below whose Expected quotes a literal in-game or
   console line carries the precondition `language: en` set in `plugins/UltiTools/config.yml`, so
-  the observed line matches this document's English text exactly. Since wave 3
+  the observed line matches this document's English text exactly. Since this release
   (UltiKits/UltiEssentials#26) every chat, kick-screen and console line this module writes goes
   through its language catalogue; before it, most of them rendered Chinese whatever `language` said.
-  For a session that checks text wave 3 introduced or changed, move
+  For a session that checks text this release introduced or changed, move
   `plugins/UltiTools/pluginConfig/UltiEssentials/lang/` aside before the start so the jar's
   catalogues are extracted fresh (an upgraded install never refreshes an already-extracted
   language file, UltiKits/UltiTools-Reborn#459); see `ultiessentials.i18n.language`.

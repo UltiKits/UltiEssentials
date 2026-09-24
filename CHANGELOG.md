@@ -9,6 +9,30 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `language: en` now applies to this module's command, ban, kick and console text; most of it showed
+  Chinese in every language (UltiKits/UltiEssentials#26). 162 messages whose keys were missing from
+  both language files now have English and Chinese text: every command's help and description, the
+  home, warp, teleport-request, scoreboard, lock and ban command replies, and the teleport warmup and
+  cancel lines. Text that was fixed Chinese is now catalogued: the kick screen shown to a banned
+  player, ban and temp-ban durations, the ban, temp-ban and unban announcements, the default ban
+  reason (`No reason`) and the console's operator name (`Console`), the permission marker in
+  `/warps`, both chest-lock refusals and the death-penalty summary. Console lines that were fixed
+  English now follow `language` too: the start-up repair, reload and removed-setting warnings,
+  scheduled-command, chest-lock, home, warp, ban, name-prefix and sidebar diagnostics. English
+  wording of existing lines is unchanged except where it was a Chinese sentence shown to English
+  players. The death-penalty summary is now sent only when a penalty was applied; it used to be sent
+  whenever the line grew past ten characters. The teleport warmup line reads
+  `Teleporting in <n>s, please do not move...`; it used to show the raw key `teleport_warmup`, and a
+  cancelled warmup showed `teleport_cancelled_moved`.
+- `language: en` 现在对本模块的命令、封禁、踢出与控制台文本生效；此前大多数文本在任何语言下都显示中文
+  （UltiKits/UltiEssentials#26）。162 条键在两份语言文件中都缺失的消息现在有中英文文本：所有命令的帮助与描述，
+  家、地标点、传送请求、计分板、箱子锁与封禁命令的回复，以及传送预热与取消提示。原先写死为中文的文本现在进入语言文件：
+  封禁玩家看到的踢出界面、封禁与临时封禁时长、封禁/临时封禁/解封广播、默认封禁原因与控制台操作者名称、
+  `/warps` 中的权限标记、两种箱子锁拒绝提示以及死亡惩罚汇总。原先写死为英文的控制台日志现在也跟随 `language`：
+  启动修复、重载与已删除设置的警告，定时命令、箱子锁、家、地标点、封禁、名称前缀与侧边栏的诊断信息。
+  现有英文措辞不变。死亡惩罚汇总现在只在确有惩罚时发送（此前只要文本超过十个字符就发送）。传送预热提示为
+  「<n> 秒后传送，请不要移动...」；此前显示原始键 `teleport_warmup`，取消时显示 `teleport_cancelled_moved`。
+
 - Reloading this module (`/ul reload UltiEssentials`) now re-reads its configuration files and
   refreshes its language files, so an edited value such as `features.speed.max-speed` applies
   without a restart. Previously this module's reload method replaced the framework's and only
@@ -259,6 +283,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   （UltiKits/UltiEssentials#27、UltiKits/UltiTools-Reborn#531）。
 
 ### Removed
+
+- Seven language entries no code has displayed since wave 2 removed the helpers that used them
+  (`feature_disabled` and six `teleport_*` messages) were removed from both language files. Nothing
+  an operator or player sees changes.
+- 从两份语言文件中删除了七条自 wave 2 删除其调用方以来就不再显示的条目（`feature_disabled` 与六条 `teleport_*`
+  消息）。运维和玩家看到的内容没有任何变化。
 
 - The module's own "disabled" console line on unload (`UltiEssentials disabled!` under
   `language: en`) and its "configuration reloaded" console line on `/ul reload UltiEssentials`

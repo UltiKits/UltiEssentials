@@ -48,7 +48,7 @@ public class TpAcceptCommand extends BaseEssentialsCommand {
                 // Notify sender
                 Player sender = Bukkit.getPlayer(request.getSenderUuid());
                 if (sender != null && sender.isOnline()) {
-                    sender.sendMessage(player.getName() + " " + i18n("essentials.tpa.accepted_by"));
+                    sender.sendMessage(String.format(i18n("essentials.tpa.accepted_by"), player.getName()));
                 }
                 break;
             case SENDER_OFFLINE:

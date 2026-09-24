@@ -66,16 +66,13 @@ public class UltiEssentials extends UltiToolsPlugin {
     private void repairStoredPrimaryKeys() {
         EntityIdBackfillService repair = getContext().getBean(EntityIdBackfillService.class);
         if (repair == null) {
-            getLogger().warn("The stored-primary-key repair is unavailable; records written before "
-                    + "UltiKits/UltiEssentials#34 was fixed were left as they are");
+            getLogger().warn(i18n("essentials.log.repair_unavailable"));
             return;
         }
         try {
             repair.run();
         } catch (RuntimeException e) {
-            getLogger().error(e, "The stored-primary-key repair failed; records written before "
-                    + "UltiKits/UltiEssentials#34 was fixed were left as they are, and the repair "
-                    + "will run again on the next start-up");
+            getLogger().error(e, i18n("essentials.log.repair_failed"));
         }
     }
 
@@ -89,7 +86,7 @@ public class UltiEssentials extends UltiToolsPlugin {
      * 启动与每次重载时，对运维文件中仍残留的已删除配置项各报一条警告。
      */
     private void warnAboutRemovedSettings() {
-        for (String warning : RemovedConfigKeys.warningsFor(getContext().getBean(EssentialsConfig.class))) {
+        for (String warning : RemovedConfigKeys.warningsFor(getContext().getBean(EssentialsConfig.class), this)) {
             getLogger().warn(warning);
         }
     }
@@ -301,15 +298,13 @@ public class UltiEssentials extends UltiToolsPlugin {
     private <T> void reloadService(Class<T> type, Consumer<T> reload) {
         T service = getContext().getBean(type);
         if (service == null) {
-            getLogger().warn("The reload could not reach " + type.getSimpleName()
-                    + "; it is still running against the configuration it was started with");
+            getLogger().warn(String.format(i18n("essentials.log.reload_unreachable"), type.getSimpleName()));
             return;
         }
         try {
             reload.accept(service);
         } catch (RuntimeException e) {
-            getLogger().error(e, "Reload of " + type.getSimpleName()
-                    + " failed; the other services were still reloaded");
+            getLogger().error(e, String.format(i18n("essentials.log.reload_failed"), type.getSimpleName()));
         }
     }
 }

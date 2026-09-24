@@ -162,8 +162,7 @@ public class WarpService {
         }
         warpOperator.delById(warp.getId());
         if (getWarp(normalizedName) != null) {
-            log.error("Warp '{}' is still stored after a delete of record {}; "
-                    + "reporting the deletion as failed", normalizedName, warp.getId());
+            log.error(plugin.i18n("essentials.log.warp_delete_not_applied"), normalizedName, warp.getId());
             return DeleteResult.FAILED;
         }
         return DeleteResult.REMOVED;

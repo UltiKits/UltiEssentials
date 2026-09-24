@@ -43,7 +43,7 @@ public class TempBanCommand extends BaseEssentialsCommand {
         @CmdParam("player") String playerName,
         @CmdParam("duration") String duration
     ) {
-        tempbanWithReason(sender, playerName, duration, "无理由");
+        tempbanWithReason(sender, playerName, duration, i18n("essentials.ban.no_reason"));
     }
     
     @CmdMapping(format = "<player> <duration> <reason>")
@@ -67,7 +67,7 @@ public class TempBanCommand extends BaseEssentialsCommand {
         }
         
         UUID operatorUuid = sender instanceof Player ? ((Player) sender).getUniqueId() : null;
-        String operatorName = sender instanceof Player ? sender.getName() : "Console";
+        String operatorName = sender instanceof Player ? sender.getName() : i18n("essentials.ban.console");
         
         BanService.BanResult result = banService.banPlayer(
             target.getUniqueId(),
@@ -81,10 +81,9 @@ public class TempBanCommand extends BaseEssentialsCommand {
         
         switch (result) {
             case SUCCESS:
-                String durationStr = BanService.formatDuration(durationMillis);
-                announce(sender, i18n("essentials.tempban.broadcast_prefix") +
-                    target.getName() + " §7被 " + operatorName + " 封禁 " + durationStr,
-                    i18n("essentials.ban.reason") + reason);
+                String durationStr = banService.formatDuration(durationMillis);
+                announce(sender, String.format(i18n("essentials.tempban.broadcast"), target.getName(), operatorName,
+                    durationStr), i18n("essentials.ban.reason") + reason);
                 break;
             case ALREADY_BANNED:
                 sender.sendMessage(i18n("essentials.ban.already_banned"));

@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.Service;
@@ -32,6 +33,9 @@ public class ScoreboardService {
     @Autowired
     private EssentialsConfig config;
 
+    @Autowired
+    private UltiToolsPlugin plugin;
+
     private Plugin bukkitPlugin;
 
     // Player UUIDs with active scoreboards
@@ -60,7 +64,7 @@ public class ScoreboardService {
         this.manager = Bukkit.getScoreboardManager();
 
         if (manager == null) {
-            log.warn("Failed to get scoreboard manager, scoreboard feature disabled");
+            log.warn(plugin.i18n("essentials.log.scoreboard_manager_missing"));
             return;
         }
         
@@ -106,14 +110,12 @@ public class ScoreboardService {
             updateScoreboard(player);
         } catch (RuntimeException e) {
             if (updateFailures.firstFailure(uuid)) {
-                failureLog.error("Could not update the sidebar for {}; it will be retried on every scoreboard update, "
-                    + "and this failure is not logged again until an update for that player succeeds",
-                    player.getName(), e);
+                failureLog.error(plugin.i18n("essentials.log.sidebar_failed"), player.getName(), e);
             }
             return;
         }
         if (updateFailures.recovered(uuid)) {
-            failureLog.info("The sidebar for {} updates again", player.getName());
+            failureLog.info(plugin.i18n("essentials.log.sidebar_recovered"), player.getName());
         }
     }
 
@@ -262,8 +264,7 @@ public class ScoreboardService {
                 try {
                     player.setScoreboard(manager.getMainScoreboard());
                 } catch (RuntimeException e) {
-                    failureLog.error("Could not return {} to the main scoreboard; the other players were still reset",
-                        player.getName(), e);
+                    failureLog.error(plugin.i18n("essentials.log.scoreboard_reset_failed"), player.getName(), e);
                 }
             }
         }
@@ -305,9 +306,7 @@ public class ScoreboardService {
                     } catch (RuntimeException e) {
                         // enableScoreboard has already marked the player as shown, so the update
                         // task retries the sidebar every interval; the other players are unaffected.
-                        failureLog.error("Could not rebuild the sidebar for {} after a reload; it will be "
-                            + "retried on the next scoreboard update, and the other players were still restored",
-                            player.getName(), e);
+                        failureLog.error(plugin.i18n("essentials.log.sidebar_reload_failed"), player.getName(), e);
                     }
                 }
             }

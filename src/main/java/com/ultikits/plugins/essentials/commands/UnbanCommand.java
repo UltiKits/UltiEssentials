@@ -58,16 +58,13 @@ public class UnbanCommand extends BaseEssentialsCommand {
             // as a full unban, and broadcasting it, would tell everyone the player can
             // rejoin when the server will still reject them. See
             // BanService#isBannedInServerBanList.
-            sender.sendMessage(i18n("essentials.unban.plugin_only_prefix") + playerName +
-                i18n("essentials.unban.plugin_only_suffix"));
+            sender.sendMessage(String.format(i18n("essentials.unban.plugin_only"), playerName));
         } else if (success) {
-            sender.sendMessage(i18n("essentials.unban.success_prefix") + playerName +
-                i18n("essentials.unban.success_suffix"));
+            sender.sendMessage(String.format(i18n("essentials.unban.success"), playerName));
             // features.ban.broadcast-unban (UltiKits/UltiEssentials#27). The issuer has just been
             // told above, so with the switch off nothing is lost but the server-wide line.
             if (config.isUnbanBroadcast()) {
-                Bukkit.broadcastMessage(i18n("essentials.unban.broadcast_prefix") +
-                    playerName + " §7的封禁已被解除");
+                Bukkit.broadcastMessage(String.format(i18n("essentials.unban.broadcast"), playerName));
             }
         } else if (banService.isBannedInServerBanList(playerName)) {
             // banPlayer() never writes to the server's own ban list, so a name absent from this

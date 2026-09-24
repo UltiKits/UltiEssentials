@@ -150,7 +150,7 @@ public class TeleportService {
                 }
                 
                 // Show countdown message
-                player.sendMessage(i18n("essentials.teleport.warmup") + " " + countdown + "s");
+                player.sendMessage(String.format(i18n("essentials.teleport.warmup"), countdown));
                 countdown--;
             }
         }.runTaskTimer(bukkitPlugin, 0L, 20L);

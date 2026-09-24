@@ -48,14 +48,13 @@ public class WarpsCommand extends BaseEssentialsCommand {
             info.append(", ").append(String.format("%.1f", warp.getZ())).append(")");
             
             if (warp.getPermission() != null && !warp.getPermission().isEmpty()) {
-                info.append(" §c[需要权限]");
+                info.append(" ").append(i18n("essentials.warps.permission_required"));
             }
             
             player.sendMessage(info.toString());
         }
         
-        player.sendMessage(i18n("essentials.list.total_prefix") + accessibleWarps.size() + 
-            i18n("essentials.warps.total_suffix"));
+        player.sendMessage(String.format(i18n("essentials.warps.total"), accessibleWarps.size()));
     }
     
     @Override

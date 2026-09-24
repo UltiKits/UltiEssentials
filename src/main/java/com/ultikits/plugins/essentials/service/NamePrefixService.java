@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.Service;
@@ -31,6 +32,9 @@ public class NamePrefixService {
     
     @Autowired
     private EssentialsConfig config;
+
+    @Autowired
+    private UltiToolsPlugin plugin;
 
     private Plugin bukkitPlugin;
     private BukkitTask updateTask;
@@ -106,14 +110,12 @@ public class NamePrefixService {
                 playerTeams.remove(uuid);
             }
             if (updateFailures.firstFailure(uuid)) {
-                failureLog.error("Could not update the name prefix for {}; it will be retried on every update, "
-                    + "and this failure is not logged again until an update for that player succeeds",
-                    player.getName(), e);
+                failureLog.error(plugin.i18n("essentials.log.name_prefix_failed"), player.getName(), e);
             }
             return;
         }
         if (updateFailures.recovered(uuid)) {
-            failureLog.info("The name prefix for {} updates again", player.getName());
+            failureLog.info(plugin.i18n("essentials.log.name_prefix_recovered"), player.getName());
         }
     }
     
@@ -231,8 +233,7 @@ public class NamePrefixService {
                 // Name the player when they are online; only the UUID is known otherwise.
                 Player player = Bukkit.getPlayer(recorded.getKey());
                 Object who = player != null ? player.getName() : recorded.getKey();
-                failureLog.error("Could not clear the name-prefix team of player {}; the other teams were still cleared",
-                    who, e);
+                failureLog.error(plugin.i18n("essentials.log.name_prefix_clear_failed"), who, e);
             }
         }
         playerTeams.clear();

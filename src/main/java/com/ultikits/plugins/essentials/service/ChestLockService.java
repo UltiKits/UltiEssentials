@@ -94,7 +94,7 @@ public class ChestLockService {
         for (ChestLockData lock : allLocks) {
             lockCache.put(lock.getLocationKey(), lock);
         }
-        log.info("Loaded {} chest locks into cache", lockCache.size());
+        log.info(plugin.i18n("essentials.log.locks_loaded"), lockCache.size());
     }
     
     /**
@@ -292,10 +292,7 @@ public class ChestLockService {
             for (ChestLockData lock : locks) {
                 kept.append(' ').append(lock.getLocationKey());
             }
-            log.error("Could not remove the {} lock record(s) protecting this container, so none of "
-                    + "them was removed and all of them stay in the cache -- the container keeps "
-                    + "reporting as locked rather than half-unlocked. Locations:{}",
-                    locks.size(), kept, e);
+            log.error(plugin.i18n("essentials.log.unlock_not_applied"), locks.size(), kept, e);
             return false;
         }
         for (ChestLockData lock : locks) {

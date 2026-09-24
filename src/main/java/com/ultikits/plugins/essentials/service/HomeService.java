@@ -137,13 +137,12 @@ public class HomeService {
             try {
                 homeOperator.update(existingHome);
             } catch (IllegalAccessException e) {
-                log.error("Failed to update home", e);
+                log.error(plugin.i18n("essentials.log.home_update_failed"), e);
             }
             HomeData stored = getHome(playerUuid, normalizedName);
             if (stored == null || !storesTheSamePlaceAs(stored, target)) {
-                log.error("Home '{}' of player {} still reads as {} after moving it to {}; "
-                        + "reporting the move as failed", normalizedName, playerUuid,
-                        stored == null ? "absent" : describe(stored), describe(target));
+                log.error(plugin.i18n("essentials.log.home_move_not_stored"), normalizedName, playerUuid,
+                        stored == null ? plugin.i18n("essentials.log.home_absent") : describe(stored), describe(target));
                 return SetHomeResult.FAILED;
             }
             return SetHomeResult.UPDATED;
@@ -199,8 +198,7 @@ public class HomeService {
         }
         homeOperator.delById(home.getId());
         if (getHome(playerUuid, normalizedName) != null) {
-            log.error("Home '{}' of player {} is still stored after a delete of record {}; "
-                    + "reporting the deletion as failed", normalizedName, playerUuid, home.getId());
+            log.error(plugin.i18n("essentials.log.home_delete_not_applied"), normalizedName, playerUuid, home.getId());
             return DeleteResult.FAILED;
         }
         return DeleteResult.REMOVED;

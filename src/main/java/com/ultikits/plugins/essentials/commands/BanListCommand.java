@@ -68,19 +68,17 @@ public class BanListCommand extends BaseEssentialsCommand {
             if (ban.isPermanent()) {
                 info.append(i18n("essentials.banlist.permanent"));
             } else {
-                info.append(i18n("essentials.banlist.remaining"));
-                info.append(BanService.formatDuration(ban.getRemainingTime()));
-                info.append("§7]");
+                info.append(String.format(i18n("essentials.banlist.remaining"),
+                    banService.formatDuration(ban.getRemainingTime())));
             }
 
             sender.sendMessage(info.toString());
             sender.sendMessage(i18n("essentials.banlist.reason") + ban.getReason());
-            sender.sendMessage(i18n("essentials.banlist.operator") + ban.getBannedByName() +
-                i18n("essentials.banlist.at") + DATE_FORMAT.format(new Date(ban.getBanTime())));
+            sender.sendMessage(String.format(i18n("essentials.banlist.operator"), ban.getBannedByName(),
+                DATE_FORMAT.format(new Date(ban.getBanTime()))));
         }
         
-        sender.sendMessage(i18n("essentials.list.total_prefix") + allBans.size() + 
-            i18n("essentials.banlist.total_suffix"));
+        sender.sendMessage(String.format(i18n("essentials.banlist.total"), allBans.size()));
         
         if (totalPages > 1) {
             sender.sendMessage(i18n("essentials.banlist.more"));

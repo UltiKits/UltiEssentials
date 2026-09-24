@@ -40,7 +40,7 @@ public class BanCommand extends BaseEssentialsCommand {
     
     @CmdMapping(format = "<player>")
     public void ban(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
-        banWithReason(sender, playerName, "无理由");
+        banWithReason(sender, playerName, i18n("essentials.ban.no_reason"));
     }
     
     @CmdMapping(format = "<player> <reason>")
@@ -56,7 +56,7 @@ public class BanCommand extends BaseEssentialsCommand {
         }
         
         UUID operatorUuid = sender instanceof Player ? ((Player) sender).getUniqueId() : null;
-        String operatorName = sender instanceof Player ? sender.getName() : "Console";
+        String operatorName = sender instanceof Player ? sender.getName() : i18n("essentials.ban.console");
         
         BanService.BanResult result = banService.banPlayer(
             target.getUniqueId(),
@@ -68,8 +68,7 @@ public class BanCommand extends BaseEssentialsCommand {
         
         switch (result) {
             case SUCCESS:
-                announce(sender, i18n("essentials.ban.broadcast_prefix") +
-                    target.getName() + " §7被 " + operatorName + " 永久封禁",
+                announce(sender, String.format(i18n("essentials.ban.broadcast"), target.getName(), operatorName),
                     i18n("essentials.ban.reason") + reason);
                 break;
             case ALREADY_BANNED:

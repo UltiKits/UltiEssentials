@@ -47,9 +47,9 @@ public class TpaCommand extends BaseEssentialsCommand {
     private void handleResult(Player sender, Player target, TpaService.TpaResult result) {
         switch (result) {
             case SENT:
-                sender.sendMessage(i18n("essentials.tpa.sent") + " " + target.getName());
+                sender.sendMessage(String.format(i18n("essentials.tpa.sent"), target.getName()));
                 sender.sendMessage(i18n("essentials.tpa.waiting"));
-                target.sendMessage(sender.getName() + " " + i18n("essentials.tpa.request_to_you"));
+                target.sendMessage(String.format(i18n("essentials.tpa.request_to_you"), sender.getName()));
                 target.sendMessage(i18n("essentials.tpa.hint"));
                 break;
             case SELF_REQUEST:

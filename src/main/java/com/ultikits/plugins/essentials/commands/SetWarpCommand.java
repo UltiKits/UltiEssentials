@@ -46,8 +46,7 @@ public class SetWarpCommand extends BaseEssentialsCommand {
         switch (result) {
             case CREATED:
                 if (permission != null && !permission.isEmpty()) {
-                    player.sendMessage(i18n("essentials.warp.created") + name +
-                        i18n("essentials.warp.created_permission") + permission + ")");
+                    player.sendMessage(String.format(i18n("essentials.warp.created_with_permission"), name, permission));
                 } else {
                     player.sendMessage(i18n("essentials.warp.created") + name);
                 }

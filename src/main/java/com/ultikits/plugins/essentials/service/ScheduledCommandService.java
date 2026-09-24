@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.PostConstruct;
@@ -28,6 +29,9 @@ public class ScheduledCommandService {
     @Autowired
     private EssentialsConfig config;
 
+    @Autowired
+    private UltiToolsPlugin plugin;
+
     private Plugin bukkitPlugin;
     private final List<BukkitTask> tasks = new ArrayList<>();
 
@@ -48,7 +52,7 @@ public class ScheduledCommandService {
         for (String entry : config.getScheduledCommands()) {
             int colonIndex = entry.indexOf(':');
             if (colonIndex <= 0) {
-                log.warn("Invalid scheduled command entry (missing interval): {}", entry);
+                log.warn(plugin.i18n("essentials.log.scheduled_missing_interval"), entry);
                 continue;
             }
 
@@ -56,18 +60,18 @@ public class ScheduledCommandService {
             try {
                 interval = Integer.parseInt(entry.substring(0, colonIndex));
             } catch (NumberFormatException e) {
-                log.warn("Invalid interval in scheduled command entry: {}", entry);
+                log.warn(plugin.i18n("essentials.log.scheduled_invalid_interval"), entry);
                 continue;
             }
 
             if (interval <= 0) {
-                log.warn("Interval must be positive in scheduled command entry: {}", entry);
+                log.warn(plugin.i18n("essentials.log.scheduled_interval_not_positive"), entry);
                 continue;
             }
 
             String command = entry.substring(colonIndex + 1).trim();
             if (command.isEmpty()) {
-                log.warn("Empty command in scheduled command entry: {}", entry);
+                log.warn(plugin.i18n("essentials.log.scheduled_empty_command"), entry);
                 continue;
             }
 
@@ -79,7 +83,7 @@ public class ScheduledCommandService {
             }.runTaskTimer(bukkitPlugin, interval * 20L, interval * 20L);
 
             tasks.add(task);
-            log.info("Scheduled command (every {}s): {}", interval, command);
+            log.info(plugin.i18n("essentials.log.scheduled_started"), interval, command);
         }
     }
 

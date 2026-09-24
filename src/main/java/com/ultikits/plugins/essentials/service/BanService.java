@@ -95,7 +95,7 @@ public class BanService {
             .uuid(UUID.randomUUID())
             .playerUuid(targetUuid.toString())
             .playerName(targetName)
-            .reason(reason != null ? reason : "无理由")
+            .reason(reason != null ? reason : plugin.i18n("essentials.ban.no_reason"))
             .bannedBy(operatorUuid != null ? operatorUuid.toString() : null)
             .bannedByName(operatorName)
             .banTime(now)
@@ -208,14 +208,13 @@ public class BanService {
             try {
                 banOperator.update(ban);
             } catch (IllegalAccessException e) {
-                log.error("Failed to update ban record", e);
+                log.error(plugin.i18n("essentials.log.ban_update_failed"), e);
             }
         }
 
         List<BanData> stillActive = activeBansMatching(column, value);
         if (!stillActive.isEmpty()) {
-            log.error("{} still has {} active ban record(s) after an unban of {} record(s); "
-                    + "reporting the unban as failed", subject, stillActive.size(), activeBans.size());
+            log.error(plugin.i18n("essentials.log.unban_still_active"), subject, stillActive.size(), activeBans.size());
             return UnbanResult.FAILED;
         }
         return UnbanResult.REMOVED;
@@ -290,26 +289,27 @@ public class BanService {
      */
     public String formatKickMessage(BanData ban) {
         StringBuilder message = new StringBuilder();
-        message.append("§c你已被封禁\n\n");
-        message.append("§7原因: §f").append(ban.getReason()).append("\n");
-        message.append("§7操作者: §f").append(ban.getBannedByName()).append("\n");
+        message.append(plugin.i18n("essentials.ban.kick.title")).append("\n\n");
+        message.append(String.format(plugin.i18n("essentials.ban.kick.reason"), ban.getReason())).append("\n");
+        message.append(String.format(plugin.i18n("essentials.ban.kick.operator"), ban.getBannedByName())).append("\n");
         
         if (ban.isPermanent()) {
-            message.append("§7时长: §c永久封禁\n");
+            message.append(plugin.i18n("essentials.ban.kick.permanent")).append("\n");
         } else {
-            message.append("§7剩余时间: §f").append(formatDuration(ban.getRemainingTime())).append("\n");
+            message.append(String.format(plugin.i18n("essentials.ban.kick.remaining"),
+                    formatDuration(ban.getRemainingTime()))).append("\n");
         }
         
-        message.append("\n§7如有异议，请联系服务器管理员");
+        message.append("\n").append(plugin.i18n("essentials.ban.kick.appeal"));
         return message.toString();
     }
     
     /**
-     * Formats duration in human-readable format.
+     * Formats duration in human-readable format, in the server's language.
      */
-    public static String formatDuration(long millis) {
+    public String formatDuration(long millis) {
         if (millis <= 0) {
-            return "已过期";
+            return plugin.i18n("essentials.duration.expired");
         }
         
         long days = TimeUnit.MILLISECONDS.toDays(millis);
@@ -318,10 +318,10 @@ public class BanService {
         long seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60;
         
         StringBuilder sb = new StringBuilder();
-        if (days > 0) sb.append(days).append("天 ");
-        if (hours > 0) sb.append(hours).append("小时 ");
-        if (minutes > 0) sb.append(minutes).append("分钟 ");
-        if (seconds > 0 || sb.length() == 0) sb.append(seconds).append("秒");
+        if (days > 0) sb.append(String.format(plugin.i18n("essentials.duration.days"), days)).append(' ');
+        if (hours > 0) sb.append(String.format(plugin.i18n("essentials.duration.hours"), hours)).append(' ');
+        if (minutes > 0) sb.append(String.format(plugin.i18n("essentials.duration.minutes"), minutes)).append(' ');
+        if (seconds > 0 || sb.length() == 0) sb.append(String.format(plugin.i18n("essentials.duration.seconds"), seconds));
         
         return sb.toString().trim();
     }

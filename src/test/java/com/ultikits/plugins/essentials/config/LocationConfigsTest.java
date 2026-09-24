@@ -175,8 +175,9 @@ class LocationConfigsTest {
         void shouldHaveDefaultValues() {
             TabBarConfig config = new TabBarConfig();
 
-            assertThat(config.getHeader()).isEqualTo("&6=== 服务器名称 ===");
-            assertThat(config.getFooter()).isEqualTo("&7在线: &e%online%&7/&e%max%");
+            // Blank by default: the tab list shows the language file's text (ruling 2026-09-24 (d)).
+            assertThat(config.getHeader()).isNotNull().isEmpty();
+            assertThat(config.getFooter()).isNotNull().isEmpty();
         }
 
         @Test

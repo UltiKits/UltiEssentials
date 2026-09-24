@@ -200,6 +200,31 @@ class UltiEssentialsRemovedConfigKeyTest {
         assertThat(startUpWarnings()).isEmpty();
     }
 
+    // ==================== legacy text defaults (maintainer ruling 2026-09-24 (d)) ====================
+
+    @Test
+    @DisplayName("Start-up blanks a scoreboard title still at an earlier version's shipped default, and saves it")
+    void startUpBlanksTheShippedScoreboardTitle() throws Exception {
+        boot("features:\n  scoreboard:\n    title: \"&6&l\u670d\u52a1\u5668\u4fe1\u606f\"\n");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(config.getScoreboardTitle()).isEmpty();
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getString("features.scoreboard.title")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Start-up keeps a customised scoreboard title, in memory and in the file")
+    void startUpKeepsACustomisedScoreboardTitle() throws Exception {
+        boot("features:\n  scoreboard:\n    title: \"&bMy Server\"\n");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(config.getScoreboardTitle()).isEqualTo("&bMy Server");
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getString("features.scoreboard.title"))
+                .isEqualTo("&bMy Server");
+    }
+
     // ==================== helpers ====================
 
     private static void assertOneWarningNaming(List<String> warnings, String key, String whereItWent) {

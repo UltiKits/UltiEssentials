@@ -305,9 +305,9 @@ class EssentialsConfigFullTest {
         @DisplayName("Should have correct scoreboard defaults")
         void shouldHaveScoreboardDefaults() {
             assertThat(config.getScoreboardUpdateInterval()).isEqualTo(1);
-            assertThat(config.getScoreboardTitle()).contains("服务器信息");
-            assertThat(config.getScoreboardLines()).isNotEmpty();
-            assertThat(config.getScoreboardLines()).hasSizeGreaterThan(5);
+            // Blank by default: the scoreboard shows the language file's text (ruling 2026-09-24 (d)).
+            assertThat(config.getScoreboardTitle()).isNotNull().isEmpty();
+            assertThat(config.getScoreboardLines()).isNotNull().isEmpty();
         }
 
         @Test

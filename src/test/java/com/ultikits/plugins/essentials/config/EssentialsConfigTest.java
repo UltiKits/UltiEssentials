@@ -159,8 +159,9 @@ class EssentialsConfigTest {
             assertThat(config.isScoreboardEnabled()).isTrue();
             assertThat(config.isScoreboardAutoEnable()).isTrue();
             assertThat(config.getScoreboardUpdateInterval()).isEqualTo(1);
-            assertThat(config.getScoreboardTitle()).isNotEmpty();
-            assertThat(config.getScoreboardLines()).isNotEmpty();
+            // Blank by default: the scoreboard shows the language file's text (ruling 2026-09-24 (d)).
+            assertThat(config.getScoreboardTitle()).isNotNull().isEmpty();
+            assertThat(config.getScoreboardLines()).isNotNull().isEmpty();
         }
     }
 

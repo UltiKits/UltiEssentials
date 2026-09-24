@@ -112,6 +112,53 @@ class ScoreboardServiceBehaviorTest {
     }
 
     @Nested
+    @DisplayName("A blank title and empty lines show the language file's default (maintainer ruling 2026-09-24 (d))")
+    class DefaultTextTests {
+
+        private String titleShown(String language) throws Exception {
+            EssentialsTestHelper.setField(service, "manager", scoreboardManager);
+            EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin(language));
+            service.enableScoreboard(EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID()));
+            ArgumentCaptor<String> title = ArgumentCaptor.forClass(String.class);
+            verify(mockScoreboard).registerNewObjective(anyString(), anyString(), title.capture());
+            return title.getValue();
+        }
+
+        @Test
+        @DisplayName("blank title: the catalogue's title, in English under en")
+        void blankTitleInEnglish() throws Exception {
+            config.setScoreboardTitle("");
+            assertThat(titleShown("en")).isEqualTo("\u00a76\u00a7lServer Info");
+        }
+
+        @Test
+        @DisplayName("blank title: the catalogue's title, in Chinese under zh")
+        void blankTitleInChinese() throws Exception {
+            config.setScoreboardTitle("  ");
+            assertThat(titleShown("zh")).isEqualTo("\u00a76\u00a7l\u670d\u52a1\u5668\u4fe1\u606f");
+        }
+
+        @Test
+        @DisplayName("a customised title is shown unchanged")
+        void customisedTitleIsKept() throws Exception {
+            config.setScoreboardTitle("&bMy Server");
+            assertThat(titleShown("en")).isEqualTo("\u00a7bMy Server");
+        }
+
+        @Test
+        @DisplayName("empty lines: the catalogue's lines, in the server's language")
+        void emptyLinesShowTheCatalogueLines() throws Exception {
+            config.setScoreboardTitle("x");
+            config.setScoreboardLines(new java.util.ArrayList<String>());
+            titleShown("en");
+            ArgumentCaptor<String> lines = ArgumentCaptor.forClass(String.class);
+            verify(mockObjective, atLeastOnce()).getScore(lines.capture());
+            assertThat(lines.getAllValues()).anyMatch(l -> l.startsWith("\u00a77Welcome, "))
+                    .anyMatch(l -> l.startsWith("\u00a76Online: "));
+        }
+    }
+
+    @Nested
     @DisplayName("ensureUnique (via updateScoreboard)")
     class EnsureUniqueTests {
 
@@ -177,7 +224,9 @@ class ScoreboardServiceBehaviorTest {
 
                 service.enableScoreboard(player);
 
-                papi.verify(() -> PlaceholderAPI.setPlaceholders(eq(player), anyString()));
+                // The empty lines now show the language file's default lines, which go through
+                // PlaceholderAPI too, so the title is not the only call.
+                papi.verify(() -> PlaceholderAPI.setPlaceholders(eq(player), anyString()), atLeastOnce());
                 verify(mockScoreboard).registerNewObjective(eq("ultiessentials"), eq("dummy"), eq("PAPI-RESOLVED"));
             }
         }

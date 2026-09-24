@@ -80,15 +80,14 @@ class OtherConfigsTest {
         @Test
         @DisplayName("Should have default header")
         void shouldHaveDefaultHeader() {
-            assertThat(config.getHeader()).isNotNull();
-            assertThat(config.getHeader()).isNotEmpty();
+            // Blank by default: the tab list shows the language file's text (ruling 2026-09-24 (d)).
+            assertThat(config.getHeader()).isNotNull().isEmpty();
         }
 
         @Test
         @DisplayName("Should have default footer")
         void shouldHaveDefaultFooter() {
-            assertThat(config.getFooter()).isNotNull();
-            assertThat(config.getFooter()).isNotEmpty();
+            assertThat(config.getFooter()).isNotNull().isEmpty();
         }
 
         @Test

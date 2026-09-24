@@ -2,6 +2,7 @@ package com.ultikits.plugins.essentials;
 
 import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
+import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
@@ -223,6 +224,42 @@ class UltiEssentialsRemovedConfigKeyTest {
         assertThat(config.getScoreboardTitle()).isEqualTo("&bMy Server");
         assertThat(YamlConfiguration.loadConfiguration(configFile).getString("features.scoreboard.title"))
                 .isEqualTo("&bMy Server");
+    }
+
+    @Test
+    @DisplayName("Start-up blanks scoreboard lines still at the list earlier versions shipped, and saves them")
+    void startUpBlanksTheShippedScoreboardLines() throws Exception {
+        boot("features:\n  scoreboard:\n    lines:\n"
+                + "    - \"&7\u6b22\u8fce, &e%player_name%\"\n    - \"&7\"\n"
+                + "    - \"&6\u5728\u7ebf\u73a9\u5bb6: &f%online_players%/%max_players%\"\n"
+                + "    - \"&6\u5f53\u524d\u4e16\u754c: &f%player_world%\"\n    - \"&7\"\n"
+                + "    - \"&6\u751f\u547d\u503c: &c%player_health%\"\n    - \"&6\u9965\u997f\u503c: &a%player_food%\"\n"
+                + "    - \"&6\u7b49\u7ea7: &e%player_level%\"\n    - \"&7\"\n    - \"&ewww.example.com\"\n");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(config.getScoreboardLines()).isEmpty();
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getStringList("features.scoreboard.lines")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Start-up blanks a tab-list header and footer still at the shipped default, and saves tabbar.yml")
+    void startUpBlanksTheShippedTabBarText() throws Exception {
+        File tabBarFile = moduleFolder.resolve("config").resolve("tabbar.yml").toFile();
+        Files.write(tabBarFile.toPath(), ("tabbar:\n  header: \"&6=== \u670d\u52a1\u5668\u540d\u79f0 ===\"\n"
+                + "  footer: \"&7\u5728\u7ebf: &e%online%&7/&e%max%\"\n").getBytes(StandardCharsets.UTF_8));
+        boot("features:\n  scoreboard:\n    title: \"&bMy Server\"\n");
+        TabBarConfig tabBar = new TabBarConfig();
+        configManager.register(plugin, tabBar);
+        plugin.getContext().registerType(TabBarConfig.class, tabBar);
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(tabBar.getHeader()).isEmpty();
+        assertThat(tabBar.getFooter()).isEmpty();
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(tabBarFile);
+        assertThat(saved.getString("tabbar.header")).isEmpty();
+        assertThat(saved.getString("tabbar.footer")).isEmpty();
     }
 
     // ==================== helpers ====================

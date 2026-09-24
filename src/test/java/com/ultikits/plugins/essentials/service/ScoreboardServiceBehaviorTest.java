@@ -156,6 +156,25 @@ class ScoreboardServiceBehaviorTest {
             assertThat(lines.getAllValues()).anyMatch(l -> l.startsWith("\u00a77Welcome, "))
                     .anyMatch(l -> l.startsWith("\u00a76Online: "));
         }
+
+        @Test
+        @DisplayName("empty lines: all ten catalogue lines, in order, in each language")
+        void emptyLinesAreTheWholeCatalogueList() throws Exception {
+            config.setScoreboardLines(new java.util.ArrayList<String>());
+            EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin("en"));
+            assertThat(service.effectiveLines()).containsExactly(
+                    "&7Welcome, &e%player_name%", "&7", "&6Online: &f%online_players%/%max_players%",
+                    "&6World: &f%player_world%", "&7", "&6Health: &c%player_health%", "&6Food: &a%player_food%",
+                    "&6Level: &e%player_level%", "&7", "&ewww.example.com");
+            // zh: exactly the lines every earlier version shipped, so an upgraded zh server's sidebar is unchanged
+            EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin("zh"));
+            assertThat(service.effectiveLines()).containsExactly(
+                    "&7\u6b22\u8fce, &e%player_name%", "&7",
+                    "&6\u5728\u7ebf\u73a9\u5bb6: &f%online_players%/%max_players%",
+                    "&6\u5f53\u524d\u4e16\u754c: &f%player_world%", "&7",
+                    "&6\u751f\u547d\u503c: &c%player_health%", "&6\u9965\u997f\u503c: &a%player_food%",
+                    "&6\u7b49\u7ea7: &e%player_level%", "&7", "&ewww.example.com");
+        }
     }
 
     @Nested

@@ -2,6 +2,7 @@ package com.ultikits.plugins.essentials.commands;
 
 import com.ultikits.plugins.essentials.UltiEssentials;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
@@ -47,7 +48,8 @@ import static org.mockito.Mockito.verify;
 @DisplayName("SpeedCommand observes an in-place EssentialsConfig reload (UltiKits/UltiEssentials#23)")
 class SpeedCommandConfigReloadTest {
 
-    private static final String OUT_OF_RANGE_KEY = "速度必须在 0-%d 之间";
+    /** The zh text of {@code essentials.speed.out_of_range}, the language the helper plugin answers in. */
+    private static final String OUT_OF_RANGE_TEXT = CatalogueText.text("zh", "essentials.speed.out_of_range");
 
     @TempDir
     Path moduleFolder;
@@ -85,7 +87,7 @@ class SpeedCommandConfigReloadTest {
 
         command.setSpeed(player, 7);
         verify(player).setWalkSpeed(anyFloat());
-        verify(player, never()).sendMessage(String.format(OUT_OF_RANGE_KEY, 10));
+        verify(player, never()).sendMessage(String.format(OUT_OF_RANGE_TEXT, 10));
         clearInvocations(player);
 
         write(configFile, "features:\n  speed:\n    enabled: true\n    max-speed: 5\n");
@@ -93,7 +95,7 @@ class SpeedCommandConfigReloadTest {
 
         command.setSpeed(player, 7);
         verify(player, never()).setWalkSpeed(anyFloat());
-        verify(player).sendMessage(String.format(OUT_OF_RANGE_KEY, 5));
+        verify(player).sendMessage(String.format(OUT_OF_RANGE_TEXT, 5));
     }
 
     private static void write(File file, String content) throws Exception {

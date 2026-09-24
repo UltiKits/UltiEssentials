@@ -278,11 +278,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   仍为旧版本出厂中文默认值的配置会在启动和 `/ul reload` 时被清空并保存；运维修改过的值保留。空的
   `features.scoreboard.lines` 现在显示默认内容而不是空侧边栏；原先不允许留空的标题留空时显示默认标题。
 
-- Language keys were renamed from Chinese sentences to ASCII keys (for example `essentials.home.set`).
+- Language keys were renamed to dotted ASCII keys (for example `essentials.home.set`): every key that
+  was a Chinese sentence, and `teleport_success`, the one older ASCII key still in use.
   An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
   the new keys; until then the renamed messages show the new built-in text. A server whose language
   files were never edited needs no action.
-- 语言键已从中文句子改为 ASCII 键（例如 `essentials.home.set`）。改过本模块 `lang/en.json` 或
+- 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。改过本模块 `lang/en.json` 或
   `lang/zh.json` 的运维需要把改动重新套到新键上；在此之前，这些消息显示新的内置文本。从未改过语言文件的服务器无需任何操作。
 
 - This module now declares `api-version: 630` in its `plugin.yml`, so it loads only on UltiTools

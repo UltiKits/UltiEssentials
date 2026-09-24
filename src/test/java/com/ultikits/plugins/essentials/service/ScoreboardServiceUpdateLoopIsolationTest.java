@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import org.bukkit.Server;
@@ -90,6 +91,7 @@ class ScoreboardServiceUpdateLoopIsolationTest {
 
         service = new ScoreboardService();
         EssentialsTestHelper.setField(service, "config", config);
+        EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin("zh"));
         service.init();
         failureLog = mock(org.slf4j.Logger.class);
         EssentialsTestHelper.setField(service, "failureLog", failureLog);

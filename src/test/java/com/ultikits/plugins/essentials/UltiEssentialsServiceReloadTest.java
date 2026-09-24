@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
@@ -456,6 +457,8 @@ class UltiEssentialsServiceReloadTest {
         write(yaml);
         plugin = mock(UltiEssentials.class, CALLS_REAL_METHODS);
         setResourceFolderPath(plugin, moduleFolder.toString());
+        // Console lines come from the module's catalogue; answer from the real en one.
+        doAnswer(CatalogueText.answer("en")).when(plugin).i18n(anyString());
 
         config = new EssentialsConfig();
         configManager = new ConfigManager();
@@ -467,6 +470,9 @@ class UltiEssentialsServiceReloadTest {
         EssentialsTestHelper.setField(namePrefixService, "config", config);
         EssentialsTestHelper.setField(scoreboardService, "config", config);
         EssentialsTestHelper.setField(scheduledCommandService, "config", config);
+        EssentialsTestHelper.setField(namePrefixService, "plugin", plugin);
+        EssentialsTestHelper.setField(scoreboardService, "plugin", plugin);
+        EssentialsTestHelper.setField(scheduledCommandService, "plugin", plugin);
         namePrefixService.init();
         scoreboardService.init();
         scheduledCommandService.init();

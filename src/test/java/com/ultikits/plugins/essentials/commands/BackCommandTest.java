@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
@@ -264,7 +265,7 @@ class BackCommandTest {
             liveBackCommand = new BackCommand(new EssentialsConfig());
 
             UltiToolsPlugin i18nPlugin = mock(UltiToolsPlugin.class);
-            lenient().when(i18nPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+            lenient().when(i18nPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
             Field pluginField = com.ultikits.plugins.essentials.commands.BaseEssentialsCommand.class
                     .getDeclaredField("plugin");
             pluginField.setAccessible(true); // NOPMD

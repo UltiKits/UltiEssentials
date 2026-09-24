@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.block.BlockMock;
@@ -82,7 +83,7 @@ class ChestLockServiceTest {
             // return the SAME lockOperator mock makes init()'s reassignment a no-op, so the
             // field-injection two lines down still holds after init() runs.
             UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
-            lenient().when(plugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+            lenient().when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
             lenient().when(plugin.getDataOperator(ChestLockData.class)).thenReturn(lockOperator);
             java.lang.reflect.Field pluginField = ChestLockService.class.getDeclaredField("plugin");
             pluginField.setAccessible(true);

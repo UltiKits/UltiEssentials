@@ -27,6 +27,9 @@ import static org.mockito.Mockito.*;
 @DisplayName("TempBanCommand Tests")
 class TempBanCommandTest {
 
+    /** The console operator name in the zh catalogue this class answers from. */
+    private static final String CONSOLE_ZH = "\u63a7\u5236\u53f0";
+
     private TempBanCommand command;
     private BanService banService;
     private Player player;
@@ -176,14 +179,14 @@ class TempBanCommandTest {
             stubExistingTarget("BadPlayer", targetUuid);
             CommandSender console = mock(CommandSender.class);
             when(console.getName()).thenReturn("CONSOLE");
-            when(banService.banPlayer(eq(targetUuid), anyString(), anyString(), isNull(), eq("Console"),
+            when(banService.banPlayer(eq(targetUuid), anyString(), anyString(), isNull(), eq(CONSOLE_ZH),
                     anyLong(), isNull())).thenReturn(BanService.BanResult.SUCCESS);
 
             try (org.mockito.MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class, org.mockito.Mockito.CALLS_REAL_METHODS)) {
                 command.tempbanWithReason(console, "BadPlayer", "1d", "hacking");
             }
 
-            verify(banService).banPlayer(eq(targetUuid), anyString(), anyString(), isNull(), eq("Console"),
+            verify(banService).banPlayer(eq(targetUuid), anyString(), anyString(), isNull(), eq(CONSOLE_ZH),
                     anyLong(), isNull());
         }
     }

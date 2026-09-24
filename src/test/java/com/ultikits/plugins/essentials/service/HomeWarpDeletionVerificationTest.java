@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.HomeData;
 import com.ultikits.plugins.essentials.service.HomeService.DeleteResult;
@@ -278,6 +279,7 @@ class HomeWarpDeletionVerificationTest {
     private HomeService homeService(SilentlyFailingStore<HomeData> store) throws Exception {
         HomeService service = new HomeService();
         setField(HomeService.class, service, "config", config);
+        setField(HomeService.class, service, "plugin", CatalogueText.plugin("zh"));
         setField(HomeService.class, service, "homeOperator", store);
         return service;
     }
@@ -285,6 +287,7 @@ class HomeWarpDeletionVerificationTest {
     private WarpService warpService(SilentlyFailingStore<WarpData> store) throws Exception {
         WarpService service = new WarpService();
         setField(WarpService.class, service, "config", config);
+        setField(WarpService.class, service, "plugin", CatalogueText.plugin("zh"));
         setField(WarpService.class, service, "warpOperator", store);
         return service;
     }

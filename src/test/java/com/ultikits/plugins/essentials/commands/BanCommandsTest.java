@@ -19,6 +19,9 @@ import static org.mockito.Mockito.*;
 @DisplayName("Ban Commands Tests")
 class BanCommandsTest {
 
+    /** The console operator name in the zh catalogue this class answers from. */
+    private static final String CONSOLE_ZH = "\u63a7\u5236\u53f0";
+
     private BanService banService;
     private Player player;
     private UUID playerUuid;
@@ -148,12 +151,12 @@ class BanCommandsTest {
             when(consoleSender.getName()).thenReturn("CONSOLE");
 
             when(banService.banPlayer(eq(targetUuid), eq("BadPlayer"), anyString(),
-                    isNull(), eq("Console"))).thenReturn(BanService.BanResult.SUCCESS);
+                    isNull(), eq(CONSOLE_ZH))).thenReturn(BanService.BanResult.SUCCESS);
 
             command.banWithReason(consoleSender, "BadPlayer", "hacking");
 
             verify(banService).banPlayer(eq(targetUuid), eq("BadPlayer"), anyString(),
-                    isNull(), eq("Console"));
+                    isNull(), eq(CONSOLE_ZH));
         }
 
         @Test

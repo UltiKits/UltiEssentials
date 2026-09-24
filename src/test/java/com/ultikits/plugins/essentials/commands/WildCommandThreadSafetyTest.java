@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
@@ -107,7 +108,7 @@ class WildCommandThreadSafetyTest {
 
         command = new WildCommand(config);
         UltiToolsPlugin frameworkPlugin = mock(UltiToolsPlugin.class);
-        lenient().when(frameworkPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(frameworkPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
         EssentialsTestHelper.setField(command, "plugin", frameworkPlugin);
 
         handlerMethod = WildCommand.class.getMethod("wildTeleport", Player.class);

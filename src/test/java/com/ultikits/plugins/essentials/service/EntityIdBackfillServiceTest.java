@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.google.gson.Gson;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
@@ -43,6 +44,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
@@ -79,6 +81,14 @@ class EntityIdBackfillServiceTest {
         MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
         backfill = new EntityIdBackfillService();
+        // The repair's console lines come from the module's catalogue; answer from the real en one.
+        try {
+            java.lang.reflect.Field field = EntityIdBackfillService.class.getDeclaredField("plugin");
+            field.setAccessible(true); // NOPMD - injected by the container in production
+            field.set(backfill, CatalogueText.plugin("en"));
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @AfterEach
@@ -387,6 +397,7 @@ class EntityIdBackfillServiceTest {
             lenient().when(config.isDataRepairEnabled()).thenReturn(enabled);
 
             UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
+            lenient().when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("en"));
             lenient().when(plugin.getDataOperator(HomeData.class))
                 .thenReturn(operatorOver("homes", HomeData.class));
             lenient().when(plugin.getDataOperator(WarpData.class))

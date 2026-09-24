@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
 import com.ultikits.plugins.essentials.service.BanService.UnbanResult;
@@ -71,6 +72,7 @@ class BanUnbanVerificationTest {
         store = new SilentlyFailingStore<>(tempDir.toFile().getAbsolutePath(), BanData.class);
         banService = new BanService();
         setField(banService, "config", config);
+        setField(banService, "plugin", CatalogueText.plugin("zh"));
         setField(banService, "banOperator", store);
     }
 

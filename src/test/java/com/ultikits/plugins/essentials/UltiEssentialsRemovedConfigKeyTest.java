@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
@@ -225,7 +226,7 @@ class UltiEssentialsRemovedConfigKeyTest {
         setResourceFolderPath(plugin, moduleFolder.toString());
         logger = mock(PluginLogger.class);
         doReturn(logger).when(plugin).getLogger();
-        doAnswer(inv -> inv.getArgument(0)).when(plugin).i18n(anyString());
+        doAnswer(CatalogueText.answer("en")).when(plugin).i18n(anyString());
 
         config = new EssentialsConfig();
         configManager = new ConfigManager();

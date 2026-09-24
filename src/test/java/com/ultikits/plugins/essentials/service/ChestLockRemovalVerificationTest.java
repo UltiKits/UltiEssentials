@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.ChestLockData;
 import com.ultikits.plugins.essentials.service.ChestLockService.UnlockResult;
@@ -92,7 +93,7 @@ class ChestLockRemovalVerificationTest {
         // store directory (writeUndeletableLockAt) has to land BEFORE the operator's constructor
         // reads that directory, and the operator is constructed when init() asks for it.
         UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
-        lenient().when(plugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
         lenient().when(plugin.getDataOperator(ChestLockData.class)).thenAnswer(inv -> store());
 
         lockService = new ChestLockService();

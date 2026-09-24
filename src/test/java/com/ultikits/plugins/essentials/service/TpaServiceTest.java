@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -72,7 +73,7 @@ class TpaServiceTest {
             // plugin was never wired here, so both NPE'd on "this.plugin is null" (13-04
             // re-measurement).
             UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
-            lenient().when(plugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+            lenient().when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
             java.lang.reflect.Field pluginField = TpaService.class.getDeclaredField("plugin");
             pluginField.setAccessible(true);
             pluginField.set(tpaService, plugin);

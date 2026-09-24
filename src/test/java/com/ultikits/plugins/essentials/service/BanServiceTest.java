@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -87,6 +88,10 @@ class BanServiceTest {
             java.lang.reflect.Field operatorField = BanService.class.getDeclaredField("banOperator");
             operatorField.setAccessible(true);
             operatorField.set(banService, banOperator);
+
+            java.lang.reflect.Field pluginField = BanService.class.getDeclaredField("plugin");
+            pluginField.setAccessible(true);
+            pluginField.set(banService, CatalogueText.plugin("zh"));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -358,7 +363,7 @@ class BanServiceTest {
         @Test
         @DisplayName("Should format days")
         void shouldFormatDays() {
-            String formatted = BanService.formatDuration(TimeUnit.DAYS.toMillis(7));
+            String formatted = banService.formatDuration(TimeUnit.DAYS.toMillis(7));
 
             assertThat(formatted).contains("7天");
         }
@@ -367,7 +372,7 @@ class BanServiceTest {
         @DisplayName("Should format hours and minutes")
         void shouldFormatHoursAndMinutes() {
             long duration = TimeUnit.HOURS.toMillis(2) + TimeUnit.MINUTES.toMillis(30);
-            String formatted = BanService.formatDuration(duration);
+            String formatted = banService.formatDuration(duration);
 
             assertThat(formatted).contains("2小时");
             assertThat(formatted).contains("30分钟");
@@ -376,7 +381,7 @@ class BanServiceTest {
         @Test
         @DisplayName("Should format expired duration")
         void shouldFormatExpiredDuration() {
-            String formatted = BanService.formatDuration(-1000);
+            String formatted = banService.formatDuration(-1000);
 
             assertThat(formatted).isEqualTo("已过期");
         }

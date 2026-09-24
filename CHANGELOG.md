@@ -267,6 +267,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The scoreboard title and lines (`config/essentials.yml`) and the tab-list header and footer
+  (`config/tabbar.yml`) now default to blank, and a blank value shows the language file's text in the
+  server's language (`Server Info`, `=== Server Name ===`, `Online: <n>/<max>` and ten scoreboard lines
+  under `language: en`). A value still at the Chinese default an earlier version shipped is blanked on
+  start-up and on `/ul reload`, and the file is saved; a value an operator changed is kept. An empty
+  `features.scoreboard.lines` list now shows the default lines instead of an empty sidebar, and a blank
+  title, which the file could not hold before, now shows the default title.
+- 计分板标题与内容（`config/essentials.yml`）以及 Tab 栏头尾（`config/tabbar.yml`）现在默认留空，留空时按服务器语言显示语言文件中的文本。
+  仍为旧版本出厂中文默认值的配置会在启动和 `/ul reload` 时被清空并保存；运维修改过的值保留。空的
+  `features.scoreboard.lines` 现在显示默认内容而不是空侧边栏；原先不允许留空的标题留空时显示默认标题。
+
 - Language keys were renamed from Chinese sentences to ASCII keys (for example `essentials.home.set`).
   An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
   the new keys; until then the renamed messages show the new built-in text. A server whose language

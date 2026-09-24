@@ -320,5 +320,10 @@
   "essentials.teleport.warmup": "§eTeleporting in %ds, please do not move...",
   "essentials.tpa.denied_notice": "Your teleport request was denied",
   "essentials.tpa.expired": "The teleport request has expired",
-  "essentials.log.warp_delete_not_applied": "Warp '{}' is still stored after a delete of record {}; reporting the deletion as failed"
+  "essentials.log.warp_delete_not_applied": "Warp '{}' is still stored after a delete of record {}; reporting the deletion as failed",
+  "essentials.scoreboard.default_title": "&6&lServer Info",
+  "essentials.scoreboard.default_lines": "&7Welcome, &e%player_name%\n&7\n&6Online: &f%online_players%/%max_players%\n&6World: &f%player_world%\n&7\n&6Health: &c%player_health%\n&6Food: &a%player_food%\n&6Level: &e%player_level%\n&7\n&ewww.example.com",
+  "essentials.tabbar.default_header": "&6=== Server Name ===",
+  "essentials.tabbar.default_footer": "&7Online: &e%online%&7/&e%max%",
+  "essentials.log.config_default_save_failed": "Could not save %s after blanking a shipped default text: %s"
 }

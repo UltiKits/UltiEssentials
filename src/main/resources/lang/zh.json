@@ -320,5 +320,10 @@
   "essentials.teleport.warmup": "§e%d 秒后传送，请不要移动...",
   "essentials.tpa.denied_notice": "你的传送请求被拒绝了",
   "essentials.tpa.expired": "传送请求已超时",
-  "essentials.log.warp_delete_not_applied": "地标点 '{}' 在删除记录 {} 后仍在存储中；报告删除失败"
+  "essentials.log.warp_delete_not_applied": "地标点 '{}' 在删除记录 {} 后仍在存储中；报告删除失败",
+  "essentials.scoreboard.default_title": "&6&l服务器信息",
+  "essentials.scoreboard.default_lines": "&7欢迎, &e%player_name%\n&7\n&6在线玩家: &f%online_players%/%max_players%\n&6当前世界: &f%player_world%\n&7\n&6生命值: &c%player_health%\n&6饥饿值: &a%player_food%\n&6等级: &e%player_level%\n&7\n&ewww.example.com",
+  "essentials.tabbar.default_header": "&6=== 服务器名称 ===",
+  "essentials.tabbar.default_footer": "&7在线: &e%online%&7/&e%max%",
+  "essentials.log.config_default_save_failed": "清空出厂默认文本后无法保存 %s：%s"
 }

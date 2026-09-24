@@ -4,7 +4,6 @@ import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
 import com.ultikits.ultitools.annotations.ConfigEntity;
 import com.ultikits.ultitools.annotations.ConfigEntry;
 import com.ultikits.ultitools.annotations.config.Range;
-import com.ultikits.ultitools.annotations.config.NotEmpty;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -144,12 +143,32 @@ public class EssentialsConfig extends AbstractConfigEntity {
     @ConfigEntry(path = "features.scoreboard.update-interval", comment = "计分板更新间隔(秒)")
     private int scoreboardUpdateInterval = 1;
 
-    @NotEmpty
-    @ConfigEntry(path = "features.scoreboard.title", comment = "计分板标题 (支持PlaceholderAPI)")
-    private String scoreboardTitle = "&6&l服务器信息";
+    /**
+     * Blank by default: a blank title shows the language file's {@code essentials.scoreboard.default_title}
+     * in the server's language, resolved when the sidebar is drawn (maintainer ruling 2026-09-24 (d)).
+     */
+    @ConfigEntry(path = "features.scoreboard.title", comment = "计分板标题 (支持PlaceholderAPI；留空则使用语言文件中的默认标题)")
+    private String scoreboardTitle = "";
 
-    @ConfigEntry(path = "features.scoreboard.lines", comment = "计分板内容行 (支持PlaceholderAPI)")
-    private java.util.List<String> scoreboardLines = java.util.Arrays.asList(
+    /**
+     * Empty by default: an empty list shows the language file's {@code essentials.scoreboard.default_lines}
+     * in the server's language, resolved when the sidebar is drawn (maintainer ruling 2026-09-24 (d)).
+     */
+    @ConfigEntry(path = "features.scoreboard.lines", comment = "计分板内容行 (支持PlaceholderAPI；留空则使用语言文件中的默认内容)")
+    private java.util.List<String> scoreboardLines = new java.util.ArrayList<>();
+
+    /**
+     * The title every earlier version shipped as the default, recognised on upgrade and blanked so the
+     * language file's text takes over. Read from this class's history: one value in every version.
+     */
+    private static final java.util.List<String> SHIPPED_SCOREBOARD_TITLES =
+        java.util.Collections.singletonList("&6&l服务器信息");
+
+    /**
+     * The lines every earlier version shipped as the default, recognised on upgrade (only the whole
+     * list, unchanged) and emptied so the language file's lines take over. One value in every version.
+     */
+    private static final java.util.List<String> SHIPPED_SCOREBOARD_LINES = java.util.Arrays.asList(
         "&7欢迎, &e%player_name%",
         "&7",
         "&6在线玩家: &f%online_players%/%max_players%",
@@ -161,6 +180,26 @@ public class EssentialsConfig extends AbstractConfigEntity {
         "&7",
         "&ewww.example.com"
     );
+
+    /**
+     * Blanks a scoreboard title or lines value that is exactly a default an earlier version shipped, so
+     * the language file's text takes over; any other value is the operator's and is kept. Idempotent:
+     * a blank value matches no shipped default. The caller saves the file when this returns true.
+     *
+     * @return whether a value was rewritten
+     */
+    public boolean migrateLegacyDefaults() {
+        boolean changed = false;
+        if (scoreboardTitle != null && SHIPPED_SCOREBOARD_TITLES.contains(scoreboardTitle)) {
+            scoreboardTitle = "";
+            changed = true;
+        }
+        if (SHIPPED_SCOREBOARD_LINES.equals(scoreboardLines)) {
+            scoreboardLines = new java.util.ArrayList<>();
+            changed = true;
+        }
+        return changed;
+    }
 
     // ============ Scheduled Commands ============
     @ConfigEntry(path = "features.scheduled-commands.enabled", comment = "Enable scheduled command execution / 启用定时命令执行")

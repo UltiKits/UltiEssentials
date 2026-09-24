@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.plugins.essentials.commands.HideCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.RemovedConfigKeys;
@@ -47,6 +48,7 @@ public class UltiEssentials extends UltiToolsPlugin {
         // All services are automatically initialized by IoC container via @PostConstruct
         repairStoredPrimaryKeys();
         warnAboutRemovedSettings();
+        blankShippedTextDefaults();
         getLogger().info(i18n("essentials.log.enabled"));
         return true;
     }
@@ -73,6 +75,35 @@ public class UltiEssentials extends UltiToolsPlugin {
             repair.run();
         } catch (RuntimeException e) {
             getLogger().error(e, i18n("essentials.log.repair_failed"));
+        }
+    }
+
+    /**
+     * Blanks the scoreboard title and lines and the tab-list header and footer when they still hold a
+     * default an earlier version shipped (all four were Chinese), and saves the file, so the language
+     * file's text takes over in the server's language; any other value is the operator's and is kept
+     * (maintainer ruling 2026-09-24 (d)). Runs at start-up and on every {@code /ul reload}; a blank
+     * value matches no shipped default, so it is never rewritten twice.
+     * <p>
+     * 计分板标题/内容与 Tab 栏头尾仍为旧版本出厂默认值时清空并保存，改由语言文件按服务器语言提供文本；运维自定义的值保留。
+     */
+    private void blankShippedTextDefaults() {
+        EssentialsConfig essentials = getContext().getBean(EssentialsConfig.class);
+        if (essentials != null && essentials.migrateLegacyDefaults()) {
+            saveMigrated(essentials);
+        }
+        TabBarConfig tabBar = getContext().getBean(TabBarConfig.class);
+        if (tabBar != null && tabBar.migrateLegacyDefaults()) {
+            saveMigrated(tabBar);
+        }
+    }
+
+    private void saveMigrated(com.ultikits.ultitools.abstracts.AbstractConfigEntity config) {
+        try {
+            config.save();
+        } catch (java.io.IOException e) {
+            getLogger().warn(String.format(i18n("essentials.log.config_default_save_failed"), config.getConfigFilePath(),
+                    e.getMessage()));
         }
     }
 
@@ -106,6 +137,7 @@ public class UltiEssentials extends UltiToolsPlugin {
     @Override
     protected void onReload() {
         warnAboutRemovedSettings();
+        blankShippedTextDefaults();
         reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
         reloadService(ScoreboardService.class, ScoreboardService::reload);
         reloadService(NamePrefixService.class, NamePrefixService::reload);

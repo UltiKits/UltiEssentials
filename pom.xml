@@ -213,8 +213,9 @@
                         </goals>
                         <configuration>
                             <excludes>
-                                <!-- D-07: the GUI layer is verified by Phase 10's real-machine UAT
-                                     instead of by this gate. This module has no gui package, so
+                                <!-- The GUI layer is verified on a real server through
+                                     UAT-CHECKLIST.md instead of by this gate. This module has no
+                                     gui package, so
                                      this exclude is written for comparability with the other
                                      fifteen module poms; confirm it is inert with the check-vs-report
                                      class count rather than assuming so. -->

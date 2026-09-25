@@ -60,7 +60,7 @@ class OtherListenersTest {
             EssentialsTestHelper.setField(listener, "scoreboardService", scoreboardService);
 
             // Mock plugin for scheduler -- resolved under the correct registered name,
-            // "UltiTools" (13-11, UltiEssentials#15), via init() rather than per-join.
+            // "UltiTools" (UltiEssentials#15), via init() rather than per-join.
             PluginManager pm = Bukkit.getServer().getPluginManager();
             Plugin mockPlugin = mock(Plugin.class);
             when(pm.getPlugin("UltiTools")).thenReturn(mockPlugin);
@@ -131,7 +131,7 @@ class OtherListenersTest {
          * {@code NamePrefixListenerTests#shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan}.
          */
         @Test
-        @DisplayName("Should skip the delayed auto-enable if the player quit before it ran (13-11, review round 4)")
+        @DisplayName("Should skip the delayed auto-enable if the player quit before it ran")
         void shouldSkipDelayedEnableIfPlayerQuitBeforeItRan() {
             config.setScoreboardEnabled(true);
             config.setScoreboardAutoEnable(true);
@@ -167,7 +167,7 @@ class OtherListenersTest {
             EssentialsTestHelper.setField(listener, "namePrefixService", namePrefixService);
 
             // Mock plugin for scheduler -- resolved under the correct registered name,
-            // "UltiTools" (13-11, UltiEssentials#15), via init() rather than per-join.
+            // "UltiTools" (UltiEssentials#15), via init() rather than per-join.
             PluginManager pm = Bukkit.getServer().getPluginManager();
             Plugin mockPlugin = mock(Plugin.class);
             when(pm.getPlugin("UltiTools")).thenReturn(mockPlugin);
@@ -221,7 +221,7 @@ class OtherListenersTest {
          * players, that entry is never pruned again.
          */
         @Test
-        @DisplayName("Should skip the delayed prefix update if the player quit before it ran (13-11, review round 2)")
+        @DisplayName("Should skip the delayed prefix update if the player quit before it ran")
         void shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan() {
             config.setNamePrefixEnabled(true);
 

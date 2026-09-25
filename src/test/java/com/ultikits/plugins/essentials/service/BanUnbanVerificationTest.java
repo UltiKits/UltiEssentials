@@ -110,7 +110,7 @@ class BanUnbanVerificationTest {
             assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
             assertThat(unbanned)
                 .as("a ban that is still active must not be reported as no ban at all -- the operator "
-                    + "stops looking while /banlist still lists them (gate 1 MAJOR-03)")
+                    + "stops looking while /banlist still lists them")
                 .isEqualTo(UnbanResult.FAILED);
             assertThat(banService.getActiveBan(target)).as("the ban the caller was told about").isNotNull();
         }

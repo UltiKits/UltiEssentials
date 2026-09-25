@@ -244,8 +244,8 @@ public class WarpService {
      * Three values rather than a boolean because the two failures are not the same thing to the
      * person reading the message: "there is no such record" ends the matter, while "the record is
      * still there" means the thing they asked for did not happen and they need to look. Collapsing
-     * them told an operator a home did not exist while {@code /homes} still listed it (gate 1
-     * MAJOR-03). Matches {@link ChestLockService.UnlockResult}, which already had this shape.
+     * them told an operator a home did not exist while {@code /homes} still listed it.
+     * Matches {@link ChestLockService.UnlockResult}, which already had this shape.
      */
     public enum DeleteResult {
         REMOVED,

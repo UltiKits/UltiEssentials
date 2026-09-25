@@ -55,7 +55,7 @@ public class SetHomeCommand extends BaseEssentialsCommand {
                 break;
             case FAILED:
                 // The home exists and the move did not reach storage, so /home would still teleport
-                // to the old location. Reporting it as updated is #34's symptom (gate 1 MAJOR-01).
+                // to the old location. Reporting it as updated is #34's symptom.
                 player.sendMessage(i18n("essentials.home.update_failed") + " (" + name.toLowerCase() + ")");
                 break;
             case LIMIT_REACHED:

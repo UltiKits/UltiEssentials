@@ -156,7 +156,7 @@ class EntityIdBackfillServiceTest {
             // A cache-backed operator hands out the instances it holds, so insert's onCreate() writes
             // the key onto the stored record itself. The delete would remove and re-add the same
             // entry while costing a full-cache Gson pass, which was the second superlinear term
-            // behind gate 1 MAJOR-05 -- measured 11.64 s for 800 records before, 0.20 s after.
+            // behind the repair's slowness -- measured 11.64 s for 800 records before, 0.20 s after.
             HomeData legacy = home("farm");
             writeLegacyRecord("homes", legacy);
             SilentlyFailingStore<HomeData> store = countingOperatorOver("homes", HomeData.class);
@@ -176,7 +176,8 @@ class EntityIdBackfillServiceTest {
             // home listed twice, the older row still undeletable. No JDBC driver is on this module's
             // test classpath (framework issue filed), so the shape is pinned through an operator that
             // is deliberately NOT Cached -- which is the property the repair actually branches on --
-            // rather than against a real database. Gate 3 is what executes the relational round trip.
+            // rather than against a real database.
+            // The real-server acceptance run is what executes the relational round trip.
             HomeData legacy = home("farm");
             writeLegacyRecord("homes", legacy);
             RowBackedStore<HomeData> store = new RowBackedStore<>(
@@ -355,7 +356,7 @@ class EntityIdBackfillServiceTest {
         void anUnresolvedConfigRefuses() throws Exception {
             // The safe default on a gate that could not be read is to refuse: "we could not read the
             // key that turns this off" must not mean "run it" for something that changes an operator's
-            // data (gate 1 MINOR-06). Asserted as stored bytes, like the disabled case.
+            // data. Asserted as stored bytes, like the disabled case.
             writeLegacyRecord("homes", home("farm"));
             List<String> before = storeContents("homes");
             wire(true);
@@ -420,7 +421,7 @@ class EntityIdBackfillServiceTest {
     }
 
     @Nested
-    @DisplayName("One transaction for the whole type (gate 1 MAJOR-05)")
+    @DisplayName("One transaction for the whole type")
     class TransactionShapeTests {
 
         @Test
@@ -474,8 +475,7 @@ class EntityIdBackfillServiceTest {
         void aFailedFlushIsNotReportedAsRepaired() throws Exception {
             // The keys reach the cache but not the disk, so the records come back un-keyed after a
             // restart. An INFO line claiming them would be claiming a durable write that did not
-            // happen, which is the same class as the counts this repair exists to make trustworthy
-            // (gate 2 round 2).
+            // happen, which is the same class as the counts this repair exists to make trustworthy.
             for (int i = 0; i < 3; i++) {
                 writeLegacyRecord("homes", home("home" + i));
             }
@@ -503,7 +503,7 @@ class EntityIdBackfillServiceTest {
     }
 
     @Nested
-    @DisplayName("A key another record already holds (gate 1 MAJOR-05 pre-check)")
+    @DisplayName("A key another record already holds (pre-check)")
     class CollisionTests {
 
         @Test
@@ -529,7 +529,7 @@ class EntityIdBackfillServiceTest {
     }
 
     @Nested
-    @DisplayName("Recovery description (gate 1 MAJOR-06)")
+    @DisplayName("Recovery description")
     class RecoveryDescriptionTests {
 
         @Test
@@ -563,7 +563,7 @@ class EntityIdBackfillServiceTest {
 
             String description = home.describeForRecovery();
 
-            // The exact omissions gate 1 measured: @Data's toString is callSuper = false, so the
+            // The exact omissions a review measured: @Data's toString is callSuper = false, so the
             // inherited world, coordinates and uuid are absent from it.
             assertThat(home.toString()).doesNotContain("world");
             assertThat(description).contains("world=", "x=", "y=", "z=", "yaw=", "pitch=", "uuid=");
@@ -619,8 +619,8 @@ class EntityIdBackfillServiceTest {
      * <p>
      * The repair branches on {@code instanceof Cached} — "can a stored row exist independently of the
      * object representing it" — so that is the property this pins, rather than pretending to be
-     * SQLite. Needed because no JDBC driver is on this module's test classpath and the pom must not
-     * change in this phase.
+     * SQLite. Needed because no JDBC driver is on this module's test classpath and the pom is
+     * deliberately unchanged.
      */
     private static final class RowBackedStore<T extends BaseDataEntity<String>> implements DataOperator<T> {
         private final DataOperator<T> delegate;

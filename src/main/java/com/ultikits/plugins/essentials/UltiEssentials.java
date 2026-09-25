@@ -223,10 +223,10 @@ public class UltiEssentials extends UltiToolsPlugin {
 
     /**
      * Shows every vanished player to everyone again and forgets the vanish state, so the unload does
-     * not leave players hidden by a module that is no longer there to un-hide them (gate-1 WR-01 on
-     * UltiKits/UltiEssentials#32). It runs first and inside the same barrier as the service
-     * shutdowns: a failure here is returned to be rethrown once every service has been shut down, and
-     * a service failure cannot stop the reveal.
+     * not leave players hidden by a module that is no longer there to un-hide them
+     * (UltiKits/UltiEssentials#32).
+     * It runs first and inside the same barrier as the service shutdowns: a failure here is returned to
+     * be rethrown once every service has been shut down, and a service failure cannot stop the reveal.
      *
      * @return the failure raised while revealing, or {@code null}
      */
@@ -322,16 +322,16 @@ public class UltiEssentials extends UltiToolsPlugin {
      * Reloads one service, leaving the others to be reloaded whatever this one does.
      * <p>
      * A service the container cannot resolve is reported as a warning rather than skipped in
-     * silence -- the same defect class {@link #shutdownService} was corrected for (gate 1 WR-02),
-     * found by sweeping this repository for it. It is reported rather than thrown because
-     * {@code reloadSelf()} does not isolate {@link #onReload()}
-     * (UltiKits/UltiTools-Reborn#509), so throwing here would stop the services after it from
-     * reloading at all -- and, because {@code PluginManager#reload()} loops the modules with no
-     * per-module guard either, it would stop every module <em>after</em> this one from reloading
-     * too. A warning that names the service is what this hook can give without that cost, and it
-     * matches {@link #repairStoredPrimaryKeys()}'s precedent in this same class. Note that
-     * {@code /ul reload <name>} replies success unconditionally, so this warning reaches the console
-     * and not the sender (UltiKits/UltiTools-Reborn#529).
+     * silence -- the same defect class {@link #shutdownService} was corrected for, found by
+     * sweeping this repository for it. It is reported rather than thrown because {@code
+     * reloadSelf()} does not isolate {@link #onReload()} (UltiKits/UltiTools-Reborn#509), so
+     * throwing here would stop the services after it from reloading at all -- and, because {@code
+     * PluginManager#reload()} loops the modules with no per-module guard either, it would stop every
+     * module <em>after</em> this one from reloading too. A warning that names the service is what
+     * this hook can give without that cost, and it matches {@link #repairStoredPrimaryKeys()}'s
+     * precedent in this same class. Note that {@code /ul reload <name>} replies success
+     * unconditionally, so this warning reaches the console and not the sender
+     * (UltiKits/UltiTools-Reborn#529).
      * <p>
      * No {@code getContext() == null} guard here, unlike {@link #shutdownService}, and the asymmetry
      * is deliberate: {@code pluginList.add} has one call site, inside

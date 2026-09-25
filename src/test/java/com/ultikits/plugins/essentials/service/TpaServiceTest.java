@@ -70,8 +70,7 @@ class TpaServiceTest {
             configField.set(tpaService, config);
 
             // acceptRequest()/denyRequest() call plugin.i18n(...) to message both players;
-            // plugin was never wired here, so both NPE'd on "this.plugin is null" (13-04
-            // re-measurement).
+            // plugin was never wired here, so both NPE'd on "this.plugin is null".
             UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
             lenient().when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
             java.lang.reflect.Field pluginField = TpaService.class.getDeclaredField("plugin");

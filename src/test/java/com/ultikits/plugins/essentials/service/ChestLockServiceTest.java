@@ -79,9 +79,9 @@ class ChestLockServiceTest {
             // init() (@PostConstruct) reassigns this.lockOperator from
             // plugin.getDataOperator(ChestLockData.class) -- plugin was never wired here, so
             // init() NPE'd immediately on every test in this class before it ever reached the
-            // operator field set below (13-04 re-measurement). Stubbing getDataOperator() to
-            // return the SAME lockOperator mock makes init()'s reassignment a no-op, so the
-            // field-injection two lines down still holds after init() runs.
+            // operator field set below. Stubbing getDataOperator() to return the SAME
+            // lockOperator mock makes init()'s reassignment a no-op, so the field-injection two
+            // lines down still holds after init() runs.
             UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
             lenient().when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
             lenient().when(plugin.getDataOperator(ChestLockData.class)).thenReturn(lockOperator);
@@ -103,8 +103,8 @@ class ChestLockServiceTest {
         // `return this;` methods, as HomeServiceTest's queryMock already does.
         // DataOperator#transaction is a default interface method, so a Mockito mock returns null and
         // never runs the action. The removal path now wraps its deletes in one transaction -- all of
-        // them apply or none do (gate 2 P1) -- so a mock that swallows the action describes a store
-        // that does nothing at all.
+        // them apply or none do -- so a mock that swallows the action describes a store that does
+        // nothing at all.
         lenient().when(lockOperator.transaction(org.mockito.ArgumentMatchers.<java.util.concurrent.Callable<Object>>any()))
                 .thenAnswer(inv -> ((java.util.concurrent.Callable<?>) inv.getArgument(0)).call());
         lenient().when(lockOperator.query()).thenReturn(storedLockQuery);

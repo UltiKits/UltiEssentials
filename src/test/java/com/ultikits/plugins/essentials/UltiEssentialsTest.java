@@ -30,7 +30,7 @@ import static org.mockito.Mockito.when;
  */
 @DisplayName("UltiEssentials Tests")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-// 13-04 re-measurement: the stale reason was never true for this class -- it constructs a REAL
+// Re-measured: the stale reason was never true for this class -- it constructs a REAL
 // UltiEssentials via `new UltiEssentials()` and calls registerSelf() directly, which runs
 // UltiToolsPlugin's no-arg constructor. That constructor's getInputStream() (:439-441)
 // unconditionally builds a "jar:file:" + CodeSource-location + "!/plugin.yml" URL, assuming the
@@ -40,8 +40,8 @@ import static org.mockito.Mockito.when;
 // plugin.yml") -- confirmed after fixing this class's OWN prior, narrower cause (getLogger()
 // left unstubbed by TestHelper.mockUltiToolsInstance(), fixed in setUp() below). Testing a real
 // UltiToolsPlugin's construction needs a packaged jar on the test classpath, which is out of
-// scope for this plan (13-04's job is the test harness, not a new build step); filed as an issue
-// rather than routed to "needs the bootstrap" -- MockBukkit.load() does not apply either, since
+// scope for this test harness (it would need a new build step); filed as an issue rather than
+// routed to "needs the bootstrap" -- MockBukkit.load() does not apply either, since
 // UltiToolsPlugin is not a Bukkit Plugin (implements IPlugin directly, per the framework's own
 // architecture notes).
 @Disabled("new UltiEssentials() runs UltiToolsPlugin's no-arg constructor, whose getInputStream()"
@@ -63,9 +63,9 @@ class UltiEssentialsTest {
         // PluginLogger; TestHelper.mockUltiToolsInstance() leaves getLogger() unstubbed
         // (returns null), and PluginLogger.log's own delegation methods NPE on that --
         // the actual cause behind this class's stale "MockBukkit Registry/PotionEffectType"
-        // reason (13-04 re-measurement). UltiTools.getInstance() already returns the mock
-        // that method installed, so it is stubbed further here rather than in TestHelper.java,
-        // which is a file synced verbatim from the framework and not meant to diverge per test.
+        // reason. UltiTools.getInstance() already returns the mock that method installed, so it
+        // is stubbed further here rather than in TestHelper.java, which is a file synced
+        // verbatim from the framework and not meant to diverge per test.
         lenient().when(UltiTools.getInstance().getLogger())
                 .thenReturn(Logger.getLogger("UltiEssentialsTest"));
     }

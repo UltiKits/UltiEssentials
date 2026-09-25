@@ -122,7 +122,7 @@ public class ChestLockService {
         // records with two different owners. That state is reachable in ordinary play -- place a chest
         // against someone else's locked single chest and run /lock -- and unlockBlock used to check
         // permission against one record while removing all of them, so the stranger could then unlock
-        // the owner's record along with their own and open the container (gate 2 round 3).
+        // the owner's record along with their own and open the container.
         for (ChestLockData lock : locksProtecting(block)) {
             if (!lock.getOwnerUuid().equals(player.getUniqueId().toString())) {
                 return LockResult.ALREADY_LOCKED;
@@ -221,7 +221,7 @@ public class ChestLockService {
         // player who owned one half remove the other half's record too, which is a bypass whenever the
         // two halves have different owners -- and asking about this block alone answered NOT_LOCKED on
         // the unrecorded half of a partly-recorded double chest, contradicting the interact check that
-        // refuses to open that very block (gate 2 round 3).
+        // refuses to open that very block.
         List<ChestLockData> locks = locksProtecting(block);
 
         if (locks.isEmpty()) {
@@ -242,7 +242,7 @@ public class ChestLockService {
         // at a time left the first half dropped from the cache while the second half's record
         // survived, and since the interact check keys on the clicked block, clicking that now-uncached
         // half opened the shared inventory the surviving record was still protecting -- a bypass
-        // introduced by returning FAILED after the first removal had already taken effect (gate 2 P1).
+        // introduced by returning FAILED after the first removal had already taken effect.
         return removeAllStoredLocks(locks)
                 ? UnlockResult.SUCCESS : UnlockResult.FAILED;
     }
@@ -255,12 +255,12 @@ public class ChestLockService {
      * and some present. The cache is mutated only afterwards, and only if the store agreed on all of
      * them, so there is no point at which the cache and the store disagree about part of a container.
      * <p>
-     * Removing them one at a time is what produced gate 2's bypass: the first half was dropped from
-     * the cache, the second half's record survived, and the interact check -- which keys on the
-     * clicked block -- then allowed clicks on the uncached half into the shared inventory the
-     * surviving record was still protecting. Restoring the first record on failure would be a
-     * compensating write that can itself fail, and would leave the same hazard for any future
-     * multi-record lock; this makes the intermediate state unable to exist instead.
+     * Removing them one at a time is what produced the bypass: the first half was dropped from the
+     * cache, the second half's record survived, and the interact check -- which keys on the clicked
+     * block -- then allowed clicks on the uncached half into the shared inventory the surviving
+     * record was still protecting. Restoring the first record on failure would be a compensating
+     * write that can itself fail, and would leave the same hazard for any future multi-record lock;
+     * this makes the intermediate state unable to exist instead.
      * <p>
      * On a store with no transaction manager bound the framework runs the action with no transaction
      * at all, so the deletes that succeeded stand. The cache is still not touched, which errs towards
@@ -387,9 +387,10 @@ public class ChestLockService {
      * A double chest is one shared inventory behind two blocks, so opening either block opens the same
      * items. Keying the check on the clicked block alone means a lock record covering one half does not
      * protect clicks on the other -- measured: every protection check in this module took a single
-     * {@code Location}, and {@code DoubleChest} was consulted only in the lock and unlock paths. Gate 2
-     * found one route to that divergence (a partly-completed unlock, now impossible); this closes the
-     * rest, including a lock whose second half was never written and legacy data holding only one half.
+     * {@code Location}, and {@code DoubleChest} was consulted only in the lock and unlock paths. A
+     * review found one route to that divergence (a partly-completed unlock, now impossible); this
+     * closes the rest, including a lock whose second half was never written and legacy data holding
+     * only one half.
      * <p>
      * A player who may access every record protecting the container may open it; one denied by any of
      * them may not.

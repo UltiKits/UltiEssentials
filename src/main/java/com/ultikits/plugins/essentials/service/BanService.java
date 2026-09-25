@@ -165,9 +165,9 @@ public class BanService {
     // currently-connected player -- so it would silently return false for every offline banned
     // player, which is what /unban checks against. isBanned(String) instead resolves via the
     // server's GameProfileCache and null-checks before ever reaching that keyed lookup. Separately
-    // verified (13-REVIEW-UltiEssentials.md WR-03) that BanList.Type.NAME and .PROFILE both
-    // construct the identical CraftProfileBanList backed by vanilla's UserBanList, so this is not
-    // a disused/separate ban list either way -- kept deliberately, not out of inertia.
+    // verified that BanList.Type.NAME and .PROFILE both construct the identical
+    // CraftProfileBanList backed by vanilla's UserBanList, so this is not a disused/separate ban
+    // list either way -- kept deliberately, not out of inertia.
     @SuppressWarnings("deprecation")
     public boolean isBannedInServerBanList(String playerName) {
         return Bukkit.getBanList(BanList.Type.NAME).isBanned(playerName);
@@ -387,7 +387,7 @@ public class BanService {
      * <p>
      * Three values rather than a boolean because reporting "not banned" for a ban that survived
      * tells the operator to stop looking while {@code /banlist} still lists the player and the
-     * player is still rejected at login -- the same harm the false success had (gate 1 MAJOR-03).
+     * player is still rejected at login -- the same harm the false success had.
      */
     public enum UnbanResult {
         REMOVED,

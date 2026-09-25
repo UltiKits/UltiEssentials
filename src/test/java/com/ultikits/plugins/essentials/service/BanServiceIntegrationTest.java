@@ -36,16 +36,16 @@ import static org.mockito.Mockito.when;
  * not merely that a mock was configured to answer the way the test expects.
  * {@code BanServiceMockitoTest}'s by-name unban test stubs {@code banOperator.query()} directly
  * and therefore cannot make that proof; that is why this class exists separately rather than as
- * an added assertion there (13-11 read_first).
+ * an added assertion there.
  * <p>
- * Covers UltiEssentials#12's two independently-decided halves (13-CONTEXT.md,
- * 13-RECONFIRMATION.md): unbanning a player this plugin itself banned (half 1 -- already closed
- * by the framework's own boolean-column read fix, #388) and unbanning a player banned only
- * through the server's own ban list (half 2 -- decided here). Reading {@link BanService#banPlayer}
- * directly (13-11 read_first) shows it never writes to the server's own ban list, so the chosen
- * fix for half 2 is a refusal that distinguishes "not in this plugin's records" from "not banned
- * anywhere" -- {@link BanService#isBannedInServerBanList(String)} -- rather than also clearing
- * the server's own list on unban, which would misrepresent what {@code banPlayer} actually does.
+ * Covers UltiEssentials#12's two independently-decided halves: unbanning a player this plugin
+ * itself banned (half 1 -- already closed by the framework's own boolean-column read fix, #388)
+ * and unbanning a player banned only through the server's own ban list (half 2 -- decided here).
+ * Reading {@link BanService#banPlayer} directly shows it never writes to the server's own ban
+ * list, so the chosen fix for half 2 is a refusal that distinguishes "not in this plugin's
+ * records" from "not banned anywhere" -- {@link BanService#isBannedInServerBanList(String)} --
+ * rather than also clearing the server's own list on unban, which would misrepresent what {@code
+ * banPlayer} actually does.
  *
  * @author wisdomme
  * @version 1.0.0

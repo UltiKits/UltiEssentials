@@ -42,8 +42,7 @@ public class DelHomeCommand extends BaseEssentialsCommand {
                 break;
             case FAILED:
                 // Distinct from NOT_FOUND on purpose: the home is still there, so telling the
-                // player it does not exist would send them away while /homes still lists it
-                // (gate 1 MAJOR-03).
+                // player it does not exist would send them away while /homes still lists it.
                 player.sendMessage(i18n("essentials.home.delete_failed"));
                 break;
         }

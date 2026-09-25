@@ -71,7 +71,7 @@ public class UnlockCommand extends BaseEssentialsCommand {
         // block alone reported "not locked" on the unrecorded half of a partly-recorded double chest
         // -- the same block the interact check refuses to open, so the command contradicted the
         // protection a player was standing in front of. Every protecting record is printed rather
-        // than the first: legacy data can hold one half per owner (gate 2 round 3).
+        // than the first: legacy data can hold one half per owner.
         List<ChestLockData> locks = chestLockService.locksProtecting(target);
 
         if (locks.isEmpty()) {

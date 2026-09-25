@@ -390,7 +390,7 @@ class BanCommandsTest {
         }
 
         @Test
-        @DisplayName("Should distinguish a name banned outside this plugin from not banned anywhere (13-11, UltiEssentials#12 half 2)")
+        @DisplayName("Should distinguish a name banned outside this plugin from not banned anywhere (UltiEssentials#12 half 2)")
         void shouldDistinguishServerBanFromNoBanAtAll() {
             when(banService.unbanPlayerByName("VanillaBannedPlayer")).thenReturn(BanService.UnbanResult.NOT_BANNED);
             when(banService.isBannedInServerBanList("VanillaBannedPlayer")).thenReturn(true);
@@ -413,7 +413,7 @@ class BanCommandsTest {
          * server still rejects the player's login.
          */
         @Test
-        @DisplayName("Should warn about a remaining server ban after removing this plugin's own ban record, without broadcasting a misleading full unban (13-11, review round 2)")
+        @DisplayName("Should warn about a remaining server ban after removing this plugin's own ban record, without broadcasting a misleading full unban")
         void shouldWarnAboutRemainingServerBanAfterPluginUnban() {
             when(banService.unbanPlayerByName("DoubleBannedPlayer")).thenReturn(BanService.UnbanResult.REMOVED);
             when(banService.isBannedInServerBanList("DoubleBannedPlayer")).thenReturn(true);

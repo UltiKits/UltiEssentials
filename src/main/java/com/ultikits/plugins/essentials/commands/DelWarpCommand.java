@@ -39,8 +39,7 @@ public class DelWarpCommand extends BaseEssentialsCommand {
                 player.sendMessage(i18n("essentials.warp.not_found") + name);
                 break;
             case FAILED:
-                // Distinct from NOT_FOUND: the warp is still there and still usable by everyone
-                // (gate 1 MAJOR-03).
+                // Distinct from NOT_FOUND: the warp is still there and still usable by everyone.
                 player.sendMessage(i18n("essentials.warp.delete_failed") + " (" + name + ")");
                 break;
         }

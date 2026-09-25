@@ -134,7 +134,7 @@ class BackCommandTest {
          * those commands recorded nothing.
          */
         @Test
-        @DisplayName("Should record location on plugin-triggered teleport (13-11, review round 2)")
+        @DisplayName("Should record location on plugin-triggered teleport")
         @SuppressWarnings("unchecked")
         void shouldRecordLocationOnPluginTeleport() throws Exception {
             World world = EssentialsTestHelper.createMockWorld("world");
@@ -237,18 +237,18 @@ class BackCommandTest {
     }
 
     /**
-     * Proves UltiEssentials#14 (13-CONTEXT.md, 13-RECONFIRMATION.md): {@code BackCommand}
-     * declares {@code implements Listener} but never carried the framework's own
-     * {@code @EventListener} registration annotation, so {@code ListenerManager#registerAll}
-     * -- which skips any {@code Listener}-typed bean for which
-     * {@code MergedAnnotationResolver.find(listener.getClass(), EventListener.class)} returns
-     * {@code null} -- never calls {@code Bukkit.getPluginManager().registerEvents(...)} for it.
+     * Proves UltiEssentials#14: {@code BackCommand} declares {@code implements Listener} but
+     * never carried the framework's own {@code @EventListener} registration annotation, so
+     * {@code ListenerManager#registerAll} -- which skips any {@code Listener}-typed bean for
+     * which {@code MergedAnnotationResolver.find(listener.getClass(), EventListener.class)}
+     * returns {@code null} -- never calls {@code Bukkit.getPluginManager().registerEvents(...)}
+     * for it.
      * {@code onPlayerTeleport} therefore never received a single real event; the pre-existing
      * tests above only ever call it directly, which is exactly the "annotation present but never
      * exercised" shape this task's own read_first warns about.
      */
     @Nested
-    @DisplayName("event listener registration (13-11, UltiEssentials#14)")
+    @DisplayName("event listener registration (UltiEssentials#14)")
     class RegistrationTests {
 
         private ServerMock mockBukkitServer;

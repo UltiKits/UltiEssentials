@@ -44,8 +44,7 @@ public class UnbanCommand extends BaseEssentialsCommand {
         if (outcome == BanService.UnbanResult.FAILED) {
             // Never the "not banned" branch below: the ban record is still active, so the player is
             // still rejected at login and /banlist still lists them. Reporting "not banned" would
-            // stop the operator looking just as effectively as the old false success did
-            // (gate 1 MAJOR-03).
+            // stop the operator looking just as effectively as the old false success did.
             sender.sendMessage(i18n("essentials.unban.failed") + " (" + playerName + ")");
             return;
         }

@@ -54,15 +54,15 @@ class HomeServiceTest {
     // HomeService's getHome()/getHomes() were refactored from getAll()-then-filter onto
     // homeOperator.query().where(...).eq(...).list()/.first() at some point after this class
     // was switched off; per-test when(homeOperator.getAll(...)) stubs are now stale for every
-    // path that calls getHome/getHomes (13-04 re-measurement). Stubbed alongside them below via
-    // queryMock, a single self-returning Query mock -- Mockito's RETURNS_DEEP_STUBS was tried
-    // first and rejected: getHome()'s chain calls .where(String) TWICE (two conditions), and
-    // deep stubs lost the generic type parameter on the second hop, handing back a mock typed
-    // to the erased BaseDataEntity bound instead of HomeData (a
-    // ClassCastException at the call site, not at stubbing time). queryMock instead mirrors
-    // QueryImpl's own real behaviour (every chainable method literally `return this;`,
-    // confirmed by reading QueryImpl.java this session), which sidesteps the generic-inference
-    // question entirely: there is only ever one mock instance for the whole chain.
+    // path that calls getHome/getHomes. Stubbed alongside them below via queryMock, a single
+    // self-returning Query mock -- Mockito's RETURNS_DEEP_STUBS was tried first and rejected:
+    // getHome()'s chain calls .where(String) TWICE (two conditions), and deep stubs lost the
+    // generic type parameter on the second hop, handing back a mock typed to the erased
+    // BaseDataEntity bound instead of HomeData (a ClassCastException at the call site, not at
+    // stubbing time). queryMock instead mirrors QueryImpl's own real behaviour (every chainable
+    // method literally `return this;`, confirmed by reading QueryImpl.java this session), which
+    // sidesteps the generic-inference question entirely: there is only ever one mock instance
+    // for the whole chain.
     @Mock
     private DataOperator<HomeData> homeOperator;
 
@@ -78,8 +78,8 @@ class HomeServiceTest {
         server = MockBukkit.mock();
         // getMaxHomes(player) permission checks call server.getPluginManager()
         // .getPlugin("MockPlugin") to attach a permission; MockBukkit only registers a plugin
-        // under that name once one is explicitly created (13-04 re-measurement -- previously
-        // absent here, so that lookup returned null and Player#addAttachment threw
+        // under that name once one is explicitly created (re-measured -- previously absent
+        // here, so that lookup returned null and Player#addAttachment threw
         // IllegalArgumentException: Plugin cannot be null).
         MockBukkit.createMockPlugin();
         TestHelper.mockUltiToolsInstance();

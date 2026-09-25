@@ -49,8 +49,8 @@ class BanServiceTest {
     // RETURNS_DEEP_STUBS: BanService's query-based lookups (getActiveBan/unbanPlayer*) were
     // refactored from getAll()-then-filter onto banOperator.query().where(...).eq(...).list()
     // at some point after this class was written and switched off; the fluent chain was never
-    // stubbed, so .query() returned null and every code path through it threw NPE (13-04
-    // re-measurement). This mock's per-test when(banOperator.getAll(...)) stubs are untouched.
+    // stubbed, so .query() returned null and every code path through it threw NPE.
+    // This mock's per-test when(banOperator.getAll(...)) stubs are untouched.
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private DataOperator<BanData> banOperator;
 
@@ -72,7 +72,7 @@ class BanServiceTest {
         // call site lands on (banOperator.query().where("player_uuid"/"player_name"/
         // "ip_address").eq(...).list()) regardless of which column name is passed. Stubbing
         // banOperator.query().list() directly (skipping where/eq) reaches a *different*,
-        // never-called node and leaves the real chain answering null (measured, 13-04).
+        // never-called node and leaves the real chain answering null.
         // Per-test when(banOperator.getAll(...)) stubs are unaffected; tests that need a
         // specific query() result override .list() individually below.
         lenient().when(banOperator.query().where(anyString()).eq(any()).list())

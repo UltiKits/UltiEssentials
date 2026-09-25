@@ -52,7 +52,11 @@ public class UltiEssentials extends UltiToolsPlugin {
         // All services are automatically initialized by IoC container via @PostConstruct
         repairStoredPrimaryKeys();
         warnAboutRemovedSettings();
-        writeConfigTextInServerLanguage();
+        if (writeConfigTextInServerLanguage()) {
+            // The container's @PostConstruct pass scheduled the commands before this point, each task
+            // holding the text it was scheduled with; restart them so they send the text just written.
+            reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
+        }
         getLogger().info(i18n("essentials.log.enabled"));
         return true;
     }
@@ -92,11 +96,15 @@ public class UltiEssentials extends UltiToolsPlugin {
      * idempotent, so a second call writes nothing.
      * <p>
      * 计分板标题/内容、Tab 栏头尾、MOTD、定时命令与死亡惩罚命令中的内置文本按服务器语言写入并保存；运维自定义的值保留。
+     *
+     * @return whether {@code config/essentials.yml}'s values changed, which includes the scheduled-command
+     *         text the running tasks were scheduled with
      */
-    private void writeConfigTextInServerLanguage() {
+    private boolean writeConfigTextInServerLanguage() {
         EssentialsConfig essentials = getContext().getBean(EssentialsConfig.class);
-        if (essentials != null
-                && essentials.materializeText(ConfigTextDefaults.jarLanguage(EssentialsConfig.class, getLanguageCode())::getLocalizedText)) {
+        boolean essentialsChanged = essentials != null
+                && essentials.materializeText(ConfigTextDefaults.jarLanguage(EssentialsConfig.class, getLanguageCode())::getLocalizedText);
+        if (essentialsChanged) {
             saveMaterialized(essentials);
         }
         TabBarConfig tabBar = getContext().getBean(TabBarConfig.class);
@@ -109,6 +117,7 @@ public class UltiEssentials extends UltiToolsPlugin {
                 && motd.materializeText(ConfigTextDefaults.jarLanguage(MotdConfig.class, getLanguageCode())::getLocalizedText)) {
             saveMaterialized(motd);
         }
+        return essentialsChanged;
     }
 
     private void saveMaterialized(AbstractConfigEntity config) {

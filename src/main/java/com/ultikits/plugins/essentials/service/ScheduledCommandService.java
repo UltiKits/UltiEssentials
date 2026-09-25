@@ -43,24 +43,13 @@ public class ScheduledCommandService {
 
     /**
      * Start all scheduled command tasks.
-     * <p>
-     * Each task dispatches by re-reading {@link #commandAt(int)} on every run rather than closing over
-     * the command text parsed here: {@code init()} runs from the IoC container's {@code @PostConstruct}
-     * pass, which completes before {@code registerSelf()} even starts (the framework assembles and
-     * refreshes the whole container first), so a text captured here would still be the pre-materialize
-     * value -- the one {@code UltiEssentials#writeConfigTextInServerLanguage()} is about to replace --
-     * for as long as this task keeps running. Reading it fresh at dispatch time means the very first
-     * run, which cannot fire before the plugin has finished loading, already sees the materialized text
-     * (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26).
      */
     public void startTasks() {
         if (!config.isScheduledCommandsEnabled()) {
             return;
         }
 
-        List<String> entries = config.getScheduledCommands();
-        for (int index = 0; index < entries.size(); index++) {
-            String entry = entries.get(index);
+        for (String entry : config.getScheduledCommands()) {
             int colonIndex = entry.indexOf(':');
             if (colonIndex <= 0) {
                 log.warn(plugin.i18n("essentials.log.scheduled_missing_interval"), entry);
@@ -86,46 +75,16 @@ public class ScheduledCommandService {
                 continue;
             }
 
-            final int scheduledIndex = index;
             BukkitTask task = new BukkitRunnable() {
                 @Override
                 public void run() {
-                    String current = commandAt(scheduledIndex);
-                    if (current != null) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), current);
-                    }
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
                 }
             }.runTaskTimer(bukkitPlugin, interval * 20L, interval * 20L);
 
             tasks.add(task);
             log.info(plugin.i18n("essentials.log.scheduled_started"), interval, command);
         }
-    }
-
-    /**
-     * The command text of the scheduled entry at {@code index} in the configuration's current
-     * {@code features.scheduled-commands.commands}, re-parsed fresh on every call so a task dispatches
-     * whatever the file holds now -- including a value {@code writeConfigTextInServerLanguage()}
-     * rewrote after this task was scheduled. {@code null} when the entry no longer exists or no longer
-     * parses (the list changed since this task was scheduled; the next {@code /ul reload} rebuilds the
-     * tasks from the new list).
-     *
-     * @param index the entry's position in {@link EssentialsConfig#getScheduledCommands()} when this
-     *              task was scheduled
-     * @return the command text, or {@code null}
-     */
-    private String commandAt(int index) {
-        List<String> entries = config.getScheduledCommands();
-        if (index < 0 || index >= entries.size()) {
-            return null;
-        }
-        String entry = entries.get(index);
-        int colonIndex = entry.indexOf(':');
-        if (colonIndex <= 0) {
-            return null;
-        }
-        String command = entry.substring(colonIndex + 1).trim();
-        return command.isEmpty() ? null : command;
     }
 
     /**

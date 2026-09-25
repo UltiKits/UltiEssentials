@@ -14,7 +14,7 @@ import org.bukkit.entity.Player;
  * 接受 TPA 请求的命令。
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"tpaccept", "tpyes", "tpok"}, permission = "ultiessentials.tpaccept", description = "接受传送请求")
+@CmdExecutor(alias = {"tpaccept", "tpyes", "tpok"}, permission = "ultiessentials.tpaccept", description = "essentials.command.tpaccept.description")
 @I18n("tpaccept.description")
 public class TpAcceptCommand extends BaseEssentialsCommand {
     
@@ -30,13 +30,13 @@ public class TpAcceptCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void acceptTpa(@CmdSender Player player) {
         if (!config.isTpaEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         
         TpaService.TpaRequest request = tpaService.getRequest(player.getUniqueId());
         if (request == null) {
-            player.sendMessage(i18n("没有待处理的传送请求"));
+            player.sendMessage(i18n("essentials.tpa.no_pending"));
             return;
         }
         
@@ -44,18 +44,18 @@ public class TpAcceptCommand extends BaseEssentialsCommand {
         
         switch (result) {
             case ACCEPTED:
-                player.sendMessage(i18n("已接受传送请求"));
+                player.sendMessage(i18n("essentials.tpa.accepted"));
                 // Notify sender
                 Player sender = Bukkit.getPlayer(request.getSenderUuid());
                 if (sender != null && sender.isOnline()) {
-                    sender.sendMessage(player.getName() + " " + i18n("接受了你的传送请求"));
+                    sender.sendMessage(String.format(i18n("essentials.tpa.accepted_by"), player.getName()));
                 }
                 break;
             case SENDER_OFFLINE:
-                player.sendMessage(i18n("请求发送者已离线"));
+                player.sendMessage(i18n("essentials.tpa.sender_offline"));
                 break;
             case NO_REQUEST:
-                player.sendMessage(i18n("没有待处理的传送请求"));
+                player.sendMessage(i18n("essentials.tpa.no_pending"));
                 break;
             default:
                 break;

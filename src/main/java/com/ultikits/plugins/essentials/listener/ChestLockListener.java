@@ -64,7 +64,7 @@ public class ChestLockListener implements Listener {
             if (lock != null) {
                 // A left click on a block is the start of digging it, so this handler -- not
                 // onBlockBreak -- is what a player meets when they try to mine someone else's
-                // locked container. Gate 3 round 4 measured that: the only event a normal mining
+                // locked container. A real-server run measured that: the only event a normal mining
                 // attempt produced was LEFT_CLICK_BLOCK cancelled=true, with no BlockBreakEvent at
                 // all, so the break wording onBlockBreak carries was unreachable by a player and
                 // reachable only through Player#breakBlock, which skips this event.
@@ -86,7 +86,7 @@ public class ChestLockListener implements Listener {
      * The refusal a player gets when a lock stops them reaching a container's contents.
      */
     private String accessRefusal(ChestLockData lock) {
-        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定");
+        return String.format(plugin.i18n("essentials.lock.refusal_open"), lock.getOwnerName());
     }
 
     /**
@@ -97,7 +97,7 @@ public class ChestLockListener implements Listener {
      * wording cannot drift between the route a player takes and the route a plugin takes.
      */
     private String breakRefusal(ChestLockData lock) {
-        return plugin.i18n("§c该容器被 §f") + lock.getOwnerName() + plugin.i18n(" §c锁定，无法破坏");
+        return String.format(plugin.i18n("essentials.lock.refusal_break"), lock.getOwnerName());
     }
     
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -112,8 +112,7 @@ public class ChestLockListener implements Listener {
         // Keyed on the container, for the same reason onPlayerInteract is: a double chest is one
         // shared inventory behind two blocks. Asking isLocked about the clicked block alone left the
         // unrecorded half of a partly-recorded double chest breakable by anyone, and breaking it drops
-        // its contents on the floor -- strictly worse than the interact bypass, which only opened them
-        // (UltiKits/UltiEssentials#50 gate 2 round 3).
+        // its contents on the floor -- strictly worse than the interact bypass, which only opened them.
         //
         // Deliberately the raw permission node rather than ChestLockService#canAccess(Block, Player):
         // admin bypass for opening a container is gated by chestlock.admin-bypass, admin bypass for
@@ -153,7 +152,7 @@ public class ChestLockListener implements Listener {
         // Container-scoped: an explosion that destroys the unrecorded half of a partly-recorded double
         // chest drops that half's contents just as a break does, so the same whole-container lookup
         // applies. This is the site whose earlier "an explosion destroys a specific block, not a
-        // container" reasoning was the same argument that left breaking open (gate 2 round 3).
+        // container" reasoning was the same argument that left breaking open.
         event.blockList().removeIf(block -> chestLockService.isContainerLocked(block));
     }
 
@@ -212,7 +211,7 @@ public class ChestLockListener implements Listener {
         // chest's inventory is held by a DoubleChest, which is not a Container and not a block state,
         // so the old test skipped every double chest -- a hopper could drain one even when BOTH halves
         // held records. That is a wider hole than the unrecorded-half case the break fix closes, and
-        // it is fixed here rather than reported (gate 2 round 3).
+        // it is fixed here rather than reported.
         //
         // getDestination() is deliberately not checked: inserting items into a locked container does
         // not expose its contents, and cancelling insertion would stop an owner's own hopper feeding

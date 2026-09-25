@@ -13,7 +13,7 @@ import org.bukkit.entity.Player;
  * 删除家的命令。
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"delhome", "deletehome", "rmhome"}, permission = "ultiessentials.delhome", description = "删除家")
+@CmdExecutor(alias = {"delhome", "deletehome", "rmhome"}, permission = "ultiessentials.delhome", description = "essentials.command.delhome.description")
 @I18n("delhome.description")
 public class DelHomeCommand extends BaseEssentialsCommand {
     
@@ -29,22 +29,21 @@ public class DelHomeCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<name>")
     public void deleteHome(@CmdSender Player player, @CmdParam("name") String name) {
         if (!config.isHomeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         
         switch (homeService.deleteHome(player.getUniqueId(), name)) {
             case REMOVED:
-                player.sendMessage(i18n("家已删除！") + " (" + name.toLowerCase() + ")");
+                player.sendMessage(i18n("essentials.home.deleted") + " (" + name.toLowerCase() + ")");
                 break;
             case NOT_FOUND:
-                player.sendMessage(i18n("找不到该家"));
+                player.sendMessage(i18n("essentials.home.not_found"));
                 break;
             case FAILED:
                 // Distinct from NOT_FOUND on purpose: the home is still there, so telling the
-                // player it does not exist would send them away while /homes still lists it
-                // (gate 1 MAJOR-03).
-                player.sendMessage(i18n("§c删除失败，该家的记录无法从存储中移除，请联系管理员"));
+                // player it does not exist would send them away while /homes still lists it.
+                player.sendMessage(i18n("essentials.home.delete_failed"));
                 break;
         }
     }

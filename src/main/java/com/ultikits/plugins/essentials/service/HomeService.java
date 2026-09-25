@@ -130,20 +130,19 @@ public class HomeService {
             // framework's update(T) returns void and addresses its row by WHERE id = ?, so an update
             // that matched nothing is indistinguishable from one that moved the home -- which is
             // UltiKits/UltiEssentials#34's symptom on the trigger this module's CHANGELOG claims
-            // fixed (gate 1 MAJOR-01). The re-query compares coordinates rather than merely finding
-            // the record, because the record was always going to still be there.
+            // fixed. The re-query compares coordinates rather than merely finding the record,
+            // because the record was always going to still be there.
             Location target = player.getLocation();
             updateHomeLocation(existingHome, target);
             try {
                 homeOperator.update(existingHome);
             } catch (IllegalAccessException e) {
-                log.error("Failed to update home", e);
+                log.error(plugin.i18n("essentials.log.home_update_failed"), e);
             }
             HomeData stored = getHome(playerUuid, normalizedName);
             if (stored == null || !storesTheSamePlaceAs(stored, target)) {
-                log.error("Home '{}' of player {} still reads as {} after moving it to {}; "
-                        + "reporting the move as failed", normalizedName, playerUuid,
-                        stored == null ? "absent" : describe(stored), describe(target));
+                log.error(plugin.i18n("essentials.log.home_move_not_stored"), normalizedName, playerUuid,
+                        stored == null ? plugin.i18n("essentials.log.home_absent") : describe(stored), describe(target));
                 return SetHomeResult.FAILED;
             }
             return SetHomeResult.UPDATED;
@@ -199,8 +198,7 @@ public class HomeService {
         }
         homeOperator.delById(home.getId());
         if (getHome(playerUuid, normalizedName) != null) {
-            log.error("Home '{}' of player {} is still stored after a delete of record {}; "
-                    + "reporting the deletion as failed", normalizedName, playerUuid, home.getId());
+            log.error(plugin.i18n("essentials.log.home_delete_not_applied"), normalizedName, playerUuid, home.getId());
             return DeleteResult.FAILED;
         }
         return DeleteResult.REMOVED;
@@ -214,7 +212,7 @@ public class HomeService {
      * the single place the stored fields are read, so a field added to the entity later cannot fall
      * out of this comparison without someone changing that method -- whereas comparing world and
      * coordinates by hand passed a move that changed only the facing direction, and would have passed
-     * the next field the same way (gate 2 P2).
+     * the next field the same way.
      * <p>
      * The round trip is applied to {@code target} as well, not just to the record, so the comparison
      * does not turn on world <em>identity</em>: both sides resolve their world by name exactly as a
@@ -234,8 +232,7 @@ public class HomeService {
      * prints the same value, for the same reason: {@code toLocation()} is the one place the stored
      * fields are read, so a field added to the entity later cannot fall out of either the comparison
      * or the diagnostic without someone changing that method. Comparing world and coordinates by hand
-     * passed a move that changed only the facing direction, and would have passed the next field too
-     * (gate 2 P2).
+     * passed a move that changed only the facing direction, and would have passed the next field too.
      */
     private static String describe(HomeData home) {
         return String.valueOf(home.toLocation());
@@ -314,7 +311,7 @@ public class HomeService {
         DISABLED,
         /**
          * The home existed and the move did not reach the store, so the player would still be
-         * teleported to the old location (gate 1 MAJOR-01).
+         * teleported to the old location.
          */
         FAILED
     }
@@ -326,8 +323,8 @@ public class HomeService {
      * Three values rather than a boolean because the two failures are not the same thing to the
      * person reading the message: "there is no such record" ends the matter, while "the record is
      * still there" means the thing they asked for did not happen and they need to look. Collapsing
-     * them told an operator a home did not exist while {@code /homes} still listed it (gate 1
-     * MAJOR-03). Matches {@link ChestLockService.UnlockResult}, which already had this shape.
+     * them told an operator a home did not exist while {@code /homes} still listed it.
+     * Matches {@link ChestLockService.UnlockResult}, which already had this shape.
      */
     public enum DeleteResult {
         REMOVED,

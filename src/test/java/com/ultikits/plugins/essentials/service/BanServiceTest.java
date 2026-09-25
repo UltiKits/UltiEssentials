@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
@@ -48,8 +49,8 @@ class BanServiceTest {
     // RETURNS_DEEP_STUBS: BanService's query-based lookups (getActiveBan/unbanPlayer*) were
     // refactored from getAll()-then-filter onto banOperator.query().where(...).eq(...).list()
     // at some point after this class was written and switched off; the fluent chain was never
-    // stubbed, so .query() returned null and every code path through it threw NPE (13-04
-    // re-measurement). This mock's per-test when(banOperator.getAll(...)) stubs are untouched.
+    // stubbed, so .query() returned null and every code path through it threw NPE.
+    // This mock's per-test when(banOperator.getAll(...)) stubs are untouched.
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private DataOperator<BanData> banOperator;
 
@@ -71,7 +72,7 @@ class BanServiceTest {
         // call site lands on (banOperator.query().where("player_uuid"/"player_name"/
         // "ip_address").eq(...).list()) regardless of which column name is passed. Stubbing
         // banOperator.query().list() directly (skipping where/eq) reaches a *different*,
-        // never-called node and leaves the real chain answering null (measured, 13-04).
+        // never-called node and leaves the real chain answering null.
         // Per-test when(banOperator.getAll(...)) stubs are unaffected; tests that need a
         // specific query() result override .list() individually below.
         lenient().when(banOperator.query().where(anyString()).eq(any()).list())
@@ -87,6 +88,10 @@ class BanServiceTest {
             java.lang.reflect.Field operatorField = BanService.class.getDeclaredField("banOperator");
             operatorField.setAccessible(true);
             operatorField.set(banService, banOperator);
+
+            java.lang.reflect.Field pluginField = BanService.class.getDeclaredField("plugin");
+            pluginField.setAccessible(true);
+            pluginField.set(banService, CatalogueText.plugin("zh"));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -358,7 +363,7 @@ class BanServiceTest {
         @Test
         @DisplayName("Should format days")
         void shouldFormatDays() {
-            String formatted = BanService.formatDuration(TimeUnit.DAYS.toMillis(7));
+            String formatted = banService.formatDuration(TimeUnit.DAYS.toMillis(7));
 
             assertThat(formatted).contains("7天");
         }
@@ -367,7 +372,7 @@ class BanServiceTest {
         @DisplayName("Should format hours and minutes")
         void shouldFormatHoursAndMinutes() {
             long duration = TimeUnit.HOURS.toMillis(2) + TimeUnit.MINUTES.toMillis(30);
-            String formatted = BanService.formatDuration(duration);
+            String formatted = banService.formatDuration(duration);
 
             assertThat(formatted).contains("2小时");
             assertThat(formatted).contains("30分钟");
@@ -376,7 +381,7 @@ class BanServiceTest {
         @Test
         @DisplayName("Should format expired duration")
         void shouldFormatExpiredDuration() {
-            String formatted = BanService.formatDuration(-1000);
+            String formatted = banService.formatDuration(-1000);
 
             assertThat(formatted).isEqualTo("已过期");
         }

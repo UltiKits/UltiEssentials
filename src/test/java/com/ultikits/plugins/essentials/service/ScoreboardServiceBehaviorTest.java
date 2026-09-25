@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -64,6 +65,7 @@ class ScoreboardServiceBehaviorTest {
 
         service = new ScoreboardService();
         EssentialsTestHelper.setField(service, "config", config);
+        EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin("zh"));
     }
 
     @AfterEach
@@ -106,6 +108,51 @@ class ScoreboardServiceBehaviorTest {
             service.init();
 
             verify(scheduler, never()).runTaskTimer(any(Plugin.class), any(Runnable.class), anyLong(), anyLong());
+        }
+    }
+
+    @Nested
+    @DisplayName("A blank title and empty lines are shown exactly as configured, as at origin/master "
+            + "(maintainer decision 2026-09-25, UltiKits/UltiEssentials#26: built-in text is written into "
+            + "the file at start-up, not resolved at read time)")
+    class BlankValueTests {
+
+        private String titleShown() throws Exception {
+            EssentialsTestHelper.setField(service, "manager", scoreboardManager);
+            service.enableScoreboard(EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID()));
+            ArgumentCaptor<String> title = ArgumentCaptor.forClass(String.class);
+            verify(mockScoreboard).registerNewObjective(anyString(), anyString(), title.capture());
+            return title.getValue();
+        }
+
+        @Test
+        @DisplayName("a blank title is shown as blank")
+        void blankTitleIsShownAsBlank() throws Exception {
+            config.setScoreboardTitle("");
+            assertThat(titleShown()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("a whitespace-only title is shown unchanged")
+        void whitespaceTitleIsShownUnchanged() throws Exception {
+            config.setScoreboardTitle("  ");
+            assertThat(titleShown()).isEqualTo("  ");
+        }
+
+        @Test
+        @DisplayName("a customised title is shown unchanged")
+        void customisedTitleIsKept() throws Exception {
+            config.setScoreboardTitle("&bMy Server");
+            assertThat(titleShown()).isEqualTo("\u00a7bMy Server");
+        }
+
+        @Test
+        @DisplayName("empty lines draw no scoreboard entries")
+        void emptyLinesDrawNothing() throws Exception {
+            config.setScoreboardTitle("x");
+            config.setScoreboardLines(new java.util.ArrayList<String>());
+            titleShown();
+            verify(mockObjective, never()).getScore(anyString());
         }
     }
 
@@ -175,7 +222,9 @@ class ScoreboardServiceBehaviorTest {
 
                 service.enableScoreboard(player);
 
-                papi.verify(() -> PlaceholderAPI.setPlaceholders(eq(player), anyString()));
+                // The empty lines now show the language file's default lines, which go through
+                // PlaceholderAPI too, so the title is not the only call.
+                papi.verify(() -> PlaceholderAPI.setPlaceholders(eq(player), anyString()), atLeastOnce());
                 verify(mockScoreboard).registerNewObjective(eq("ultiessentials"), eq("dummy"), eq("PAPI-RESOLVED"));
             }
         }

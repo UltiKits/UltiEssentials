@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
  * Command to view another player's inventory.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"invsee"}, permission = "ultiessentials.invsee", description = "查看玩家背包")
+@CmdExecutor(alias = {"invsee"}, permission = "ultiessentials.invsee", description = "essentials.command.invsee.description")
 public class InvseeCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -21,26 +21,26 @@ public class InvseeCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<player>")
     public void invsee(@CmdSender Player sender, @CmdParam("player") Player target) {
         if (!config.isInvseeEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在或不在线"));
+            sender.sendMessage(i18n("essentials.error.player_not_found_or_offline"));
             return;
         }
 
         if (target.equals(sender)) {
-            sender.sendMessage(i18n("不能查看自己的背包"));
+            sender.sendMessage(i18n("essentials.invsee.self"));
             return;
         }
 
         sender.openInventory(target.getInventory());
-        sender.sendMessage(String.format(i18n("正在查看 %s 的背包"), target.getName()));
+        sender.sendMessage(String.format(i18n("essentials.invsee.viewing"), target.getName()));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /invsee <玩家> 查看玩家背包"));
+        sender.sendMessage(i18n("essentials.help.invsee"));
     }
 }

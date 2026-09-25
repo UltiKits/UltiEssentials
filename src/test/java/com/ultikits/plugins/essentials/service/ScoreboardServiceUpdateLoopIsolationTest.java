@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import org.bukkit.Server;
@@ -40,12 +41,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Codex review on UltiKits/UltiEssentials PR #44 (thread "Remove failed players from the enabled
- * scoreboard set"): {@link ScoreboardService}'s repeating update task and its {@code shutdown()}
- * walk every player with a sidebar, and one player whose sidebar cannot be built or reset must not
- * stop the players after them. A player who keeps failing stays shown and is retried every update,
- * but the failure is logged once until that player succeeds again, so the console is not flooded
- * every interval; leaving the sidebar (quit or {@code /scoreboard off}) or going offline forgets it.
+ * Found reviewing UltiKits/UltiEssentials PR #44: {@link ScoreboardService}'s repeating update
+ * task and its {@code shutdown()} walk every player with a sidebar, and one player whose sidebar
+ * cannot be built or reset must not stop the players after them. A player who keeps failing stays
+ * shown and is retried every update, but the failure is logged once until that player succeeds
+ * again, so the console is not flooded every interval; leaving the sidebar (quit or {@code
+ * /scoreboard off}) or going offline forgets it.
  * <p>
  * The two players are created so that the first is also first in the service's iteration order.
  * <p>
@@ -90,6 +91,7 @@ class ScoreboardServiceUpdateLoopIsolationTest {
 
         service = new ScoreboardService();
         EssentialsTestHelper.setField(service, "config", config);
+        EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin("zh"));
         service.init();
         failureLog = mock(org.slf4j.Logger.class);
         EssentialsTestHelper.setField(service, "failureLog", failureLog);

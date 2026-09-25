@@ -19,7 +19,7 @@ import org.bukkit.entity.Player;
 @CmdExecutor(
     alias = {"scoreboard", "sb"},
     permission = "ultiessentials.scoreboard",
-    description = "切换计分板显示"
+    description = "essentials.command.scoreboard.description"
 )
 public class ScoreboardCommand extends BaseEssentialsCommand {
     
@@ -31,37 +31,37 @@ public class ScoreboardCommand extends BaseEssentialsCommand {
         boolean enabled = scoreboardService.toggleScoreboard(player);
         
         if (enabled) {
-            player.sendMessage(i18n("§a计分板已启用"));
+            player.sendMessage(i18n("essentials.scoreboard.enabled"));
         } else {
-            player.sendMessage(i18n("§c计分板已禁用"));
+            player.sendMessage(i18n("essentials.scoreboard.disabled"));
         }
     }
     
     @CmdMapping(format = "on")
     public void enable(@CmdSender Player player) {
         if (scoreboardService.isEnabled(player)) {
-            player.sendMessage(i18n("§e计分板已经启用"));
+            player.sendMessage(i18n("essentials.scoreboard.already_enabled"));
             return;
         }
         
         scoreboardService.enableScoreboard(player);
-        player.sendMessage(i18n("§a计分板已启用"));
+        player.sendMessage(i18n("essentials.scoreboard.enabled"));
     }
     
     @CmdMapping(format = "off")
     public void disable(@CmdSender Player player) {
         if (!scoreboardService.isEnabled(player)) {
-            player.sendMessage(i18n("§e计分板已经禁用"));
+            player.sendMessage(i18n("essentials.scoreboard.already_disabled"));
             return;
         }
         
         scoreboardService.disableScoreboard(player);
-        player.sendMessage(i18n("§c计分板已禁用"));
+        player.sendMessage(i18n("essentials.scoreboard.disabled"));
     }
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /scoreboard [on/off]"));
-        sender.sendMessage(i18n("切换或设置计分板显示状态"));
+        sender.sendMessage(i18n("essentials.help.scoreboard.usage"));
+        sender.sendMessage(i18n("essentials.help.scoreboard"));
     }
 }

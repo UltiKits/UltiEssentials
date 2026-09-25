@@ -116,26 +116,25 @@ public class EntityIdBackfillService {
         Report report = new Report();
         if (config == null || !config.isDataRepairEnabled()) {
             // An unresolved config bean refuses rather than proceeding: for a repair that changes an
-            // operator's data, "we could not read the key that turns this off" must not mean "run it"
-            // (gate 1 MINOR-06). One line rather than silence either way -- "why did it not run?" has
-            // to be answerable from the log, and an operator who set the key will recognise it.
-            log.info("Start-up repair of records saved without a primary key did not run ({}); those "
-                    + "records stay as they are, and deleting or updating them keeps failing",
-                    config == null ? "this module's configuration was not available"
-                            : "features.data-repair.enabled is false");
+            // operator's data, "we could not read the key that turns this off" must not mean "run it".
+            // One line rather than silence either way -- "why did it not run?" has to be answerable
+            // from the log, and an operator who set the key will recognise it.
+            log.info(plugin.i18n("essentials.log.repair_skipped"),
+                    config == null ? plugin.i18n("essentials.log.repair_skipped_no_config")
+                            : plugin.i18n("essentials.log.repair_skipped_disabled"));
             return report;
         }
         for (Class<? extends UuidKeyedDataEntity> type : REPAIRED_TYPES) {
             report.put(type.getSimpleName(), repair(type));
         }
-        report.log();
+        report.log(plugin);
         return report;
     }
 
     private <T extends UuidKeyedDataEntity> Outcome repair(Class<T> type) {
         DataOperator<T> operator = plugin.getDataOperator(type);
         if (operator == null) {
-            log.warn("No data operator for {}; its records were left untouched", type.getSimpleName());
+            log.warn(plugin.i18n("essentials.log.repair_no_operator"), type.getSimpleName());
             return new Outcome(0, 0);
         }
         return repair(operator, type.getSimpleName());
@@ -174,21 +173,17 @@ public class EntityIdBackfillService {
                 continue;
             }
             if (uuid == null) {
-                log.warn("A stored {} record has no identity of its own, so no key can be written "
-                        + "for it; left untouched", label);
+                log.warn(plugin.i18n("essentials.log.repair_no_identity"), label);
                 skipped++;
                 continue;
             }
             if (persisted != null) {
-                log.warn("Stored {} record {} already carries a different primary key ({}); left "
-                        + "untouched rather than guessing which is right", label, uuid, persisted);
+                log.warn(plugin.i18n("essentials.log.repair_different_key"), label, uuid, persisted);
                 skipped++;
                 continue;
             }
             if (occurrences.get(uuid) != 1) {
-                log.warn("{} stored {} records share the identity {}; left untouched, because "
-                        + "repairing one of them would delete the others",
-                        occurrences.get(uuid), label, uuid);
+                log.warn(plugin.i18n("essentials.log.repair_shared_identity"), occurrences.get(uuid), label, uuid);
                 skipped++;
                 continue;
             }
@@ -197,9 +192,7 @@ public class EntityIdBackfillService {
                 // would collide with it. Detected from the same snapshot rather than discovered by
                 // attempting the write and catching the failure: with one transaction around the
                 // whole type, an attempted collision would roll back every record repaired with it.
-                log.warn("Another stored {} record already holds {} as its primary key; the record "
-                        + "identified by it is left untouched rather than colliding with it",
-                        label, uuid);
+                log.warn(plugin.i18n("essentials.log.repair_key_taken"), label, uuid);
                 skipped++;
                 continue;
             }
@@ -230,7 +223,7 @@ public class EntityIdBackfillService {
      * A failed write is reported rather than swallowed, and the caller drops the repaired count to
      * zero on it: the keys would be in the cache but not on disk, so the records come back un-keyed
      * after a restart, and an INFO line claiming they were repaired would be claiming a durable write
-     * that did not happen (gate 2 round 2).
+     * that did not happen.
      *
      * @param operator the operator to repair through
      * @param label    the entity type name, for diagnostics
@@ -244,8 +237,7 @@ public class EntityIdBackfillService {
             ((Cached) operator).flush();
             return true;
         } catch (RuntimeException e) {
-            log.error("Repaired {} records could not be written to disk, so they are reported as "
-                    + "untouched; the repair will run again on the next start-up", label, e);
+            log.error(plugin.i18n("essentials.log.repair_flush_failed"), label, e);
             return false;
         }
     }
@@ -258,10 +250,10 @@ public class EntityIdBackfillService {
      * Cost: {@code SimpleJsonDataOperator.transaction} opens by deep-copying its entire cache through
      * Gson, so a transaction per record made the repair superlinear on the main thread inside
      * {@code onEnable} -- 100/200/400/800 records took 0.66/0.73/2.32/11.64 s, which extrapolates to
-     * minutes for a few thousand and looks exactly like a hung server (gate 1 MAJOR-05). One
-     * transaction is one deep copy per entity type instead of N. Safety: it also closes the window
-     * between the delete and the insert for the whole run rather than one record at a time, so a
-     * failure anywhere leaves the store as it was rather than part-repaired.
+     * minutes for a few thousand and looks exactly like a hung server. One transaction is one deep
+     * copy per entity type instead of N. Safety: it also closes the window between the delete and
+     * the insert for the whole run rather than one record at a time, so a failure anywhere leaves
+     * the store as it was rather than part-repaired.
      * <p>
      * All-or-nothing is only acceptable because the one failure this loop could previously expect --
      * colliding with a primary key another record already holds -- is now excluded before the
@@ -281,9 +273,10 @@ public class EntityIdBackfillService {
         // onCreate() writes the key onto the stored record itself and the delete would remove and
         // re-add the same entry -- while costing a full-cache Gson pass per call, because the
         // framework's own del(WhereCondition) serialises every entry to evaluate the condition. That
-        // was the second superlinear term behind gate 1 MAJOR-05, and dropping the delete where it is
-        // redundant removes it rather than shrinking it. Whether the key really was written is then
-        // confirmed below rather than assumed, so relying on that behaviour cannot fail silently.
+        // was the second superlinear term behind the repair's slowness, and dropping the delete where
+        // it is redundant removes it rather than shrinking it. Whether the key really was written is
+        // then confirmed below rather than assumed, so relying on that behaviour cannot fail
+        // silently.
         boolean cacheBacked = operator instanceof Cached;
         Set<String> expected = new HashSet<>();
         for (T record : candidates) {
@@ -307,22 +300,18 @@ public class EntityIdBackfillService {
                 }
             }
             if (written != candidates.size()) {
-                log.error("Attempted to write a primary key for {} {} record(s) but only {} carry one "
-                        + "afterwards; the rest are reported as untouched", candidates.size(), label,
-                        written);
+                log.error(plugin.i18n("essentials.log.repair_partial"), candidates.size(), label, written);
             }
             return written;
         } catch (Exception e) {
             // Every candidate is still held in memory here, so their contents can be reported in
             // full. Through describeForRecovery(), which names the fields it prints -- the entities'
-            // own toString does not carry inherited fields (gate 1 MAJOR-06).
+            // own toString does not carry inherited fields.
             StringBuilder contents = new StringBuilder();
             for (T record : candidates) {
                 contents.append("\n  ").append(record.describeForRecovery());
             }
-            log.error("Repairing {} {} record(s) failed and the whole attempt was rolled back, so "
-                    + "nothing was changed. The records it would have rewritten were:{}",
-                    candidates.size(), label, contents, e);
+            log.error(plugin.i18n("essentials.log.repair_rolled_back"), candidates.size(), label, contents, e);
             return 0;
         }
     }
@@ -393,24 +382,21 @@ public class EntityIdBackfillService {
          * Writes one INFO line per entity type that had records <strong>written</strong>, then a
          * summary. An INFO line here therefore always means records were written, which is what the
          * javadoc, CHANGELOG and FEATURES.md all claim; a run that only skipped records used to log
-         * one too, making that claim false (gate 1 MINOR-01). A skip is already reported at WARNING,
-         * one line per record, with the reason -- so a skip-only run is not silent, it is simply not
-         * claiming a write.
+         * one too, making that claim false. A skip is already reported at WARNING, one line per
+         * record, with the reason -- so a skip-only run is not silent, it is simply not claiming a
+         * write.
          */
-        void log() {
+        void log(UltiToolsPlugin plugin) {
             List<String> labels = new ArrayList<>(byType.keySet());
             Collections.sort(labels);
             for (String label : labels) {
                 Outcome outcome = byType.get(label);
                 if (outcome.repaired() > 0) {
-                    log.info("Repaired the stored primary key of {} {} record(s); left {} untouched",
-                        outcome.repaired(), label, outcome.skipped());
+                    log.info(plugin.i18n("essentials.log.repair_type_done"), outcome.repaired(), label, outcome.skipped());
                 }
             }
             if (totalRepaired() > 0) {
-                log.info("Records written before UltiKits/UltiEssentials#34 was fixed: {} repaired, "
-                        + "{} left untouched. This runs once -- a repaired record is not visited again.",
-                    totalRepaired(), totalSkipped());
+                log.info(plugin.i18n("essentials.log.repair_summary"), totalRepaired(), totalSkipped());
             }
         }
     }

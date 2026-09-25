@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.listener;
 
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.EventListener;
@@ -26,6 +27,9 @@ public class DeathPunishListener implements Listener {
     
     @Autowired
     private EssentialsConfig config;
+
+    @Autowired
+    private UltiToolsPlugin plugin;
     
     private final Random random = new Random();
     
@@ -48,7 +52,10 @@ public class DeathPunishListener implements Listener {
         }
         
         StringBuilder message = new StringBuilder();
-        message.append(ChatColor.RED).append("死亡惩罚: ");
+        message.append(ChatColor.RED).append(plugin.i18n("essentials.deathpunish.prefix"));
+        // Whether any penalty was applied: the summary is sent only then. (The line used to be sent
+        // when the builder grew past 10 characters, which depended on the prefix's length.)
+        boolean punished = false;
         
         // Money loss
         if (config.isDeathPunishMoneyEnabled() && EconomyUtils.isAvailable()) {
@@ -63,7 +70,8 @@ public class DeathPunishListener implements Listener {
             
             if (loss > 0) {
                 EconomyUtils.withdraw(player, loss);
-                message.append(ChatColor.GOLD).append(String.format("-%.2f金币 ", loss));
+                message.append(' ').append(ChatColor.GOLD).append(String.format(plugin.i18n("essentials.deathpunish.money"), loss));
+                punished = true;
             }
         }
         
@@ -71,7 +79,8 @@ public class DeathPunishListener implements Listener {
         if (config.isDeathPunishItemDropEnabled()) {
             int dropCount = processItemDrop(event);
             if (dropCount > 0) {
-                message.append(ChatColor.YELLOW).append(dropCount).append("件物品掉落 ");
+                message.append(' ').append(ChatColor.YELLOW).append(String.format(plugin.i18n("essentials.deathpunish.items"), dropCount));
+                punished = true;
             }
         }
         
@@ -80,7 +89,8 @@ public class DeathPunishListener implements Listener {
             int expLoss = (int) (player.getTotalExperience() * (config.getDeathPunishExpPercent() / 100.0));
             if (expLoss > 0) {
                 event.setDroppedExp(Math.max(0, event.getDroppedExp() - expLoss));
-                message.append(ChatColor.GREEN).append("-").append(expLoss).append("经验 ");
+                message.append(' ').append(ChatColor.GREEN).append(String.format(plugin.i18n("essentials.deathpunish.exp"), expLoss));
+                punished = true;
             }
         }
         
@@ -90,7 +100,7 @@ public class DeathPunishListener implements Listener {
         }
         
         // Send message
-        if (message.length() > 10) {
+        if (punished) {
             player.sendMessage(message.toString());
         }
     }

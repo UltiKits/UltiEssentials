@@ -155,11 +155,11 @@ public class TpaService {
         if (request.getType() == TpaType.TPA) {
             // Sender teleports to target
             sender.teleport(target.getLocation());
-            sender.sendMessage(plugin.i18n("传送成功！"));
+            sender.sendMessage(plugin.i18n("essentials.teleport.success"));
         } else {
             // Target teleports to sender
             target.teleport(sender.getLocation());
-            target.sendMessage(plugin.i18n("传送成功！"));
+            target.sendMessage(plugin.i18n("essentials.teleport.success"));
         }
         
         cancelRequest(target.getUniqueId());
@@ -181,7 +181,7 @@ public class TpaService {
         // Notify sender
         Player sender = Bukkit.getPlayer(request.getSenderUuid());
         if (sender != null && sender.isOnline()) {
-            sender.sendMessage(plugin.i18n("你的传送请求被拒绝了"));
+            sender.sendMessage(plugin.i18n("essentials.tpa.denied_notice"));
         }
         
         cancelRequest(target.getUniqueId());
@@ -253,10 +253,10 @@ public class TpaService {
                     Player target = Bukkit.getPlayer(targetUuid);
                     
                     if (sender != null && sender.isOnline()) {
-                        sender.sendMessage(plugin.i18n("传送请求已超时"));
+                        sender.sendMessage(plugin.i18n("essentials.tpa.expired"));
                     }
                     if (target != null && target.isOnline()) {
-                        target.sendMessage(plugin.i18n("传送请求已超时"));
+                        target.sendMessage(plugin.i18n("essentials.tpa.expired"));
                     }
                     
                     cancelRequest(targetUuid);

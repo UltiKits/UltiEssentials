@@ -73,8 +73,8 @@ class ChestLockServiceDoubleChestTest {
         // `return this;` methods, as HomeServiceTest's queryMock already does.
         // DataOperator#transaction is a default interface method, so a Mockito mock returns null and
         // never runs the action. The removal path now wraps its deletes in one transaction -- all of
-        // them apply or none do (gate 2 P1) -- so a mock that swallows the action describes a store
-        // that does nothing at all.
+        // them apply or none do -- so a mock that swallows the action describes a store that does
+        // nothing at all.
         lenient().when(lockOperator.transaction(org.mockito.ArgumentMatchers.<java.util.concurrent.Callable<Object>>any()))
                 .thenAnswer(inv -> ((java.util.concurrent.Callable<?>) inv.getArgument(0)).call());
         lenient().when(lockOperator.query()).thenReturn(storedLockQuery);
@@ -274,7 +274,7 @@ class ChestLockServiceDoubleChestTest {
             // Allowing this was a bypass, not a convenience: it produced one container protected by
             // two records with two owners, and unlockBlock then removed BOTH on the say-so of
             // whichever one the caller owned -- so a stranger could unlock and open the container by
-            // placing a chest against it (gate 2 round 3).
+            // placing a chest against it.
             assertThat(result).isEqualTo(ChestLockService.LockResult.ALREADY_LOCKED);
             verify(lockOperator, never()).insert(any(ChestLockData.class));
         }

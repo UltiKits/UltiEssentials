@@ -19,7 +19,7 @@ import org.bukkit.entity.Player;
 @CmdExecutor(
     alias = {"lock", "l"},
     permission = "ultiessentials.lock",
-    description = "锁定容器"
+    description = "essentials.command.lock.description"
 )
 public class LockCommand extends BaseEssentialsCommand {
     
@@ -31,7 +31,7 @@ public class LockCommand extends BaseEssentialsCommand {
         Block target = player.getTargetBlockExact(5);
         
         if (target == null) {
-            player.sendMessage(i18n("§c请看向一个容器"));
+            player.sendMessage(i18n("essentials.lock.look_at_container"));
             return;
         }
         
@@ -39,26 +39,26 @@ public class LockCommand extends BaseEssentialsCommand {
         
         switch (result) {
             case SUCCESS:
-                player.sendMessage(i18n("§a已锁定该容器"));
+                player.sendMessage(i18n("essentials.lock.locked"));
                 break;
             case NOT_LOCKABLE:
-                player.sendMessage(i18n("§c该方块无法锁定"));
+                player.sendMessage(i18n("essentials.lock.not_lockable"));
                 break;
             case ALREADY_LOCKED:
-                player.sendMessage(i18n("§c该容器已被其他玩家锁定"));
+                player.sendMessage(i18n("essentials.lock.locked_by_other"));
                 break;
             case ALREADY_LOCKED_BY_YOU:
-                player.sendMessage(i18n("§e你已经锁定了该容器"));
+                player.sendMessage(i18n("essentials.lock.already_yours"));
                 break;
             case DISABLED:
-                player.sendMessage(i18n("§c箱子锁功能已禁用"));
+                player.sendMessage(i18n("essentials.lock.disabled"));
                 break;
         }
     }
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /lock"));
-        sender.sendMessage(i18n("看向一个容器并使用此命令来锁定它"));
+        sender.sendMessage(i18n("essentials.help.lock.usage"));
+        sender.sendMessage(i18n("essentials.help.lock"));
     }
 }

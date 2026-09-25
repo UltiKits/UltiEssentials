@@ -1,14 +1,19 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
+import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
 import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
+import com.ultikits.plugins.essentials.utils.TestHelper;
+import com.ultikits.ultitools.UltiTools;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.ConfigEntry;
 import com.ultikits.ultitools.context.SimpleContainer;
+import com.ultikits.ultitools.exceptions.ConfigurationException;
 import com.ultikits.ultitools.interfaces.impl.logger.PluginLogger;
 import com.ultikits.ultitools.manager.ConfigManager;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -29,11 +34,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -77,17 +84,26 @@ class UltiEssentialsRemovedConfigKeyTest {
     private ConfigManager configManager;
     private EssentialsConfig config;
     private PluginLogger logger;
+    private Object previousUltiTools;
 
     @BeforeEach
     void setUp() throws Exception {
         EssentialsTestHelper.setUp();
+        previousUltiTools = ultiToolsField().get(null);
         configFile = moduleFolder.resolve("config").resolve("essentials.yml").toFile();
         assertThat(configFile.getParentFile().mkdirs()).isTrue();
     }
 
     @AfterEach
     void tearDown() throws Exception {
+        ultiToolsField().set(null, previousUltiTools);
         EssentialsTestHelper.tearDown();
+    }
+
+    private static Field ultiToolsField() throws Exception {
+        Field field = UltiTools.class.getDeclaredField("ultiTools");
+        field.setAccessible(true);
+        return field;
     }
 
     // ==================== the declaration ====================
@@ -199,6 +215,140 @@ class UltiEssentialsRemovedConfigKeyTest {
         assertThat(startUpWarnings()).isEmpty();
     }
 
+    // ==================== config text materializer (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26) ====================
+
+    @Test
+    @DisplayName("Start-up rewrites a scoreboard title still at an earlier version's shipped default, in the server's language, and saves it")
+    void startUpMaterializesTheShippedScoreboardTitle() throws Exception {
+        boot("features:\n  scoreboard:\n    title: \"&6&l\u670d\u52a1\u5668\u4fe1\u606f\"\n", "en");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(config.getScoreboardTitle()).isEqualTo("&6&lServer Info");
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getString("features.scoreboard.title"))
+                .isEqualTo("&6&lServer Info");
+    }
+
+    @Test
+    @DisplayName("Start-up keeps a customised scoreboard title, in memory and in the file")
+    void startUpKeepsACustomisedScoreboardTitle() throws Exception {
+        boot("features:\n  scoreboard:\n    title: \"&bMy Server\"\n", "en");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(config.getScoreboardTitle()).isEqualTo("&bMy Server");
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getString("features.scoreboard.title"))
+                .isEqualTo("&bMy Server");
+    }
+
+    @Test
+    @DisplayName("A blank scoreboard title is refused by the framework before this module runs (@NotEmpty), exactly as every released version")
+    void blankScoreboardTitleIsRefusedByTheFramework() {
+        assertThatThrownBy(() -> boot("features:\n  scoreboard:\n    title: \"\"\n", "en"))
+                .isInstanceOf(ConfigurationException.class)
+                .hasMessageContaining("scoreboardTitle");
+    }
+
+    @Test
+    @DisplayName("Start-up rewrites scoreboard lines still at the list earlier versions shipped, in the server's language, and saves them")
+    void startUpMaterializesTheShippedScoreboardLines() throws Exception {
+        boot("features:\n  scoreboard:\n    lines:\n"
+                + "    - \"&7\u6b22\u8fce, &e%player_name%\"\n    - \"&7\"\n"
+                + "    - \"&6\u5728\u7ebf\u73a9\u5bb6: &f%online_players%/%max_players%\"\n"
+                + "    - \"&6\u5f53\u524d\u4e16\u754c: &f%player_world%\"\n    - \"&7\"\n"
+                + "    - \"&6\u751f\u547d\u503c: &c%player_health%\"\n    - \"&6\u9965\u997f\u503c: &a%player_food%\"\n"
+                + "    - \"&6\u7b49\u7ea7: &e%player_level%\"\n    - \"&7\"\n    - \"&ewww.example.com\"\n", "en");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        List<String> expected = java.util.Arrays.asList(
+                "&7Welcome, &e%player_name%", "&7", "&6Online: &f%online_players%/%max_players%",
+                "&6World: &f%player_world%", "&7", "&6Health: &c%player_health%", "&6Food: &a%player_food%",
+                "&6Level: &e%player_level%", "&7", "&ewww.example.com");
+        assertThat(config.getScoreboardLines()).containsExactlyElementsOf(expected);
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getStringList("features.scoreboard.lines"))
+                .containsExactlyElementsOf(expected);
+    }
+
+    @Test
+    @DisplayName("An empty scoreboard-lines list is kept empty, exactly as at origin/master: never materialized")
+    void emptyScoreboardLinesAreNeverMaterialized() throws Exception {
+        boot("features:\n  scoreboard:\n    lines: []\n", "en");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(config.getScoreboardLines()).isEmpty();
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getStringList("features.scoreboard.lines")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Start-up rewrites a tab-list header and footer still at the shipped default, in the server's language, and saves tabbar.yml")
+    void startUpMaterializesTheShippedTabBarText() throws Exception {
+        File tabBarFile = moduleFolder.resolve("config").resolve("tabbar.yml").toFile();
+        Files.write(tabBarFile.toPath(), ("tabbar:\n  header: \"&6=== \u670d\u52a1\u5668\u540d\u79f0 ===\"\n"
+                + "  footer: \"&7\u5728\u7ebf: &e%online%&7/&e%max%\"\n").getBytes(StandardCharsets.UTF_8));
+        boot("features:\n  scoreboard:\n    title: \"&bMy Server\"\n", "en");
+        TabBarConfig tabBar = new TabBarConfig();
+        configManager.register(plugin, tabBar);
+        plugin.getContext().registerType(TabBarConfig.class, tabBar);
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(tabBar.getHeader()).isEqualTo("&6=== Server Name ===");
+        assertThat(tabBar.getFooter()).isEqualTo("&7Online: &e%online%&7/&e%max%");
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(tabBarFile);
+        assertThat(saved.getString("tabbar.header")).isEqualTo("&6=== Server Name ===");
+        assertThat(saved.getString("tabbar.footer")).isEqualTo("&7Online: &e%online%&7/&e%max%");
+    }
+
+    @Test
+    @DisplayName("A blank tab-list header and footer are kept blank, exactly as at origin/master: never materialized (neither field carries @NotEmpty)")
+    void blankTabBarTextIsNeverMaterialized() throws Exception {
+        File tabBarFile = moduleFolder.resolve("config").resolve("tabbar.yml").toFile();
+        Files.write(tabBarFile.toPath(), "tabbar:\n  header: \"\"\n  footer: \"\"\n".getBytes(StandardCharsets.UTF_8));
+        boot("", "en");
+        TabBarConfig tabBar = new TabBarConfig();
+        configManager.register(plugin, tabBar);
+        plugin.getContext().registerType(TabBarConfig.class, tabBar);
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(tabBar.getHeader()).isEmpty();
+        assertThat(tabBar.getFooter()).isEmpty();
+        YamlConfiguration saved = YamlConfiguration.loadConfiguration(tabBarFile);
+        assertThat(saved.getString("tabbar.header")).isEmpty();
+        assertThat(saved.getString("tabbar.footer")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Start-up rewrites the scoreboard title in Chinese under language: zh, and saves nothing when it is already the Chinese shipped default")
+    void startUpMaterializesInChineseUnderZh() throws Exception {
+        boot("", "zh");
+
+        assertThat(startUpWarnings()).isEmpty();
+
+        // A fresh install's Java default is the Chinese shipped text (the last version shipped it in
+        // Chinese), so under language: zh nothing changes and the framework's own first-start write
+        // already matches -- no second save.
+        assertThat(config.getScoreboardTitle()).isEqualTo("&6&l\u670d\u52a1\u5668\u4fe1\u606f");
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getString("features.scoreboard.title"))
+                .isEqualTo("&6&l\u670d\u52a1\u5668\u4fe1\u606f");
+    }
+
+    @Test
+    @DisplayName("A second start-up materializes nothing: the file already holds the current-language text")
+    void aSecondStartUpMaterializesNothing() throws Exception {
+        boot("features:\n  scoreboard:\n    title: \"&6&l\u670d\u52a1\u5668\u4fe1\u606f\"\n", "en");
+
+        assertThat(startUpWarnings()).isEmpty();
+        assertThat(config.getScoreboardTitle()).isEqualTo("&6&lServer Info");
+
+        // registerSelf() again, against the file this module itself just wrote.
+        assertThat(startUpWarnings()).isEmpty();
+
+        assertThat(config.getScoreboardTitle()).isEqualTo("&6&lServer Info");
+    }
+
     // ==================== helpers ====================
 
     private static void assertOneWarningNaming(List<String> warnings, String key, String whereItWent) {
@@ -213,19 +363,34 @@ class UltiEssentialsRemovedConfigKeyTest {
     }
 
     /**
+     * {@link #boot(String, String)} under {@code language: en}, the framework's default -- every
+     * existing case in this file (removed-key warnings, wild cooldown) is language-independent, and the
+     * config text materializer's own cases pass their language explicitly.
+     */
+    private void boot(String yaml) throws Exception {
+        boot(yaml, "en");
+    }
+
+    /**
      * Loads {@code config/essentials.yml} with the given content through the framework's real
      * {@link ConfigManager}, exactly as a server start does, and registers the loaded configuration
      * in the module's container. The start-up data repair and the three services a reload restarts
      * are present as no-op beans, so the only warnings start-up or a reload can log are the ones
-     * under test.
+     * under test. {@code language} is what {@code registerSelf()}'s config-text materializer
+     * ({@code UltiToolsPlugin#getLanguageCode()}) reads from the framework's own {@code config.yml}.
      */
-    private void boot(String yaml) throws Exception {
+    private void boot(String yaml, String language) throws Exception {
         write(yaml);
         plugin = mock(UltiEssentials.class, CALLS_REAL_METHODS);
         setResourceFolderPath(plugin, moduleFolder.toString());
         logger = mock(PluginLogger.class);
         doReturn(logger).when(plugin).getLogger();
-        doAnswer(inv -> inv.getArgument(0)).when(plugin).i18n(anyString());
+        doAnswer(CatalogueText.answer("en")).when(plugin).i18n(anyString());
+
+        TestHelper.mockUltiToolsInstance();
+        YamlConfiguration frameworkConfig = new YamlConfiguration();
+        frameworkConfig.set("language", language);
+        lenient().when(UltiTools.getInstance().getConfig()).thenReturn(frameworkConfig);
 
         config = new EssentialsConfig();
         configManager = new ConfigManager();

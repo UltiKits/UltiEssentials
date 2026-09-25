@@ -18,7 +18,7 @@ import org.bukkit.entity.Player;
 @CmdExecutor(
     alias = {"setwarp", "swarp", "addwarp"},
     permission = "ultiessentials.warp.set",
-    description = "创建地标点"
+    description = "essentials.command.setwarp.description"
 )
 public class SetWarpCommand extends BaseEssentialsCommand {
     
@@ -46,20 +46,19 @@ public class SetWarpCommand extends BaseEssentialsCommand {
         switch (result) {
             case CREATED:
                 if (permission != null && !permission.isEmpty()) {
-                    player.sendMessage(i18n("已创建地标点: ") + name +
-                        i18n(" (权限: ") + permission + ")");
+                    player.sendMessage(String.format(i18n("essentials.warp.created_with_permission"), name, permission));
                 } else {
-                    player.sendMessage(i18n("已创建地标点: ") + name);
+                    player.sendMessage(i18n("essentials.warp.created") + name);
                 }
                 break;
             case ALREADY_EXISTS:
-                player.sendMessage(i18n("地标点已存在: ") + name);
+                player.sendMessage(i18n("essentials.warp.exists") + name);
                 break;
             case INVALID_NAME:
-                player.sendMessage(i18n("无效的地标名称（长度需在1-32字符之间）"));
+                player.sendMessage(i18n("essentials.warp.invalid_name"));
                 break;
             case DISABLED:
-                player.sendMessage(i18n("地标功能已禁用"));
+                player.sendMessage(i18n("essentials.warp.disabled"));
                 break;
             default:
                 // Handle any unexpected result types
@@ -69,8 +68,8 @@ public class SetWarpCommand extends BaseEssentialsCommand {
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /setwarp <名称> [权限]"));
-        sender.sendMessage(i18n("在当前位置创建一个地标点"));
-        sender.sendMessage(i18n("可选：指定访问此地标所需的权限"));
+        sender.sendMessage(i18n("essentials.help.setwarp.usage"));
+        sender.sendMessage(i18n("essentials.help.setwarp"));
+        sender.sendMessage(i18n("essentials.help.setwarp.permission"));
     }
 }

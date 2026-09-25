@@ -85,7 +85,8 @@ class TpaHereCommandResultRoutingTest {
 
         command.sendTpaHere(sender, "Target");
 
-        verify(sender).sendMessage(contains("17"));
+        // The unit is part of the language's text, not an English "s" appended to it.
+        verify(sender).sendMessage("\u8bf7\u7a0d\u540e\u518d\u53d1\u9001\u8bf7\u6c42\uff0817 \u79d2\uff09");
     }
 
     @Test

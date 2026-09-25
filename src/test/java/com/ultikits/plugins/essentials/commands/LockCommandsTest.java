@@ -206,7 +206,7 @@ class LockCommandsTest {
                     .build();
             // Container-scoped: asked about the unrecorded half of a partly-recorded double chest,
             // the per-location read answered "not locked" about a container the interact check
-            // refuses to open (gate 2 round 3).
+            // refuses to open.
             when(chestLockService.locksProtecting(block))
                     .thenReturn(Collections.singletonList(lockData));
 

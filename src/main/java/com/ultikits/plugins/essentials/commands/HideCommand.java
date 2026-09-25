@@ -15,7 +15,7 @@ import java.util.UUID;
  * Command to toggle vanish/invisible mode.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"hide", "vanish"}, permission = "ultiessentials.hide", description = "切换隐身模式")
+@CmdExecutor(alias = {"hide", "vanish"}, permission = "ultiessentials.hide", description = "essentials.command.hide.description")
 public class HideCommand extends BaseEssentialsCommand {
 
     /**
@@ -47,7 +47,7 @@ public class HideCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void toggleHide(@CmdSender Player player) {
         if (!config.isHideEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
@@ -57,7 +57,7 @@ public class HideCommand extends BaseEssentialsCommand {
             for (Player online : Bukkit.getOnlinePlayers()) {
                 online.showPlayer(getBukkitPlugin(), player);
             }
-            player.sendMessage(i18n("隐身模式已关闭"));
+            player.sendMessage(i18n("essentials.hide.disabled"));
         } else {
             // Enable vanish
             HIDDEN_PLAYERS.add(player.getUniqueId());
@@ -66,7 +66,7 @@ public class HideCommand extends BaseEssentialsCommand {
                     online.hidePlayer(getBukkitPlugin(), player);
                 }
             }
-            player.sendMessage(i18n("隐身模式已开启"));
+            player.sendMessage(i18n("essentials.hide.enabled"));
         }
     }
 
@@ -151,6 +151,6 @@ public class HideCommand extends BaseEssentialsCommand {
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /hide 切换隐身模式"));
+        sender.sendMessage(i18n("essentials.help.hide"));
     }
 }

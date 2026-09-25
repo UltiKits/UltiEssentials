@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.ChestLockData;
 import com.ultikits.plugins.essentials.service.ChestLockService.UnlockResult;
@@ -92,7 +93,7 @@ class ChestLockRemovalVerificationTest {
         // store directory (writeUndeletableLockAt) has to land BEFORE the operator's constructor
         // reads that directory, and the operator is constructed when init() asks for it.
         UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
-        lenient().when(plugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
         lenient().when(plugin.getDataOperator(ChestLockData.class)).thenAnswer(inv -> store());
 
         lockService = new ChestLockService();
@@ -220,7 +221,7 @@ class ChestLockRemovalVerificationTest {
     }
 
     @Nested
-    @DisplayName("Double chest — both halves are one outcome (gate 1 MAJOR-02)")
+    @DisplayName("Double chest — both halves are one outcome")
     class DoubleChestTests {
 
         @Test
@@ -281,11 +282,11 @@ class ChestLockRemovalVerificationTest {
 
             assertThat(result)
                 .as("telling the player the container is unlocked while one half's record survives "
-                    + "is #37's symptom inside the method #37 fixed (gate 1 MAJOR-02)")
+                    + "is #37's symptom inside the method #37 fixed")
                 .isEqualTo(UnlockResult.FAILED);
             // All or nothing: the half that COULD be removed is put back, because dropping it while
             // the other half's record survives is what let a player click the now-uncached half into
-            // the shared inventory the surviving record was still protecting (gate 2 P1).
+            // the shared inventory the surviving record was still protecting.
             assertThat(persistedLocksAt(left)).as("the half that could have been removed").isEqualTo(1);
             assertThat(persistedLocksAt(right)).as("the half that could not").isEqualTo(1);
             assertThat(lockService.isLocked(left)).as("cached, in step with the store").isTrue();

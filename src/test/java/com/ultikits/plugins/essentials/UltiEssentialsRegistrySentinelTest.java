@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * module's one shared entry point: it is also the exact sequence {@code BanListenerMockitoTest}
  * (a real production-path test, not a sentinel) depends on to make
  * {@code Bukkit.createProfile(...)} resolve for {@code BanListener.onPlayerLogin}. Breaking or
- * removing {@code bootstrapLiveServer()} now fails both classes, not just this one (14-13).</p>
+ * removing {@code bootstrapLiveServer()} now fails both classes, not just this one.</p>
  *
  * <p>{@code bootstrapLiveServer()} itself opens with {@link MockBukkitHelper#clearForeignServer()},
  * which guards against a real, measured hazard in this repository: several test classes (e.g.
@@ -43,8 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * {@code mock(Server.class)} into {@code Bukkit.server} via reflection and never clear it. Without
  * that pre-step, {@code MockBukkit.mock()} throws {@code UnsupportedOperationException: Cannot
  * redefine singleton Server} whenever this sentinel happens to run after one of those classes in
- * the same forked JVM -- a reopen guard must not itself be fragile to unrelated test ordering
- * (14-09). Kept here unchanged; only the call site moved.</p>
+ * the same forked JVM -- a reopen guard must not itself be fragile to unrelated test ordering.
+ * Kept here unchanged; only the call site moved.</p>
  */
 public class UltiEssentialsRegistrySentinelTest {
 

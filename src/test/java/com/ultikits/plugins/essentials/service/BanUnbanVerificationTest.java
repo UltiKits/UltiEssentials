@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
 import com.ultikits.plugins.essentials.service.BanService.UnbanResult;
@@ -71,6 +72,7 @@ class BanUnbanVerificationTest {
         store = new SilentlyFailingStore<>(tempDir.toFile().getAbsolutePath(), BanData.class);
         banService = new BanService();
         setField(banService, "config", config);
+        setField(banService, "plugin", CatalogueText.plugin("zh"));
         setField(banService, "banOperator", store);
     }
 
@@ -108,7 +110,7 @@ class BanUnbanVerificationTest {
             assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
             assertThat(unbanned)
                 .as("a ban that is still active must not be reported as no ban at all -- the operator "
-                    + "stops looking while /banlist still lists them (gate 1 MAJOR-03)")
+                    + "stops looking while /banlist still lists them")
                 .isEqualTo(UnbanResult.FAILED);
             assertThat(banService.getActiveBan(target)).as("the ban the caller was told about").isNotNull();
         }

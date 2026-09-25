@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.BanData;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
@@ -53,6 +54,7 @@ class BanServiceMockitoTest {
 
         banService = new BanService();
         EssentialsTestHelper.setField(banService, "config", config);
+        EssentialsTestHelper.setField(banService, "plugin", CatalogueText.plugin("zh"));
         EssentialsTestHelper.setField(banService, "banOperator", banOperator);
 
         playerUuid = UUID.randomUUID();
@@ -758,28 +760,28 @@ class BanServiceMockitoTest {
         @Test
         @DisplayName("Should format days")
         void shouldFormatDays() {
-            String formatted = BanService.formatDuration(TimeUnit.DAYS.toMillis(7));
+            String formatted = banService.formatDuration(TimeUnit.DAYS.toMillis(7));
             assertThat(formatted).contains("7天");
         }
 
         @Test
         @DisplayName("Should format hours")
         void shouldFormatHours() {
-            String formatted = BanService.formatDuration(TimeUnit.HOURS.toMillis(5));
+            String formatted = banService.formatDuration(TimeUnit.HOURS.toMillis(5));
             assertThat(formatted).contains("5小时");
         }
 
         @Test
         @DisplayName("Should format minutes")
         void shouldFormatMinutes() {
-            String formatted = BanService.formatDuration(TimeUnit.MINUTES.toMillis(30));
+            String formatted = banService.formatDuration(TimeUnit.MINUTES.toMillis(30));
             assertThat(formatted).contains("30分钟");
         }
 
         @Test
         @DisplayName("Should format seconds")
         void shouldFormatSeconds() {
-            String formatted = BanService.formatDuration(TimeUnit.SECONDS.toMillis(45));
+            String formatted = banService.formatDuration(TimeUnit.SECONDS.toMillis(45));
             assertThat(formatted).contains("45秒");
         }
 
@@ -787,7 +789,7 @@ class BanServiceMockitoTest {
         @DisplayName("Should format combined duration")
         void shouldFormatCombinedDuration() {
             long duration = TimeUnit.DAYS.toMillis(1) + TimeUnit.HOURS.toMillis(2) + TimeUnit.MINUTES.toMillis(30);
-            String formatted = BanService.formatDuration(duration);
+            String formatted = banService.formatDuration(duration);
             assertThat(formatted).contains("1天");
             assertThat(formatted).contains("2小时");
             assertThat(formatted).contains("30分钟");
@@ -796,14 +798,14 @@ class BanServiceMockitoTest {
         @Test
         @DisplayName("Should format zero as expired")
         void shouldFormatZeroAsExpired() {
-            String formatted = BanService.formatDuration(0);
+            String formatted = banService.formatDuration(0);
             assertThat(formatted).isEqualTo("已过期");
         }
 
         @Test
         @DisplayName("Should format negative as expired")
         void shouldFormatNegativeAsExpired() {
-            String formatted = BanService.formatDuration(-1000);
+            String formatted = banService.formatDuration(-1000);
             assertThat(formatted).isEqualTo("已过期");
         }
 
@@ -811,7 +813,7 @@ class BanServiceMockitoTest {
         @DisplayName("Should format 0 seconds for very small positive value")
         void shouldFormatZeroSecondsForSmallValue() {
             // 500ms = 0 seconds, 0 minutes, 0 hours, 0 days -> "0秒"
-            String formatted = BanService.formatDuration(500);
+            String formatted = banService.formatDuration(500);
             assertThat(formatted).contains("0秒");
         }
     }

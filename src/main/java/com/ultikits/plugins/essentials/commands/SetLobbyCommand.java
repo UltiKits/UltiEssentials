@@ -12,7 +12,7 @@ import java.io.IOException;
  * Command to set the server lobby/hub at player's current location.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"setlobby", "sethub"}, permission = "ultiessentials.lobby.set", description = "设置主城")
+@CmdExecutor(alias = {"setlobby", "sethub"}, permission = "ultiessentials.lobby.set", description = "essentials.command.setlobby.description")
 public class SetLobbyCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -26,21 +26,21 @@ public class SetLobbyCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void setLobby(@CmdSender Player player) {
         if (!config.isLobbyEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         lobbyConfig.setLobbyLocation(player.getLocation());
         try {
             lobbyConfig.save();
-            player.sendMessage(i18n("主城已设置"));
+            player.sendMessage(i18n("essentials.lobby.set"));
         } catch (IOException e) {
-            player.sendMessage(i18n("保存主城失败"));
+            player.sendMessage(i18n("essentials.lobby.save_failed"));
         }
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /setlobby 设置主城"));
+        sender.sendMessage(i18n("essentials.help.setlobby"));
     }
 }

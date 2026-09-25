@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.utils;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.UltiEssentials;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.interfaces.DataOperator;
@@ -61,9 +62,9 @@ public final class EssentialsTestHelper {
         mockLogger = mock(PluginLogger.class);
         lenient().when(mockPlugin.getLogger()).thenReturn(mockLogger);
 
-        // Mock i18n to return the key as-is
+        // i18n answers from the real shipped zh catalogue (a server on the default language: zh)
         lenient().when(mockPlugin.i18n(anyString()))
-                .thenAnswer(inv -> inv.getArgument(0));
+                .thenAnswer(CatalogueText.answer("zh"));
 
         // Mock getDataOperator
         lenient().when(mockPlugin.getDataOperator(any()))

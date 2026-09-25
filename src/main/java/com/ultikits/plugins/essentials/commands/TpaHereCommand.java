@@ -14,7 +14,7 @@ import org.bukkit.entity.Player;
  * 发送 TPA-here 请求的命令（请求另一个玩家传送到你身边）。
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"tpahere", "tphere"}, permission = "ultiessentials.tpahere", description = "请求玩家传送到你身边")
+@CmdExecutor(alias = {"tpahere", "tphere"}, permission = "ultiessentials.tpahere", description = "essentials.command.tpahere.description")
 @I18n("tpahere.description")
 public class TpaHereCommand extends BaseEssentialsCommand {
     
@@ -30,13 +30,13 @@ public class TpaHereCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<player>")
     public void sendTpaHere(@CmdSender Player sender, @CmdParam("player") String playerName) {
         if (!config.isTpaEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         
         Player target = Bukkit.getPlayer(playerName);
         if (target == null || !target.isOnline()) {
-            sender.sendMessage(i18n("玩家不在线"));
+            sender.sendMessage(i18n("essentials.tpa.player_offline"));
             return;
         }
         
@@ -47,26 +47,26 @@ public class TpaHereCommand extends BaseEssentialsCommand {
     private void handleResult(Player sender, Player target, TpaService.TpaResult result) {
         switch (result) {
             case SENT:
-                sender.sendMessage(i18n("传送请求已发送给") + " " + target.getName());
-                sender.sendMessage(i18n("等待对方接受..."));
-                target.sendMessage(sender.getName() + " " + i18n("请求你传送到他身边"));
-                target.sendMessage(i18n("使用 /tpaccept 接受，/tpdeny 拒绝"));
+                sender.sendMessage(String.format(i18n("essentials.tpa.sent"), target.getName()));
+                sender.sendMessage(i18n("essentials.tpa.waiting"));
+                target.sendMessage(String.format(i18n("essentials.tpa.request_here"), sender.getName()));
+                target.sendMessage(i18n("essentials.tpa.hint"));
                 break;
             case SELF_REQUEST:
-                sender.sendMessage(i18n("不能向自己发送传送请求"));
+                sender.sendMessage(i18n("essentials.tpa.self"));
                 break;
             case TARGET_BUSY:
-                sender.sendMessage(i18n("对方有待处理的传送请求"));
+                sender.sendMessage(i18n("essentials.tpa.target_has_pending"));
                 break;
             case ON_COOLDOWN:
                 int remaining = tpaService.getRemainingCooldown(sender.getUniqueId());
-                sender.sendMessage(i18n("请稍后再发送请求") + " (" + remaining + "s)");
+                sender.sendMessage(String.format(i18n("essentials.tpa.cooldown"), remaining));
                 break;
             case CROSS_WORLD_DISABLED:
-                sender.sendMessage(i18n("不允许跨世界传送"));
+                sender.sendMessage(i18n("essentials.tpa.cross_world"));
                 break;
             case DISABLED:
-                sender.sendMessage(i18n("该功能已禁用"));
+                sender.sendMessage(i18n("essentials.error.feature_disabled"));
                 break;
             default:
                 break;

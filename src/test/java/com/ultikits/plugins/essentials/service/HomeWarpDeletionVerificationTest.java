@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.entity.HomeData;
 import com.ultikits.plugins.essentials.service.HomeService.DeleteResult;
@@ -108,7 +109,7 @@ class HomeWarpDeletionVerificationTest {
             assertThat(store.deleteAttempts()).as("the service really asked the store to delete").isEqualTo(1);
             assertThat(deleted)
                 .as("a surviving record must not be reported as an absent one -- the operator would "
-                    + "stop looking while /homes still lists it (gate 1 MAJOR-03)")
+                    + "stop looking while /homes still lists it")
                 .isEqualTo(DeleteResult.FAILED);
             assertThat(service.getHome(player, "farm")).as("the record the caller was told about").isNotNull();
         }
@@ -172,7 +173,7 @@ class HomeWarpDeletionVerificationTest {
 
             assertThat(store.deleteAttempts()).as("the service really asked the store to delete").isEqualTo(1);
             assertThat(deleted)
-                .as("a surviving record must not be reported as an absent one (gate 1 MAJOR-03)")
+                .as("a surviving record must not be reported as an absent one")
                 .isEqualTo(WarpService.DeleteResult.FAILED);
             assertThat(service.getWarp("shop")).as("the record the caller was told about").isNotNull();
         }
@@ -191,7 +192,7 @@ class HomeWarpDeletionVerificationTest {
     }
 
     @Nested
-    @DisplayName("/sethome on an existing home (gate 1 MAJOR-01)")
+    @DisplayName("/sethome on an existing home")
     class SetHomeUpdateTests {
 
         @Test
@@ -220,9 +221,9 @@ class HomeWarpDeletionVerificationTest {
         void anIgnoredFacingChangeIsNotReportedUpdated() throws Exception {
             // The same coordinates, a different direction. /home reads yaw and pitch back through
             // toLocation(), so an ignored write leaves the player facing the old way -- and a
-            // comparison of world and XYZ alone reported that as UPDATED (gate 2 P2). The check now
-            // compares the constructed location, so every field toLocation() reads is covered and the
-            // next field added is covered without anyone remembering.
+            // comparison of world and XYZ alone reported that as UPDATED. The check now compares the
+            // constructed location, so every field toLocation() reads is covered and the next field
+            // added is covered without anyone remembering.
             SilentlyFailingStore<HomeData> store = homeStore();
             HomeService service = homeService(store);
             PlayerMock player = server.addPlayer("HomeOwner");
@@ -257,7 +258,7 @@ class HomeWarpDeletionVerificationTest {
             assertThat(store.updateAttempts()).as("the service really asked the store to update").isEqualTo(1);
             assertThat(result)
                 .as("telling the player the home moved while the stored coordinates did not is #34's "
-                    + "symptom on the trigger the CHANGELOG claims fixed (gate 1 MAJOR-01)")
+                    + "symptom on the trigger the CHANGELOG claims fixed")
                 .isEqualTo(SetHomeResult.FAILED);
             HomeData stored = service.getHome(player.getUniqueId(), "farm");
             assertThat(stored).isNotNull();
@@ -278,6 +279,7 @@ class HomeWarpDeletionVerificationTest {
     private HomeService homeService(SilentlyFailingStore<HomeData> store) throws Exception {
         HomeService service = new HomeService();
         setField(HomeService.class, service, "config", config);
+        setField(HomeService.class, service, "plugin", CatalogueText.plugin("zh"));
         setField(HomeService.class, service, "homeOperator", store);
         return service;
     }
@@ -285,6 +287,7 @@ class HomeWarpDeletionVerificationTest {
     private WarpService warpService(SilentlyFailingStore<WarpData> store) throws Exception {
         WarpService service = new WarpService();
         setField(WarpService.class, service, "config", config);
+        setField(WarpService.class, service, "plugin", CatalogueText.plugin("zh"));
         setField(WarpService.class, service, "warpOperator", store);
         return service;
     }

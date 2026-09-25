@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 /**
  * Unloading the module (for example {@code /upm uninstall UltiEssentials}) shows every vanished
  * player to everyone again and forgets the vanish state, so nobody is left hidden by a module that is
- * no longer there to un-hide them (gate-1 finding WR-01 on the #32 change, the same defect class as
+ * no longer there to un-hide them (found reviewing the #32 change, the same defect class as
  * UltiKits/UltiEssentials#32: Bukkit's visibility and the module's vanish set stop agreeing).
  * <p>
  * Every hide is recorded against the {@code UltiTools} Bukkit plugin, which stays enabled when this
@@ -52,7 +52,7 @@ import static org.mockito.Mockito.when;
  * <p>
  * 卸载模块时让所有隐身玩家对所有人重新可见，并清空隐身状态。
  */
-@DisplayName("Unloading the module lifts every vanish (gate-1 WR-01, UltiKits/UltiEssentials#32 class)")
+@DisplayName("Unloading the module lifts every vanish (UltiKits/UltiEssentials#32 class)")
 class VanishOnUnloadTest {
 
     private UltiEssentials plugin;

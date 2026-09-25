@@ -135,36 +135,49 @@ class EssentialsConfigTextTest {
 
     // ================================================================== catalogue texts
 
+    // Local literal copies of the catalogue keys, not references to EssentialsConfig/TabBarConfig/
+    // MotdConfig's own key constants: this file must compile with only ConfigTextDefaults.java kept
+    // at head (rule 12), and the three entities are reverted to their pre-fix shape (no such
+    // constants) in that proof.
+    private static final String SCOREBOARD_TITLE_KEY = "essentials.scoreboard.default_title";
+    private static final String SCOREBOARD_LINES_KEY = "essentials.scoreboard.default_lines";
+    private static final String SCHEDULED_COMMANDS_KEY = "essentials.scheduled-commands.default_commands";
+    private static final String DEATHPUNISH_COMMANDS_KEY = "essentials.deathpunish.default_commands";
+    private static final String TABBAR_HEADER_KEY = "essentials.tabbar.default_header";
+    private static final String TABBAR_FOOTER_KEY = "essentials.tabbar.default_footer";
+    private static final String MOTD_LINE1_KEY = "essentials.motd.default_line1";
+    private static final String MOTD_LINE2_KEY = "essentials.motd.default_line2";
+
     private static String titleText(String code) {
-        return CatalogueText.text(code, EssentialsConfig.SCOREBOARD_TITLE_KEY);
+        return CatalogueText.text(code, SCOREBOARD_TITLE_KEY);
     }
 
     private static List<String> linesText(String code) {
-        return Arrays.asList(CatalogueText.text(code, EssentialsConfig.SCOREBOARD_LINES_KEY).split("\n", -1));
+        return Arrays.asList(CatalogueText.text(code, SCOREBOARD_LINES_KEY).split("\n", -1));
     }
 
     private static List<String> scheduledText(String code) {
-        return Arrays.asList(CatalogueText.text(code, EssentialsConfig.SCHEDULED_COMMANDS_KEY).split("\n", -1));
+        return Arrays.asList(CatalogueText.text(code, SCHEDULED_COMMANDS_KEY).split("\n", -1));
     }
 
     private static List<String> deathpunishText(String code) {
-        return Arrays.asList(CatalogueText.text(code, EssentialsConfig.DEATHPUNISH_COMMANDS_KEY).split("\n", -1));
+        return Arrays.asList(CatalogueText.text(code, DEATHPUNISH_COMMANDS_KEY).split("\n", -1));
     }
 
     private static String headerText(String code) {
-        return CatalogueText.text(code, TabBarConfig.HEADER_KEY);
+        return CatalogueText.text(code, TABBAR_HEADER_KEY);
     }
 
     private static String footerText(String code) {
-        return CatalogueText.text(code, TabBarConfig.FOOTER_KEY);
+        return CatalogueText.text(code, TABBAR_FOOTER_KEY);
     }
 
     private static String line1Text(String code) {
-        return CatalogueText.text(code, MotdConfig.LINE1_KEY);
+        return CatalogueText.text(code, MOTD_LINE1_KEY);
     }
 
     private static String line2Text(String code) {
-        return CatalogueText.text(code, MotdConfig.LINE2_KEY);
+        return CatalogueText.text(code, MOTD_LINE2_KEY);
     }
 
     /** The command text a "interval:command" scheduled-commands entry dispatches, as the service parses it. */
@@ -564,11 +577,11 @@ class EssentialsConfigTextTest {
     @Test
     @DisplayName("an operator's edit of the extracted language file is not written into any of the three files, so each value keeps following a language switch (orchestrator ruling O3)")
     void diskCatalogueEditDoesNotReachTheFile() throws Exception {
-        diskOverrides.put(EssentialsConfig.SCOREBOARD_TITLE_KEY, "Edited title");
-        diskOverrides.put(EssentialsConfig.SCHEDULED_COMMANDS_KEY, "999:say Edited");
-        diskOverrides.put(EssentialsConfig.DEATHPUNISH_COMMANDS_KEY, "say Edited");
-        diskOverrides.put(TabBarConfig.HEADER_KEY, "Edited header");
-        diskOverrides.put(MotdConfig.LINE1_KEY, "Edited motd");
+        diskOverrides.put(SCOREBOARD_TITLE_KEY, "Edited title");
+        diskOverrides.put(SCHEDULED_COMMANDS_KEY, "999:say Edited");
+        diskOverrides.put(DEATHPUNISH_COMMANDS_KEY, "say Edited");
+        diskOverrides.put(TABBAR_HEADER_KEY, "Edited header");
+        diskOverrides.put(MOTD_LINE1_KEY, "Edited motd");
         language[0] = "en";
         writeEssentials(SHIPPED_TITLE_ZH, SHIPPED_LINES_ZH, SHIPPED_SCHEDULED_EN, SHIPPED_DEATHPUNISH_ZH);
         writeTabBar(SHIPPED_HEADER_ZH, SHIPPED_FOOTER_ZH);
@@ -594,7 +607,7 @@ class EssentialsConfigTextTest {
     @Test
     @DisplayName("an operator-edited language file on disk does not widen what counts as built-in text")
     void diskCatalogueDoesNotWidenTheTrackedSet() throws Exception {
-        diskOverrides.put(EssentialsConfig.SCOREBOARD_TITLE_KEY, "Edited title");
+        diskOverrides.put(SCOREBOARD_TITLE_KEY, "Edited title");
         language[0] = "en";
         writeEssentials("Edited title", SHIPPED_LINES_ZH, SHIPPED_SCHEDULED_EN, SHIPPED_DEATHPUNISH_ZH);
         EssentialsConfig essentials = spy(loadEssentials());

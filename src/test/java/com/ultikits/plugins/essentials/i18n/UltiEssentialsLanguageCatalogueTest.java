@@ -77,6 +77,28 @@ class UltiEssentialsLanguageCatalogueTest {
             //                 + "everything else to backup.reason.unknown",
             //         "backup.reason.manual", "backup.reason.auto", "backup.reason.death",
             //         "backup.reason.quit", "backup.reason.admin", "backup.reason.unknown")
+            new DynamicSite("src/main/java/com/ultikits/plugins/essentials/UltiEssentials.java",
+                    "::getLocalizedText",
+                    "UltiEssentials#writeConfigTextInServerLanguage passes the jar catalogue's getLocalizedText "
+                            + "(ConfigTextDefaults#jarLanguage) to EssentialsConfig#materializeText, which asks it "
+                            + "for exactly the catalogue keys of the scoreboard title/lines and the scheduled-command "
+                            + "and death-punishment command text (maintainer decision 2026-09-25 and the text source "
+                            + "decision of 2026-09-25: config text written in the server's language, from the "
+                            + "module jar's own catalogue)",
+                    "essentials.scoreboard.default_title", "essentials.scoreboard.default_lines",
+                    "essentials.scheduled-commands.default_commands", "essentials.deathpunish.default_commands"),
+            new DynamicSite("src/main/java/com/ultikits/plugins/essentials/UltiEssentials.java",
+                    "::getLocalizedText",
+                    "UltiEssentials#writeConfigTextInServerLanguage passes the jar catalogue's getLocalizedText "
+                            + "(ConfigTextDefaults#jarLanguage) to TabBarConfig#materializeText, which asks it for "
+                            + "exactly the catalogue keys of the tab-list header and footer text",
+                    "essentials.tabbar.default_header", "essentials.tabbar.default_footer"),
+            new DynamicSite("src/main/java/com/ultikits/plugins/essentials/UltiEssentials.java",
+                    "::getLocalizedText",
+                    "UltiEssentials#writeConfigTextInServerLanguage passes the jar catalogue's getLocalizedText "
+                            + "(ConfigTextDefaults#jarLanguage) to MotdConfig#materializeText, which asks it for "
+                            + "exactly the catalogue keys of the two MOTD lines",
+                    "essentials.motd.default_line1", "essentials.motd.default_line2")
     ));
 
     private static List<SourceFile> sources;

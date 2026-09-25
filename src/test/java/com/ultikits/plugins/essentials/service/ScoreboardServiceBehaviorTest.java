@@ -112,12 +112,13 @@ class ScoreboardServiceBehaviorTest {
     }
 
     @Nested
-    @DisplayName("A blank title and empty lines show the language file's default (maintainer ruling 2026-09-24 (d))")
-    class DefaultTextTests {
+    @DisplayName("A blank title and empty lines are shown exactly as configured, as at origin/master "
+            + "(maintainer decision 2026-09-25, UltiKits/UltiEssentials#26: built-in text is written into "
+            + "the file at start-up, not resolved at read time)")
+    class BlankValueTests {
 
-        private String titleShown(String language) throws Exception {
+        private String titleShown() throws Exception {
             EssentialsTestHelper.setField(service, "manager", scoreboardManager);
-            EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin(language));
             service.enableScoreboard(EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID()));
             ArgumentCaptor<String> title = ArgumentCaptor.forClass(String.class);
             verify(mockScoreboard).registerNewObjective(anyString(), anyString(), title.capture());
@@ -125,55 +126,33 @@ class ScoreboardServiceBehaviorTest {
         }
 
         @Test
-        @DisplayName("blank title: the catalogue's title, in English under en")
-        void blankTitleInEnglish() throws Exception {
+        @DisplayName("a blank title is shown as blank")
+        void blankTitleIsShownAsBlank() throws Exception {
             config.setScoreboardTitle("");
-            assertThat(titleShown("en")).isEqualTo("\u00a76\u00a7lServer Info");
+            assertThat(titleShown()).isEmpty();
         }
 
         @Test
-        @DisplayName("blank title: the catalogue's title, in Chinese under zh")
-        void blankTitleInChinese() throws Exception {
+        @DisplayName("a whitespace-only title is shown unchanged")
+        void whitespaceTitleIsShownUnchanged() throws Exception {
             config.setScoreboardTitle("  ");
-            assertThat(titleShown("zh")).isEqualTo("\u00a76\u00a7l\u670d\u52a1\u5668\u4fe1\u606f");
+            assertThat(titleShown()).isEqualTo("  ");
         }
 
         @Test
         @DisplayName("a customised title is shown unchanged")
         void customisedTitleIsKept() throws Exception {
             config.setScoreboardTitle("&bMy Server");
-            assertThat(titleShown("en")).isEqualTo("\u00a7bMy Server");
+            assertThat(titleShown()).isEqualTo("\u00a7bMy Server");
         }
 
         @Test
-        @DisplayName("empty lines: the catalogue's lines, in the server's language")
-        void emptyLinesShowTheCatalogueLines() throws Exception {
+        @DisplayName("empty lines draw no scoreboard entries")
+        void emptyLinesDrawNothing() throws Exception {
             config.setScoreboardTitle("x");
             config.setScoreboardLines(new java.util.ArrayList<String>());
-            titleShown("en");
-            ArgumentCaptor<String> lines = ArgumentCaptor.forClass(String.class);
-            verify(mockObjective, atLeastOnce()).getScore(lines.capture());
-            assertThat(lines.getAllValues()).anyMatch(l -> l.startsWith("\u00a77Welcome, "))
-                    .anyMatch(l -> l.startsWith("\u00a76Online: "));
-        }
-
-        @Test
-        @DisplayName("empty lines: all ten catalogue lines, in order, in each language")
-        void emptyLinesAreTheWholeCatalogueList() throws Exception {
-            config.setScoreboardLines(new java.util.ArrayList<String>());
-            EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin("en"));
-            assertThat(service.effectiveLines()).containsExactly(
-                    "&7Welcome, &e%player_name%", "&7", "&6Online: &f%online_players%/%max_players%",
-                    "&6World: &f%player_world%", "&7", "&6Health: &c%player_health%", "&6Food: &a%player_food%",
-                    "&6Level: &e%player_level%", "&7", "&ewww.example.com");
-            // zh: exactly the lines every earlier version shipped, so an upgraded zh server's sidebar is unchanged
-            EssentialsTestHelper.setField(service, "plugin", CatalogueText.plugin("zh"));
-            assertThat(service.effectiveLines()).containsExactly(
-                    "&7\u6b22\u8fce, &e%player_name%", "&7",
-                    "&6\u5728\u7ebf\u73a9\u5bb6: &f%online_players%/%max_players%",
-                    "&6\u5f53\u524d\u4e16\u754c: &f%player_world%", "&7",
-                    "&6\u751f\u547d\u503c: &c%player_health%", "&6\u9965\u997f\u503c: &a%player_food%",
-                    "&6\u7b49\u7ea7: &e%player_level%", "&7", "&ewww.example.com");
+            titleShown();
+            verify(mockObjective, never()).getScore(anyString());
         }
     }
 

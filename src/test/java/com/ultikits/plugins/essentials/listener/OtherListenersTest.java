@@ -1,6 +1,5 @@
 package com.ultikits.plugins.essentials.listener;
 
-import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.commands.BackCommand;
 import com.ultikits.plugins.essentials.commands.HideCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
@@ -255,7 +254,6 @@ class OtherListenersTest {
             listener = new TabBarListener();
             EssentialsTestHelper.setField(listener, "config", config);
             EssentialsTestHelper.setField(listener, "tabBarConfig", tabBarConfig);
-            EssentialsTestHelper.setField(listener, "plugin", CatalogueText.plugin("zh"));
         }
 
         @Test

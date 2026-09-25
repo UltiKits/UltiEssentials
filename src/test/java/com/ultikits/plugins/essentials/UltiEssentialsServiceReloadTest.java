@@ -76,8 +76,13 @@ import static org.mockito.Mockito.when;
  * are on observable state: team entries, scheduled task periods, cancelled tasks, dispatched
  * commands and assigned scoreboards.
  * <p>
- * The remaining {@code reloadSelf()} steps (language refresh, drift report, framework reload line)
- * need a running UltiTools instance and do not touch these services.
+ * {@code onReload()} also writes this module's built-in config text in the server's language
+ * (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26), which reads the framework's own
+ * {@code config.yml} through {@code UltiToolsPlugin#getLanguageCode()} -- {@link #boot} mocks the
+ * {@code UltiTools} singleton under {@code language: en} so that call resolves.
+ * <p>
+ * The remaining {@code reloadSelf()} steps (drift report, framework reload line) do not touch these
+ * services.
  * <p>
  * 验证重载会按新配置重启定时命令、计分板与头顶称号服务。
  */
@@ -115,10 +120,12 @@ class UltiEssentialsServiceReloadTest {
     private final Set<String> teamEntries = new HashSet<>();
     private ScoreboardManager scoreboardManager;
     private Player player;
+    private Object previousUltiTools;
 
     @BeforeEach
     void setUp() throws Exception {
         EssentialsTestHelper.setUp();
+        previousUltiTools = ultiToolsField().get(null);
 
         BukkitScheduler scheduler = EssentialsTestHelper.getMockServer().getScheduler();
         lenient().when(scheduler.runTaskTimer(any(Plugin.class), any(Runnable.class), anyLong(), anyLong()))
@@ -165,7 +172,14 @@ class UltiEssentialsServiceReloadTest {
 
     @AfterEach
     void tearDown() throws Exception {
+        ultiToolsField().set(null, previousUltiTools);
         EssentialsTestHelper.tearDown();
+    }
+
+    private static Field ultiToolsField() throws Exception {
+        Field field = com.ultikits.ultitools.UltiTools.class.getDeclaredField("ultiTools");
+        field.setAccessible(true);
+        return field;
     }
 
     @Test
@@ -459,6 +473,13 @@ class UltiEssentialsServiceReloadTest {
         setResourceFolderPath(plugin, moduleFolder.toString());
         // Console lines come from the module's catalogue; answer from the real en one.
         doAnswer(CatalogueText.answer("en")).when(plugin).i18n(anyString());
+
+        // onReload()'s config-text materializer reads the server's language through
+        // UltiToolsPlugin#getLanguageCode(), which reads the framework's own config.yml.
+        com.ultikits.plugins.essentials.utils.TestHelper.mockUltiToolsInstance();
+        org.bukkit.configuration.file.YamlConfiguration frameworkConfig = new org.bukkit.configuration.file.YamlConfiguration();
+        frameworkConfig.set("language", "en");
+        lenient().when(com.ultikits.ultitools.UltiTools.getInstance().getConfig()).thenReturn(frameworkConfig);
 
         config = new EssentialsConfig();
         configManager = new ConfigManager();

@@ -80,14 +80,16 @@ class OtherConfigsTest {
         @Test
         @DisplayName("Should have default header")
         void shouldHaveDefaultHeader() {
-            // Blank by default: the tab list shows the language file's text (ruling 2026-09-24 (d)).
-            assertThat(config.getHeader()).isNotNull().isEmpty();
+            // The Java default is the header every earlier version shipped; materializeText() rewrites
+            // it in the server's language at start-up (maintainer decision 2026-09-25,
+            // UltiKits/UltiEssentials#26).
+            assertThat(config.getHeader()).isEqualTo("&6=== 服务器名称 ===");
         }
 
         @Test
         @DisplayName("Should have default footer")
         void shouldHaveDefaultFooter() {
-            assertThat(config.getFooter()).isNotNull().isEmpty();
+            assertThat(config.getFooter()).isEqualTo("&7在线: &e%online%&7/&e%max%");
         }
 
         @Test

@@ -267,16 +267,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- The scoreboard title and lines (`config/essentials.yml`) and the tab-list header and footer
-  (`config/tabbar.yml`) now default to blank, and a blank value shows the language file's text in the
-  server's language (`Server Info`, `=== Server Name ===`, `Online: <n>/<max>` and ten scoreboard lines
-  under `language: en`). A value still at the Chinese default an earlier version shipped is blanked on
-  start-up and on `/ul reload`, and the file is saved; a value an operator changed is kept. An empty
-  `features.scoreboard.lines` list now shows the default lines instead of an empty sidebar, and a blank
-  title, which the file could not hold before, now shows the default title.
-- 计分板标题与内容（`config/essentials.yml`）以及 Tab 栏头尾（`config/tabbar.yml`）现在默认留空，留空时按服务器语言显示语言文件中的文本。
-  仍为旧版本出厂中文默认值的配置会在启动和 `/ul reload` 时被清空并保存；运维修改过的值保留。空的
-  `features.scoreboard.lines` 现在显示默认内容而不是空侧边栏；原先不允许留空的标题留空时显示默认标题。
+- Changed: message and title settings in `config/essentials.yml` (the scoreboard title and lines, the
+  scheduled-command text and the death-punishment command text), `config/tabbar.yml` (the tab-list
+  header and footer) and `config/motd.yml` (the two MOTD lines) are written in the server's language
+  when the module starts, and the file is what the module shows. A setting that is still built-in
+  text — in any language, or a default an earlier version shipped — follows `language`: it is
+  rewritten when the module starts or after `/ul reload`. A setting you edited is kept. To keep a
+  built-in text but stop it following `language`, change at least one character. An edit of the
+  extracted language file no longer flows into these settings — customise them in the config file
+  instead; released versions never read these keys from the language file, so this is no regression.
+  A blank scoreboard title is refused at load, exactly as every released version (`@NotEmpty`); a
+  blank `features.scoreboard.lines`, `tabbar.header` or `tabbar.footer` is kept blank and shows
+  nothing, exactly as every released version.
+- 变更：`config/essentials.yml`（计分板标题与内容、定时命令文字、死亡惩罚命令文字）、`config/tabbar.yml`
+  （Tab 栏头尾）与 `config/motd.yml`（两行 MOTD）中的消息与标题设置在模块启动时按服务器语言写入，文件内容即模块显示的内容。
+  仍为内置文本（任一语言的内置文本，或旧版本的出厂默认值）的设置会跟随 `language`：模块启动或执行 `/ul reload` 后改写为
+  当前语言的文本。你改过的设置保持不变。若想保留内置文本又不让它跟随语言，请至少改动一个字符。改动运维已解压的语言文件
+  不再影响这些设置——请直接在配置文件中修改；已发布版本从未从语言文件读取过这些键，因此这不是回归。空的计分板标题会在
+  启动时被拒绝，与历来发布的每个版本一致（`@NotEmpty`）；空的 `features.scoreboard.lines`、`tabbar.header` 或
+  `tabbar.footer` 保持为空且不显示任何内容，与历来发布的每个版本一致。
 
 - Language keys were renamed to dotted ASCII keys (for example `essentials.home.set`): every key that
   was a Chinese sentence, and `teleport_success`, the one older ASCII key still in use.

@@ -325,5 +325,9 @@
   "essentials.scoreboard.default_lines": "&7欢迎, &e%player_name%\n&7\n&6在线玩家: &f%online_players%/%max_players%\n&6当前世界: &f%player_world%\n&7\n&6生命值: &c%player_health%\n&6饥饿值: &a%player_food%\n&6等级: &e%player_level%\n&7\n&ewww.example.com",
   "essentials.tabbar.default_header": "&6=== 服务器名称 ===",
   "essentials.tabbar.default_footer": "&7在线: &e%online%&7/&e%max%",
-  "essentials.log.config_default_save_failed": "清空出厂默认文本后无法保存 %s：%s"
+  "essentials.scheduled-commands.default_commands": "300:say 服务器已上线!\n600:broadcast &c提醒: 请遵守服务器规则!",
+  "essentials.deathpunish.default_commands": "say {PLAYER} 死亡了!",
+  "essentials.motd.default_line1": "&6欢迎来到我们的服务器!",
+  "essentials.motd.default_line2": "&7由 UltiTools 强力驱动",
+  "essentials.log.config_default_save_failed": "已按服务器语言写入 %s 中的内置文本，但保存失败：%s"
 }

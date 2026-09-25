@@ -1,5 +1,7 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.config.ConfigTextDefaults;
+import com.ultikits.plugins.essentials.config.MotdConfig;
 import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.plugins.essentials.commands.HideCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
@@ -9,9 +11,11 @@ import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.service.TeleportService;
+import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.UltiToolsModule;
 
+import java.io.IOException;
 import java.util.function.Consumer;
 
 /**
@@ -48,7 +52,7 @@ public class UltiEssentials extends UltiToolsPlugin {
         // All services are automatically initialized by IoC container via @PostConstruct
         repairStoredPrimaryKeys();
         warnAboutRemovedSettings();
-        blankShippedTextDefaults();
+        writeConfigTextInServerLanguage();
         getLogger().info(i18n("essentials.log.enabled"));
         return true;
     }
@@ -79,29 +83,38 @@ public class UltiEssentials extends UltiToolsPlugin {
     }
 
     /**
-     * Blanks the scoreboard title and lines and the tab-list header and footer when they still hold a
-     * default an earlier version shipped (all four were Chinese), and saves the file, so the language
-     * file's text takes over in the server's language; any other value is the operator's and is kept
-     * (maintainer ruling 2026-09-24 (d)). Runs at start-up and on every {@code /ul reload}; a blank
-     * value matches no shipped default, so it is never rewritten twice.
+     * Writes the scoreboard title and lines, the tab-list header and footer, the MOTD lines, the
+     * scheduled-command text and the death-punishment command text in the server's language, when each
+     * is still built-in text -- a default an earlier version shipped, or this jar's own text for it in
+     * any language -- and saves the file(s) that changed; any other value is the operator's and is kept
+     * (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26). Runs at start-up and on every
+     * {@code /ul reload}, after the framework has re-read the configuration and rebuilt the language;
+     * idempotent, so a second call writes nothing.
      * <p>
-     * 计分板标题/内容与 Tab 栏头尾仍为旧版本出厂默认值时清空并保存，改由语言文件按服务器语言提供文本；运维自定义的值保留。
+     * 计分板标题/内容、Tab 栏头尾、MOTD、定时命令与死亡惩罚命令中的内置文本按服务器语言写入并保存；运维自定义的值保留。
      */
-    private void blankShippedTextDefaults() {
+    private void writeConfigTextInServerLanguage() {
         EssentialsConfig essentials = getContext().getBean(EssentialsConfig.class);
-        if (essentials != null && essentials.migrateLegacyDefaults()) {
-            saveMigrated(essentials);
+        if (essentials != null
+                && essentials.materializeText(ConfigTextDefaults.jarLanguage(EssentialsConfig.class, getLanguageCode())::getLocalizedText)) {
+            saveMaterialized(essentials);
         }
         TabBarConfig tabBar = getContext().getBean(TabBarConfig.class);
-        if (tabBar != null && tabBar.migrateLegacyDefaults()) {
-            saveMigrated(tabBar);
+        if (tabBar != null
+                && tabBar.materializeText(ConfigTextDefaults.jarLanguage(TabBarConfig.class, getLanguageCode())::getLocalizedText)) {
+            saveMaterialized(tabBar);
+        }
+        MotdConfig motd = getContext().getBean(MotdConfig.class);
+        if (motd != null
+                && motd.materializeText(ConfigTextDefaults.jarLanguage(MotdConfig.class, getLanguageCode())::getLocalizedText)) {
+            saveMaterialized(motd);
         }
     }
 
-    private void saveMigrated(com.ultikits.ultitools.abstracts.AbstractConfigEntity config) {
+    private void saveMaterialized(AbstractConfigEntity config) {
         try {
             config.save();
-        } catch (java.io.IOException e) {
+        } catch (IOException e) {
             getLogger().warn(String.format(i18n("essentials.log.config_default_save_failed"), config.getConfigFilePath(),
                     e.getMessage()));
         }
@@ -137,7 +150,7 @@ public class UltiEssentials extends UltiToolsPlugin {
     @Override
     protected void onReload() {
         warnAboutRemovedSettings();
-        blankShippedTextDefaults();
+        writeConfigTextInServerLanguage();
         reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
         reloadService(ScoreboardService.class, ScoreboardService::reload);
         reloadService(NamePrefixService.class, NamePrefixService::reload);

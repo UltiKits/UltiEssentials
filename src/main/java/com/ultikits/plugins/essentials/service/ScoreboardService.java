@@ -166,43 +166,24 @@ public class ScoreboardService {
     }
     
     /**
-     * The configured title, or the language file's default when it is blank. Resolved here, when the
-     * sidebar is drawn, and never while the configuration reloads: the framework reloads the
-     * configuration before it rebuilds the language (maintainer ruling 2026-09-24 (d)).
-     */
-    String effectiveTitle() {
-        String title = config.getScoreboardTitle();
-        return title == null || title.trim().isEmpty() ? plugin.i18n("essentials.scoreboard.default_title") : title;
-    }
-
-    /** The configured lines, or the language file's default lines (one per line of the text) when empty. */
-    List<String> effectiveLines() {
-        List<String> lines = config.getScoreboardLines();
-        if (lines == null || lines.isEmpty()) {
-            return java.util.Arrays.asList(plugin.i18n("essentials.scoreboard.default_lines").split("\n", -1));
-        }
-        return lines;
-    }
-
-    /**
      * Updates the scoreboard for a player.
      */
     public void updateScoreboard(Player player) {
         if (manager == null || !enabledPlayers.contains(player.getUniqueId())) {
             return;
         }
-        
+
         Scoreboard scoreboard = manager.getNewScoreboard();
-        String title = parsePlaceholders(player, effectiveTitle());
-        
+        String title = parsePlaceholders(player, config.getScoreboardTitle());
+
         Objective objective = scoreboard.registerNewObjective(
             "ultiessentials",
             "dummy",
             colorize(title)
         );
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        
-        List<String> lines = effectiveLines();
+
+        List<String> lines = config.getScoreboardLines();
         int score = lines.size();
         
         for (String line : lines) {

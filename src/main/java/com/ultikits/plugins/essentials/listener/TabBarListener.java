@@ -1,6 +1,5 @@
 package com.ultikits.plugins.essentials.listener;
 
-import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.ultitools.annotations.Autowired;
@@ -20,12 +19,9 @@ public class TabBarListener implements Listener {
 
     @Autowired
     private EssentialsConfig config;
-    
-    @Autowired
-    private TabBarConfig tabBarConfig;
 
     @Autowired
-    private UltiToolsPlugin plugin;
+    private TabBarConfig tabBarConfig;
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -43,16 +39,8 @@ public class TabBarListener implements Listener {
      * @param player the player to update
      */
     public void updateTabBar(Player player) {
-        // A blank value shows the language file's text, resolved here when the tab list is drawn and
-        // never while the configuration reloads (maintainer ruling 2026-09-24 (d)).
         String header = tabBarConfig.getHeader();
-        if (header == null || header.trim().isEmpty()) {
-            header = plugin.i18n("essentials.tabbar.default_header");
-        }
         String footer = tabBarConfig.getFooter();
-        if (footer == null || footer.trim().isEmpty()) {
-            footer = plugin.i18n("essentials.tabbar.default_footer");
-        }
 
         // Replace variables
         header = header

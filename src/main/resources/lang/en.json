@@ -325,5 +325,9 @@
   "essentials.scoreboard.default_lines": "&7Welcome, &e%player_name%\n&7\n&6Online: &f%online_players%/%max_players%\n&6World: &f%player_world%\n&7\n&6Health: &c%player_health%\n&6Food: &a%player_food%\n&6Level: &e%player_level%\n&7\n&ewww.example.com",
   "essentials.tabbar.default_header": "&6=== Server Name ===",
   "essentials.tabbar.default_footer": "&7Online: &e%online%&7/&e%max%",
-  "essentials.log.config_default_save_failed": "Could not save %s after blanking a shipped default text: %s"
+  "essentials.scheduled-commands.default_commands": "300:say Server is online!\n600:broadcast &cReminder: follow server rules!",
+  "essentials.deathpunish.default_commands": "say {PLAYER} died!",
+  "essentials.motd.default_line1": "&6Welcome to our server!",
+  "essentials.motd.default_line2": "&7Powered by UltiTools",
+  "essentials.log.config_default_save_failed": "Could not save %s after writing its built-in text in the server's language: %s"
 }

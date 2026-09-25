@@ -404,13 +404,13 @@ class BanCommandsTest {
         }
 
         /**
-         * Proves the review round-2 Codex finding on PR#22 (comment 3944429768): a player who is
-         * simultaneously in this plugin's own active ban records AND the server's own ban list
-         * (e.g. an additional vanilla {@code /ban}) previously fell into the {@code success}
-         * branch alone -- {@code unbanPlayerByName} returns {@code true}, the {@code else if}
-         * checking {@code isBannedInServerBanList} is never reached, and the command told the
-         * sender (and broadcast to everyone) that the ban was fully removed even though the
-         * server still rejects the player's login.
+         * Pins a behaviour found reviewing PR #22: a player who is simultaneously in this
+         * plugin's own active ban records AND the server's own ban list (e.g. an additional
+         * vanilla {@code /ban}) previously fell into the {@code success} branch alone -- {@code
+         * unbanPlayerByName} returns {@code true}, the {@code else if} checking {@code
+         * isBannedInServerBanList} is never reached, and the command told the sender (and
+         * broadcast to everyone) that the ban was fully removed even though the server still
+         * rejects the player's login.
          */
         @Test
         @DisplayName("Should warn about a remaining server ban after removing this plugin's own ban record, without broadcasting a misleading full unban")

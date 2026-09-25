@@ -120,15 +120,14 @@ class OtherListenersTest {
         }
 
         /**
-         * Proves the review round-4 Codex finding on PR#22 (comment 3944635309): a player who
-         * disconnects during the 20-tick auto-enable delay is removed by {@code onPlayerQuit}
-         * (which calls {@code ScoreboardService#disableScoreboard}) before this scheduled
-         * callback runs. Without an online check, the callback would call
-         * {@code enableScoreboard} anyway, which re-adds the player's (now offline) UUID to
-         * {@code ScoreboardService#enabledPlayers} and immediately builds and assigns a
-         * scoreboard to a disconnected {@code Player}, undoing the quit cleanup until a later
-         * periodic update removes it. Same shape and technique as
-         * {@code NamePrefixListenerTests#shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan}.
+         * Pins a behaviour found reviewing PR #22: a player who disconnects during the 20-tick
+         * auto-enable delay is removed by {@code onPlayerQuit} (which calls {@code
+         * ScoreboardService#disableScoreboard}) before this scheduled callback runs. Without an
+         * online check, the callback would call {@code enableScoreboard} anyway, which re-adds
+         * the player's (now offline) UUID to {@code ScoreboardService#enabledPlayers} and
+         * immediately builds and assigns a scoreboard to a disconnected {@code Player}, undoing
+         * the quit cleanup until a later periodic update removes it. Same shape and technique
+         * as {@code NamePrefixListenerTests#shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan}.
          */
         @Test
         @DisplayName("Should skip the delayed auto-enable if the player quit before it ran")
@@ -212,9 +211,9 @@ class OtherListenersTest {
         }
 
         /**
-         * Proves the review round-2 Codex finding on PR#22 (comment 3944429769): a player who
-         * disconnects during the 10-tick join delay is removed by {@code onPlayerQuit} (which
-         * calls {@code NamePrefixService#removePlayer}) before this scheduled callback runs.
+         * Pins a behaviour found reviewing PR #22: a player who disconnects during the 10-tick
+         * join delay is removed by {@code onPlayerQuit} (which calls {@code
+         * NamePrefixService#removePlayer}) before this scheduled callback runs.
          * Without an online check, the callback would call {@code updatePlayer} anyway, which
          * recreates the player's {@code playerTeams} entry and re-adds their (now offline) name
          * to the main-scoreboard team -- and since the periodic updater only iterates online

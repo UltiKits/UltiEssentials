@@ -125,13 +125,12 @@ class BackCommandTest {
         }
 
         /**
-         * Proves the review round-2 Codex finding on PR#22 (comment 3944429766): every one of
-         * this plugin's own teleport call sites -- {@code TeleportService} (backing /home and
-         * /warp), {@code SpawnCommand}, {@code LobbyCommand} -- calls
-         * {@code Player#teleport(Location)} with no explicit cause, which Bukkit/Paper's
-         * {@code Entity#teleport(Location)} javadoc and source both default to
-         * {@code TeleportCause.PLUGIN}, not {@code COMMAND}. Before this fix, /back after any of
-         * those commands recorded nothing.
+         * Pins a behaviour found reviewing PR #22: every one of this plugin's own teleport call
+         * sites -- {@code TeleportService} (backing /home and /warp), {@code SpawnCommand},
+         * {@code LobbyCommand} -- calls {@code Player#teleport(Location)} with no explicit
+         * cause, which Bukkit/Paper's {@code Entity#teleport(Location)} javadoc and source both
+         * default to {@code TeleportCause.PLUGIN}, not {@code COMMAND}. Before this fix, /back
+         * after any of those commands recorded nothing.
          */
         @Test
         @DisplayName("Should record location on plugin-triggered teleport")
@@ -313,13 +312,13 @@ class BackCommandTest {
         }
 
         /**
-         * Proves the review round-3 Codex finding on PR#22 (comment 3944574360): dispatched at
-         * default priority with no {@code ignoreCancelled}, {@code onPlayerTeleport} still
-         * recorded a teleport another listener (or a higher-priority listener acting after this
-         * one) went on to cancel, overwriting a valid previous location with the unchanged
-         * {@code from}. Dispatches through Bukkit's real event bus (not a direct method call) so
-         * the {@code priority}/{@code ignoreCancelled} handler attributes are actually exercised,
-         * not just declared.
+         * Pins a behaviour found reviewing PR #22: dispatched at default priority with no
+         * {@code ignoreCancelled}, {@code onPlayerTeleport} still recorded a teleport another
+         * listener (or a higher-priority listener acting after this one) went on to cancel,
+         * overwriting a valid previous location with the unchanged {@code from}. Dispatches
+         * through Bukkit's real event bus (not a direct method call) so the {@code
+         * priority}/{@code ignoreCancelled} handler attributes are actually exercised, not just
+         * declared.
          */
         @Test
         @DisplayName("aCancelledTeleportDoesNotOverwriteThePreviousLocation: a teleport cancelled by another listener before this class observes it must not replace a previously recorded valid /back location")

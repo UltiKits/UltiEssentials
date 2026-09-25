@@ -72,7 +72,7 @@ import static org.mockito.Mockito.mock;
  * {@code performOneTick()} on the calling (test) thread, which {@code ServerMock} treats as
  * primary ({@code isPrimaryThread() == true}). The test is still red before the fix and green
  * after it, for the real reason (the wrong thread), not for a setup error -- it does not
- * reproduce the specific exception text the plan predicted, because that exception is not part
+ * reproduce the specific exception text first predicted, because that exception is not part
  * of this dependency's simulated contract for this call chain.
  * </p>
  */

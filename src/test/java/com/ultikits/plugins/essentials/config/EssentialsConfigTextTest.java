@@ -115,7 +115,8 @@ class EssentialsConfigTextTest {
     private TabBarConfig currentTabBar;
     private MotdConfig currentMotd;
     private final EntityIdBackfillService backfillService = mock(EntityIdBackfillService.class);
-    private final ScheduledCommandService scheduledCommandServiceBean = mock(ScheduledCommandService.class);
+    /** The scheduled-command service the module double's getBean returns; a test may put a real one here. */
+    private ScheduledCommandService scheduledCommandServiceBean = mock(ScheduledCommandService.class);
     private final ScoreboardService scoreboardServiceBean = mock(ScoreboardService.class);
     private final NamePrefixService namePrefixServiceBean = mock(NamePrefixService.class);
 
@@ -137,8 +138,8 @@ class EssentialsConfigTextTest {
 
     // Local literal copies of the catalogue keys, not references to EssentialsConfig/TabBarConfig/
     // MotdConfig's own key constants: this file must compile with only ConfigTextDefaults.java kept
-    // at head (rule 12), and the three entities are reverted to their pre-fix shape (no such
-    // constants) in that proof.
+    // at head (the revert proof restores the fix's production files only), and the three entities
+    // are reverted to their pre-fix shape (no such constants) in that proof.
     private static final String SCOREBOARD_TITLE_KEY = "essentials.scoreboard.default_title";
     private static final String SCOREBOARD_LINES_KEY = "essentials.scoreboard.default_lines";
     private static final String SCHEDULED_COMMANDS_KEY = "essentials.scheduled-commands.default_commands";
@@ -449,7 +450,7 @@ class EssentialsConfigTextTest {
         assertThat(onDisk(essentialsFile()).getString("features.scoreboard.title")).isEqualTo(SHIPPED_TITLE_ZH + " ");
     }
 
-    // ================================================================== blank semantics (R6)
+    // ================================================================== blank semantics
 
     @Nested
     @DisplayName("blank semantics: @NotEmpty refuses a blank scoreboard.title; a blank lines/header/footer is kept blank")
@@ -572,10 +573,10 @@ class EssentialsConfigTextTest {
         assertThat(essentials.getScoreboardTitle()).isEqualTo(titleText("en"));
     }
 
-    // ================================================================== O3: the jar's own catalogue, not the disk copy
+    // ================================================================== the jar's own catalogue, not the disk copy
 
     @Test
-    @DisplayName("an operator's edit of the extracted language file is not written into any of the three files, so each value keeps following a language switch (orchestrator ruling O3)")
+    @DisplayName("an operator's edit of the extracted language file is not written into any of the three files, so each value keeps following a language switch (text source decision of 2026-09-25)")
     void diskCatalogueEditDoesNotReachTheFile() throws Exception {
         diskOverrides.put(SCOREBOARD_TITLE_KEY, "Edited title");
         diskOverrides.put(SCHEDULED_COMMANDS_KEY, "999:say Edited");
@@ -794,10 +795,137 @@ class EssentialsConfigTextTest {
                     r.run();
                 }
 
-                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq(commandTextOf(scheduledText("zh").get(0)))),
-                        org.mockito.Mockito.times(1));
-                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq(commandTextOf(scheduledText("zh").get(1)))),
-                        org.mockito.Mockito.times(1));
+                // Expected texts are computed before verify(): a failure while computing them inside the
+                // verify lambda would leave Mockito's matcher state open and fail the next test instead.
+                String first = commandTextOf(scheduledText("zh").get(0));
+                String second = commandTextOf(scheduledText("zh").get(1));
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq(first)), org.mockito.Mockito.times(1));
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq(second)), org.mockito.Mockito.times(1));
+            }
+        }
+
+        @Test
+        @DisplayName("DeathPunishListener dispatches the command text rewritten in the file under en")
+        void deathPunishListenerUsesTheRewrittenText() throws Exception {
+            language[0] = "en";
+            writeEssentials(SHIPPED_TITLE_ZH, SHIPPED_LINES_ZH, SHIPPED_SCHEDULED_EN, SHIPPED_DEATHPUNISH_ZH);
+            EssentialsConfig essentials = loadEssentials();
+            essentials.setDeathPunishEnabled(true);
+            essentials.setDeathPunishCommandEnabled(true);
+            start(essentials, loadTabBar(), loadMotd());
+            assertThat(onDisk(essentialsFile()).getStringList("features.deathpunish.command.commands"))
+                    .containsExactly("say {PLAYER} died!");
+
+            DeathPunishListener listener = new DeathPunishListener();
+            set(listener, "config", essentials);
+            set(listener, "plugin", plugin);
+            Player player = mock(Player.class);
+            org.mockito.Mockito.when(player.getName()).thenReturn("Steve");
+            org.mockito.Mockito.when(player.hasPermission(anyString())).thenReturn(false);
+            org.mockito.Mockito.when(player.getWorld()).thenReturn(mock(org.bukkit.World.class));
+            org.bukkit.event.entity.PlayerDeathEvent event = mock(org.bukkit.event.entity.PlayerDeathEvent.class);
+            org.mockito.Mockito.when(event.getEntity()).thenReturn(player);
+            org.mockito.Mockito.when(event.getDrops()).thenReturn(new ArrayList<>());
+
+            try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+                org.bukkit.command.ConsoleCommandSender console = mock(org.bukkit.command.ConsoleCommandSender.class);
+                bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+                listener.onPlayerDeath(event);
+
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq("say Steve died!")));
+            }
+        }
+
+        /**
+         * Production order: the container's {@code @PostConstruct} pass schedules the tasks before
+         * {@code registerSelf()} writes the file's text in the server's language. Every task still
+         * running after enable must send the rewritten text.
+         */
+        @Test
+        @DisplayName("tasks scheduled before enable send the text written at enable (the container schedules them first)")
+        void tasksScheduledBeforeEnableSendTheWrittenText() throws Exception {
+            language[0] = "zh";
+            writeEssentials(SHIPPED_TITLE_ZH, SHIPPED_LINES_ZH, SHIPPED_SCHEDULED_EN, SHIPPED_DEATHPUNISH_ZH);
+            EssentialsConfig essentials = loadEssentials();
+            essentials.setScheduledCommandsEnabled(true);
+            ScheduledCommandService service = new ScheduledCommandService();
+            set(service, "config", essentials);
+            set(service, "plugin", plugin);
+            set(service, "bukkitPlugin", mock(org.bukkit.plugin.Plugin.class));
+            scheduledCommandServiceBean = service;
+            String first = commandTextOf(scheduledText("zh").get(0));
+            String second = commandTextOf(scheduledText("zh").get(1));
+
+            try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+                org.bukkit.scheduler.BukkitScheduler scheduler = mock(org.bukkit.scheduler.BukkitScheduler.class);
+                Map<Runnable, org.bukkit.scheduler.BukkitTask> scheduled = new LinkedHashMap<>();
+                bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+                org.mockito.Mockito.when(scheduler.runTaskTimer(any(org.bukkit.plugin.Plugin.class),
+                                any(Runnable.class), org.mockito.ArgumentMatchers.anyLong(),
+                                org.mockito.ArgumentMatchers.anyLong()))
+                        .thenAnswer(inv -> {
+                            org.bukkit.scheduler.BukkitTask task = mock(org.bukkit.scheduler.BukkitTask.class);
+                            scheduled.put(inv.getArgument(1), task);
+                            return task;
+                        });
+                org.bukkit.command.ConsoleCommandSender console = mock(org.bukkit.command.ConsoleCommandSender.class);
+                bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+
+                service.startTasks();          // the @PostConstruct pass
+                start(essentials, loadTabBar(), loadMotd());  // registerSelf()
+
+                int live = 0;
+                for (Map.Entry<Runnable, org.bukkit.scheduler.BukkitTask> e : scheduled.entrySet()) {
+                    if (Mockito.mockingDetails(e.getValue()).getInvocations().stream()
+                            .noneMatch(i -> "cancel".equals(i.getMethod().getName()))) {
+                        e.getKey().run();
+                        live++;
+                    }
+                }
+                assertThat(live).isEqualTo(2);
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq(first)), org.mockito.Mockito.times(1));
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq(second)), org.mockito.Mockito.times(1));
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq("say Server is online!")), never());
+            }
+        }
+
+        /**
+         * A task keeps the command it was scheduled with until the next reload: a list changed in memory
+         * without a reload (a panel write) must not move another entry's command onto this task's interval.
+         */
+        @Test
+        @DisplayName("a running task keeps its own command when the list changes without a reload")
+        void aRunningTaskKeepsItsOwnCommandWhenTheListChanges() throws Exception {
+            language[0] = "en";
+            EssentialsConfig essentials = loadEssentials();
+            essentials.setScheduledCommandsEnabled(true);
+            essentials.setScheduledCommands(new ArrayList<>(Arrays.asList("60:say Tip of the minute", "86400:stop")));
+            ScheduledCommandService service = new ScheduledCommandService();
+            set(service, "config", essentials);
+            set(service, "plugin", plugin);
+            set(service, "bukkitPlugin", mock(org.bukkit.plugin.Plugin.class));
+
+            try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+                org.bukkit.scheduler.BukkitScheduler scheduler = mock(org.bukkit.scheduler.BukkitScheduler.class);
+                List<Runnable> scheduled = new ArrayList<>();
+                bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+                org.mockito.Mockito.when(scheduler.runTaskTimer(any(org.bukkit.plugin.Plugin.class),
+                                any(Runnable.class), org.mockito.ArgumentMatchers.anyLong(),
+                                org.mockito.ArgumentMatchers.anyLong()))
+                        .thenAnswer(inv -> {
+                            scheduled.add(inv.getArgument(1));
+                            return mock(org.bukkit.scheduler.BukkitTask.class);
+                        });
+                org.bukkit.command.ConsoleCommandSender console = mock(org.bukkit.command.ConsoleCommandSender.class);
+                bukkit.when(Bukkit::getConsoleSender).thenReturn(console);
+
+                service.startTasks();
+                assertThat(scheduled).hasSize(2);
+                essentials.setScheduledCommands(new ArrayList<>(Arrays.asList("86400:stop")));
+                scheduled.get(0).run();
+
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq("say Tip of the minute")), org.mockito.Mockito.times(1));
+                bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq("stop")), never());
             }
         }
 

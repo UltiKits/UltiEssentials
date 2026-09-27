@@ -151,6 +151,20 @@ class ScoreboardServiceMainTeamsTest {
     }
 
     @Test
+    @DisplayName("When another plugin removes the sidebar objective from the board, the next update redraws every line on the new one")
+    void aRecreatedObjectiveGetsEveryLineAgain() {
+        service.enableScoreboard(player);
+        Objective replacement = mock(Objective.class);
+        when(replacement.getScore(anyString())).thenReturn(mock(Score.class));
+        when(privateBoard.getObjective("ultiessentials")).thenReturn(null);
+        when(privateBoard.registerNewObjective(anyString(), anyString(), anyString())).thenReturn(replacement);
+
+        service.updateScoreboard(player);
+
+        verify(replacement).getScore("Line");
+    }
+
+    @Test
     @DisplayName("An unchanged team costs no writes on the next update")
     void unchangedTeamCostsNoWrites() {
         FakeScoreboards.addTeam(mainBoard, "up_x", "[VIP] ", "Alice");

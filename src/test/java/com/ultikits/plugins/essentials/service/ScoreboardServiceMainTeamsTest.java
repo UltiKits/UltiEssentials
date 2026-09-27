@@ -166,6 +166,13 @@ class ScoreboardServiceMainTeamsTest {
         verify(replacement).getScore("Line");
     }
 
+    /** Scores on {@code objective} read as set, so an update sees the lines intact and tests one thing. */
+    private static void keepScoresSet(Objective objective) {
+        Score score = mock(Score.class);
+        when(score.isScoreSet()).thenReturn(true);
+        when(objective.getScore(anyString())).thenReturn(score);
+    }
+
     // Another plugin can change this module's board while the player views it. Every piece of that
     // board the update does not rebuild on its own is checked: the objective (recreated above), the
     // sidebar slot, and the scores; the title and the copied teams are rewritten on every update.
@@ -174,6 +181,7 @@ class ScoreboardServiceMainTeamsTest {
     @DisplayName("When another plugin clears the sidebar slot on the board, the next update puts the objective back in it")
     void aClearedSidebarSlotIsRestored() {
         Objective objective = privateBoard.getObjective("ultiessentials");
+        keepScoresSet(objective);
         service.enableScoreboard(player);
         org.mockito.Mockito.clearInvocations(objective);
         when(privateBoard.getObjective(DisplaySlot.SIDEBAR)).thenReturn(null);
@@ -187,6 +195,7 @@ class ScoreboardServiceMainTeamsTest {
     @DisplayName("When another plugin shows its own objective in the sidebar slot of the board, the next update puts this one back")
     void aForeignObjectiveInTheSlotIsReplaced() {
         Objective objective = privateBoard.getObjective("ultiessentials");
+        keepScoresSet(objective);
         service.enableScoreboard(player);
         org.mockito.Mockito.clearInvocations(objective);
         when(privateBoard.getObjective(DisplaySlot.SIDEBAR)).thenReturn(mock(Objective.class));
@@ -200,6 +209,7 @@ class ScoreboardServiceMainTeamsTest {
     @DisplayName("While this objective holds the slot, an update does not set the slot again")
     void theSlotIsNotRewrittenWhileHeld() {
         Objective objective = privateBoard.getObjective("ultiessentials");
+        keepScoresSet(objective);
         service.enableScoreboard(player);
         org.mockito.Mockito.clearInvocations(objective);
         when(privateBoard.getObjective(DisplaySlot.SIDEBAR)).thenReturn(objective);
@@ -244,16 +254,21 @@ class ScoreboardServiceMainTeamsTest {
     // lines, and the teams it copied from the main scoreboard. Anything another plugin put there stays.
 
     @Test
-    @DisplayName("When the lines change, only this module's previous lines are reset: another objective's scores stay")
-    void aLineChangeResetsOnlyThisModulesLines() {
-        when(privateBoard.getEntries()).thenReturn(new java.util.HashSet<>(java.util.Arrays.asList("Alex", "Line")));
+    @DisplayName("When the lines change, no entry is reset board-wide: this module's objective is replaced, so another objective's scores stay")
+    void aLineChangeReplacesOnlyThisModulesObjective() {
+        Objective objective = privateBoard.getObjective("ultiessentials");
         service.enableScoreboard(player);
+        Objective replacement = mock(Objective.class);
+        when(replacement.getScore(anyString())).thenReturn(mock(Score.class));
+        when(privateBoard.registerNewObjective(anyString(), anyString(), anyString())).thenReturn(replacement);
         config.setScoreboardLines(Collections.singletonList("Other"));
 
         service.updateScoreboard(player);
 
-        verify(privateBoard).resetScores("Line");
-        verify(privateBoard, never()).resetScores("Alex");
+        verify(privateBoard, never()).resetScores(anyString());
+        verify(objective).unregister();
+        verify(replacement).setDisplaySlot(DisplaySlot.SIDEBAR);
+        verify(replacement).getScore("Other");
     }
 
     @Test
@@ -269,6 +284,23 @@ class ScoreboardServiceMainTeamsTest {
 
         assertThat(privateBoard.getTeam("up_x")).as("the copy of a team gone from the main board").isNull();
         assertThat(privateBoard.getTeam("tab_sort")).as("another plugin's team").isNotNull();
+    }
+
+    @Test
+    @DisplayName("A team another plugin put on the board under a copied team's name is left as that plugin set it")
+    void aForeignTeamReusingACopiedNameIsLeftAlone() {
+        Team source = FakeScoreboards.addTeam(mainBoard, "up_x", "[VIP] ", "Alice");
+        service.enableScoreboard(player);
+        privateBoard.getTeam("up_x").unregister();
+        Team foreign = FakeScoreboards.addTeam(privateBoard, "up_x", "[TAB] ", "Bob");
+
+        service.updateScoreboard(player);
+        source.unregister();
+        service.updateScoreboard(player);
+
+        assertThat(privateBoard.getTeam("up_x")).isSameAs(foreign);
+        assertThat(foreign.prefix()).isEqualTo(Component.text("[TAB] "));
+        assertThat(foreign.getEntries()).containsExactly("Bob");
     }
 
     @Test

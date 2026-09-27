@@ -194,6 +194,38 @@ class NamePrefixServiceMockitoTest {
     }
 
     @Nested
+    @DisplayName("After shutdown (#51)")
+    class AfterShutdownTests {
+
+        @Test
+        @DisplayName("The delayed join update that fires after the module was unloaded adds no team entry")
+        void updateAfterShutdownDoesNothing() {
+            Team team = mock(Team.class);
+            lenient().when(mainScoreboard.getTeam(anyString())).thenReturn(team);
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+
+            service.shutdown();
+            service.updatePlayer(player);
+
+            verify(team, never()).addEntry(anyString());
+            verify(mainScoreboard, never()).registerNewTeam(anyString());
+        }
+
+        @Test
+        @DisplayName("A reload is not an unload: players are updated again afterwards")
+        void updateAfterReloadWorks() {
+            Team team = mock(Team.class);
+            lenient().when(mainScoreboard.getTeam(anyString())).thenReturn(team);
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+
+            service.reload();
+            service.updatePlayer(player);
+
+            verify(team).addEntry("Steve");
+        }
+    }
+
+    @Nested
     @DisplayName("reload")
     class ReloadTests {
 

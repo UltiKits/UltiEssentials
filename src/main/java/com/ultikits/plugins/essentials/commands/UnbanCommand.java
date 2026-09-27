@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
  * Command for unbanning players.
  * <p>
  * Usage: /unban <player>
- *        /unbanip <ip>
  *
  * @author wisdomme
  * @version 1.0.0

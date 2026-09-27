@@ -116,16 +116,6 @@ public class BanService {
     }
     
     /**
-     * Unbans a player, reporting success only once no active ban record remains for them.
-     *
-     * @param targetUuid the UUID of the player to unban
-     * @return what happened: the ban was lifted, there was none, or one survived
-     */
-    public UnbanResult unbanPlayer(UUID targetUuid) {
-        return deactivateActiveBans("player_uuid", targetUuid.toString(), "player " + targetUuid);
-    }
-    
-    /**
      * Unbans a player by name, reporting success only once no active ban record remains for that
      * name.
      * <p>
@@ -174,21 +164,12 @@ public class BanService {
     }
 
     /**
-     * Unbans an IP address.
-     *
-     * @param ipAddress the IP address to unban
-     * @return true if unbanned, false if not banned
-     */
-    public UnbanResult unbanIp(String ipAddress) {
-        return deactivateActiveBans("ip_address", ipAddress, "IP address " + ipAddress);
-    }
-
-    /**
      * Deactivates every active ban record matching one column value, then confirms by re-query that
      * none is left active before reporting success.
      * <p>
-     * The three unban paths held three copies of this body, so a fix applied to one of them would
-     * have left the other two reporting success on an unchanged store. A failed update on a single
+     * The unban paths once held three copies of this body, so a fix applied to one of them would
+     * have left the others reporting success on an unchanged store; {@link #unbanPlayerByName} is
+     * the only path left (UltiKits/UltiEssentials#47). A failed update on a single
      * record is logged and the remaining records are still attempted: the re-query, not the
      * individual call, decides the outcome.
      *

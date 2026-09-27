@@ -367,6 +367,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- Removed the two unban helpers that no command reached — unbanning by player UUID and by IP address —
+  and the `/unbanip` line in `/unban`'s documentation, which named a command that does not exist.
+  `/unban <player>` is unchanged; an IP-unban command is tracked as a feature request,
+  UltiKits/UltiEssentials#63 (UltiKits/UltiEssentials#47).
+- 删除两个没有任何命令调用的解封方法（按玩家 UUID 解封、按 IP 解封），以及 `/unban` 说明中指向不存在命令的
+  `/unbanip` 一行。`/unban <玩家>` 不变；IP 解封命令作为功能需求在 UltiKits/UltiEssentials#63 跟踪（UltiKits/UltiEssentials#47）。
 - Seven language entries no code has displayed since an earlier change in this release removed the
   helpers that used them
   (`feature_disabled` and six `teleport_*` messages) were removed from both language files. Nothing

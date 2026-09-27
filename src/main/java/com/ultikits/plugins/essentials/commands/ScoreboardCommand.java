@@ -31,7 +31,7 @@ public class ScoreboardCommand extends BaseEssentialsCommand {
         boolean enabled = scoreboardService.toggleScoreboard(player);
         
         if (enabled) {
-            player.sendMessage(i18n("essentials.scoreboard.enabled"));
+            sendEnabledReply(player);
         } else {
             player.sendMessage(i18n("essentials.scoreboard.disabled"));
         }
@@ -40,12 +40,30 @@ public class ScoreboardCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "on")
     public void enable(@CmdSender Player player) {
         if (scoreboardService.isEnabled(player)) {
-            player.sendMessage(i18n("essentials.scoreboard.already_enabled"));
+            // On, but another scoreboard keeps the slot: say so rather than "already enabled",
+            // which would not explain why no sidebar is on screen (UltiKits/UltiEssentials#40).
+            if (scoreboardService.isSlotTakenByAnother(player)) {
+                player.sendMessage(i18n("essentials.scoreboard.enabled_occupied"));
+            } else {
+                player.sendMessage(i18n("essentials.scoreboard.already_enabled"));
+            }
             return;
         }
         
         scoreboardService.enableScoreboard(player);
-        player.sendMessage(i18n("essentials.scoreboard.enabled"));
+        sendEnabledReply(player);
+    }
+
+    /**
+     * Confirms that the scoreboard is on, or says that it is on but another scoreboard keeps the
+     * sidebar slot for now (UltiKits/UltiEssentials#40).
+     */
+    private void sendEnabledReply(Player player) {
+        if (scoreboardService.isSlotTakenByAnother(player)) {
+            player.sendMessage(i18n("essentials.scoreboard.enabled_occupied"));
+        } else {
+            player.sendMessage(i18n("essentials.scoreboard.enabled"));
+        }
     }
     
     @CmdMapping(format = "off")

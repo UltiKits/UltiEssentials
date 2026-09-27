@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -15,6 +16,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.*;
 
 import com.ultikits.ultitools.annotations.PostConstruct;
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,6 +39,15 @@ public class ScoreboardService {
     private UltiToolsPlugin plugin;
 
     private Plugin bukkitPlugin;
+
+    /** The module whose sidebar shares the player's sidebar slot with this one. */
+    private static final String OTHER_SIDEBAR_MODULE = "UltiSideBar";
+
+    /** That module's configuration file, relative to its module folder. */
+    private static final String OTHER_SIDEBAR_CONFIG = "config/sidebar.yml";
+
+    /** That module's switch for its sidebar. */
+    private static final String OTHER_SIDEBAR_KEY = "enabled";
 
     /** Longest entry text a scoreboard line keeps (the limit older clients enforce). */
     private static final int MAX_ENTRY_LENGTH = 40;
@@ -80,7 +91,35 @@ public class ScoreboardService {
         // Start update task if enabled
         if (config.isScoreboardEnabled()) {
             startUpdateTask();
+            Bukkit.getScheduler().runTask(bukkitPlugin, this::reportOtherSidebar);
         }
+    }
+
+    /**
+     * Logs one line, on the first server tick after start-up (when every module has been loaded,
+     * whatever their order), when UltiSideBar's sidebar is also enabled: each player keeps whichever
+     * sidebar is shown first, and the other one waits (UltiKits/UltiEssentials#40).
+     */
+    private void reportOtherSidebar() {
+        for (UltiToolsPlugin module : UltiToolsPlugin.getPluginManager().getPluginList()) {
+            if (OTHER_SIDEBAR_MODULE.equals(module.getPluginName())
+                    && isOtherSidebarEnabled(module.getResourceFolderPath())) {
+                failureLog.info(plugin.i18n("essentials.log.scoreboard_other_sidebar"));
+                return;
+            }
+        }
+    }
+
+    /**
+     * Reads UltiSideBar's own switch for its sidebar from that module's configuration file; the
+     * switch defaults to on, as it ships.
+     */
+    private static boolean isOtherSidebarEnabled(String moduleFolder) {
+        File file = new File(moduleFolder, OTHER_SIDEBAR_CONFIG);
+        if (!file.isFile()) {
+            return true;
+        }
+        return YamlConfiguration.loadConfiguration(file).getBoolean(OTHER_SIDEBAR_KEY, true);
     }
     
     /**
@@ -147,15 +186,13 @@ public class ScoreboardService {
      */
     public void disableScoreboard(Player player) {
         enabledPlayers.remove(player.getUniqueId());
-        playerBoards.remove(player.getUniqueId());
+        Scoreboard own = playerBoards.remove(player.getUniqueId());
         shownLines.remove(player.getUniqueId());
         updateFailures.forget(player.getUniqueId());
         
-        // Give back the server's main scoreboard, not a fresh empty one: name-prefix teams and any
-        // other main-scoreboard content are only visible on the main scoreboard.
-        if (manager != null) {
-            player.setScoreboard(manager.getMainScoreboard());
-        }
+        // Give back the server's main scoreboard, not a fresh empty one -- and only while this
+        // module's own board is on screen (UltiKits/UltiEssentials#40).
+        returnToMainScoreboard(player, own);
     }
     
     /**
@@ -190,6 +227,11 @@ public class ScoreboardService {
      */
     public void updateScoreboard(Player player) {
         if (manager == null || !enabledPlayers.contains(player.getUniqueId())) {
+            return;
+        }
+        if (isSlotTakenByAnother(player)) {
+            // Another scoreboard holds the sidebar slot; it stays until it is put away, and a later
+            // update shows this sidebar then (UltiKits/UltiEssentials#40, UltiKits/UltiSideBar#26).
             return;
         }
 
@@ -239,6 +281,32 @@ public class ScoreboardService {
         }
     }
     
+    /**
+     * Whether another plugin's scoreboard holds the player's sidebar slot: the player views neither
+     * the server's main scoreboard nor this module's own board. The first sidebar shown keeps the
+     * slot; this module's sidebar waits (maintainer decision 2026-09-27, UltiKits/UltiEssentials#40).
+     *
+     * @param player the player
+     * @return {@code true} if this module's sidebar yields to the scoreboard on screen
+     */
+    public boolean isSlotTakenByAnother(Player player) {
+        Scoreboard current = player.getScoreboard();
+        if (current == null || manager == null || current.equals(playerBoards.get(player.getUniqueId()))) {
+            return false;
+        }
+        return !current.equals(manager.getMainScoreboard());
+    }
+
+    /**
+     * Returns the player to the main scoreboard, but only while this module's own board is the one
+     * on screen: another plugin's scoreboard is left where it is.
+     */
+    private void returnToMainScoreboard(Player player, Scoreboard own) {
+        if (manager != null && own != null && own.equals(player.getScoreboard())) {
+            player.setScoreboard(manager.getMainScoreboard());
+        }
+    }
+
     /**
      * Makes a line unique among the lines of this update: it is truncated to the entry length limit
      * first and only then compared, so two lines that differ only after the limit still become two
@@ -311,12 +379,12 @@ public class ScoreboardService {
             updateTask = null;
         }
         
-        // Return every player who had a sidebar to the main scoreboard
+        // Return every player who is viewing this module's sidebar to the main scoreboard
         for (UUID uuid : enabledPlayers) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && manager != null) {
                 try {
-                    player.setScoreboard(manager.getMainScoreboard());
+                    returnToMainScoreboard(player, playerBoards.get(uuid));
                 } catch (RuntimeException e) {
                     failureLog.error(plugin.i18n("essentials.log.scoreboard_reset_failed"), player.getName(), e);
                 }

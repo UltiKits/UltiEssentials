@@ -9,6 +9,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The sidebar no longer replaces another plugin's sidebar (such as UltiSideBar's): whichever sidebar a
+  player sees first stays, and this one appears once the other is turned off. `/scoreboard on` and
+  `/scoreboard` now say when another scoreboard keeps the slot, and `/scoreboard off` no longer removes
+  another plugin's sidebar. When UltiSideBar's sidebar is also enabled, one console line says so after
+  start-up (UltiKits/UltiEssentials#40).
+- 侧边栏不再顶替其它插件的侧边栏（例如 UltiSideBar 的）：玩家先看到哪个侧边栏就保留哪个，另一个关闭后本侧边栏才显示。
+  `/scoreboard on` 与 `/scoreboard` 在另一个计分板占用该位置时会如实说明，`/scoreboard off` 也不再移除其它插件的侧边栏。
+  UltiSideBar 的侧边栏同时开启时，启动后控制台会有一行提示（UltiKits/UltiEssentials#40）。
 - Name prefixes (`features.nameprefix`) and other main-scoreboard teams (vanilla `/team` teams, other
   plugins' teams) now show while this module's sidebar is on: the sidebar's own scoreboard now carries
   the server's main-scoreboard teams and follows their changes on every update. Previously every

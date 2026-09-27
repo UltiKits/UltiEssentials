@@ -47,9 +47,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 装有 PlaceholderAPI 时，计分板现在会把内置变量（`%online_players%`、`%max_players%`、`%player_food%` 等）显示为数值，
   不再原样显示：计分板与名字前缀先填入本模块自己的变量，再交给 PlaceholderAPI（UltiKits/UltiEssentials#59）。
 - `/scoreboard off` run right after joining now sticks: the sidebar no longer appears a moment later
-  from the delayed auto-enable. The choice lasts until the player quits or runs `/scoreboard on`
-  (UltiKits/UltiEssentials#45).
-- 刚进服就执行的 `/scoreboard off` 现在会生效：侧边栏不会再被延迟的自动开启在片刻后重新显示。该选择持续到玩家退出或执行
+  from the delayed auto-enable, nor from a reload that turns the scoreboard feature on. The choice lasts
+  until the player quits or runs `/scoreboard on` (UltiKits/UltiEssentials#45).
+- 刚进服就执行的 `/scoreboard off` 现在会生效：侧边栏不会再被延迟的自动开启在片刻后重新显示，重载开启计分板功能时也不会。该选择持续到玩家退出或执行
   `/scoreboard on` 为止（UltiKits/UltiEssentials#45）。
 - The sidebar no longer replaces another plugin's sidebar (such as UltiSideBar's): whichever sidebar a
   player sees first stays, and this one appears once the other is turned off. `/scoreboard on` and

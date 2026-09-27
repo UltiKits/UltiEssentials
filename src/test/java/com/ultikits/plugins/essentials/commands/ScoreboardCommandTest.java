@@ -67,7 +67,7 @@ class ScoreboardCommandTest {
 
         command.enable(player);
 
-        verify(scoreboardService).enableScoreboard(player);
+        verify(scoreboardService).acceptScoreboard(player);
         verify(player).sendMessage(anyString());
     }
 
@@ -117,7 +117,7 @@ class ScoreboardCommandTest {
 
         command.enable(player);
 
-        verify(scoreboardService).enableScoreboard(player);
+        verify(scoreboardService).acceptScoreboard(player);
         verify(player).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.enabled_occupied"));
         verify(player, never()).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.enabled"));
     }

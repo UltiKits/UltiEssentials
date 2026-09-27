@@ -197,9 +197,23 @@ public class ScoreboardService {
             return;
         }
         
-        declinedPlayers.remove(player.getUniqueId());
+        if (declinedPlayers.contains(player.getUniqueId())) {
+            // An automatic enable (the delayed join enable, a reload that turns the feature on) never
+            // overrides a player who turned the sidebar off this session; only the player's own
+            // /scoreboard on or toggle does, through acceptScoreboard (UltiKits/UltiEssentials#45).
+            return;
+        }
         enabledPlayers.add(player.getUniqueId());
         updateScoreboard(player);
+    }
+
+    /**
+     * Turns the sidebar on because the player asked to: forgets an earlier decline for the session,
+     * then enables it.
+     */
+    public void acceptScoreboard(Player player) {
+        declinedPlayers.remove(player.getUniqueId());
+        enableScoreboard(player);
     }
     
     /**
@@ -249,7 +263,7 @@ public class ScoreboardService {
             declineScoreboard(player);
             return false;
         } else {
-            enableScoreboard(player);
+            acceptScoreboard(player);
             return true;
         }
     }

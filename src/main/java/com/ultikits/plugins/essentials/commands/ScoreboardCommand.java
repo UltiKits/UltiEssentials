@@ -50,7 +50,7 @@ public class ScoreboardCommand extends BaseEssentialsCommand {
             return;
         }
         
-        scoreboardService.enableScoreboard(player);
+        scoreboardService.acceptScoreboard(player);
         sendEnabledReply(player);
     }
 

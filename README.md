@@ -53,6 +53,12 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 | `/wl off` | 禁用白名单 | `ultiessentials.whitelist.manage` |
 | `/wl status` | 查看白名单状态 | `ultiessentials.whitelist.manage` |
 
+### Commands that take over vanilla commands / 接管原版命令的命令
+
+`/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name: `/ban` and `/banlist` work on this module's own ban records, not on the server's ban list, and `/scoreboard` toggles this module's sidebar. The vanilla commands stay reachable as `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard`.
+
+`/ban`、`/banlist`、`/scoreboard` 有意接管了同名的原版命令：`/ban` 与 `/banlist` 操作本模块自己的封禁记录，而不是服务器的封禁名单；`/scoreboard` 用于开关本模块的侧边栏。原版命令仍可通过 `minecraft:ban`、`minecraft:banlist`、`minecraft:scoreboard` 调用。
+
 ### 🎨 服务器自定义
 
 | 功能 | 描述 | 配置文件 |

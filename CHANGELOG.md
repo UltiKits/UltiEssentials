@@ -329,6 +329,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name, as
+  the maintainer decided; this is now stated in the documentation. The vanilla commands stay reachable as
+  `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard` (UltiKits/UltiEssentials#61).
+- `/ban`、`/banlist`、`/scoreboard` 按维护者决定有意接管同名原版命令，现已写入文档；原版命令仍可用 `minecraft:ban`、
+  `minecraft:banlist`、`minecraft:scoreboard` 调用（UltiKits/UltiEssentials#61）。
 - Changed: message and title settings in `config/essentials.yml` (the scoreboard title and lines, the
   scheduled-command text and the death-punishment command text), `config/tabbar.yml` (the tab-list
   header and footer) and `config/motd.yml` (the two MOTD lines) are written in the server's language

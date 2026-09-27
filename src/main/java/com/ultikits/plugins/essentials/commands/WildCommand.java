@@ -12,6 +12,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Command to randomly teleport player within a configured range.
@@ -24,6 +25,13 @@ public class WildCommand extends BaseEssentialsCommand {
 
     /** Candidate locations tried before /wild gives up. */
     private static final int MAX_ATTEMPTS = 10;
+
+    /**
+     * Bumped when the module unloads. A search's continuation runs in a task of the {@code UltiTools}
+     * Bukkit plugin, which outlives this module, so the unload cannot cancel it by plugin; each search
+     * remembers the generation it started in and stops at its next step once that has changed.
+     */
+    private static final AtomicInteger GENERATION = new AtomicInteger();
 
     private final EssentialsConfig config;
 
@@ -58,7 +66,16 @@ public class WildCommand extends BaseEssentialsCommand {
         player.sendMessage(i18n("essentials.wild.searching"));
 
         Location origin = player.getLocation();
-        tryLocation(player, world, origin.getX(), origin.getZ(), minRange, maxRange, 0);
+        tryLocation(player, world, origin.getX(), origin.getZ(), minRange, maxRange, 0, GENERATION.get());
+    }
+
+    /**
+     * Invalidates every search still waiting for a chunk or for its main-thread check, so none of them
+     * teleports or messages a player after the module has unloaded. Called from the module's
+     * {@code onUnregister()} hook.
+     */
+    public static void cancelPendingSearches() {
+        GENERATION.incrementAndGet();
     }
 
     /**
@@ -69,7 +86,10 @@ public class WildCommand extends BaseEssentialsCommand {
      * (UltiKits/UltiEssentials#24). A player who logged out while a chunk loaded is left alone.
      */
     private void tryLocation(Player player, World world, double originX, double originZ,
-                             int minRange, int maxRange, int attempt) {
+                             int minRange, int maxRange, int attempt, int generation) {
+        if (generation != GENERATION.get()) {
+            return;
+        }
         if (attempt >= MAX_ATTEMPTS) {
             player.sendMessage(i18n("essentials.wild.no_safe_location"));
             return;
@@ -79,9 +99,12 @@ public class WildCommand extends BaseEssentialsCommand {
         int x = (int) (originX + range * Math.cos(angle));
         int z = (int) (originZ + range * Math.sin(angle));
 
-        world.getChunkAtAsync(x >> 4, z >> 4).whenComplete((chunk, loadFailure) ->
+        world.getChunkAtAsync(x >> 4, z >> 4).whenComplete((chunk, loadFailure) -> {
+            if (generation != GENERATION.get()) {
+                return;
+            }
             Bukkit.getScheduler().runTask(Bukkit.getPluginManager().getPlugin("UltiTools"), () -> {
-                if (!player.isOnline()) {
+                if (generation != GENERATION.get() || !player.isOnline()) {
                     return;
                 }
                 if (loadFailure == null) {
@@ -96,8 +119,9 @@ public class WildCommand extends BaseEssentialsCommand {
                         return;
                     }
                 }
-                tryLocation(player, world, originX, originZ, minRange, maxRange, attempt + 1);
-            }));
+                tryLocation(player, world, originX, originZ, minRange, maxRange, attempt + 1, generation);
+            });
+        });
     }
 
     /**

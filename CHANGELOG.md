@@ -22,9 +22,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `/wild` 成功提示现在报告玩家落脚的高度（脚所在的位置）；此前报告的是下方一格的地面方块高度（UltiKits/UltiEssentials#33）。
 - `/wild` no longer stalls the server while it looks for a place: each candidate chunk is loaded (and
   generated, if new) asynchronously, and the safety check and the teleport run on the main thread once it
-  has loaded. A player who logs out meanwhile is not teleported (UltiKits/UltiEssentials#24).
+  has loaded. A player who logs out meanwhile is not teleported, and a search still waiting for a chunk
+  when the module is unloaded does nothing (UltiKits/UltiEssentials#24).
 - `/wild` 寻找落点时不再卡住服务器：每个候选区块都异步加载（新区块异步生成），加载完成后再在主线程做安全检查并传送；
-  期间下线的玩家不会被传送（UltiKits/UltiEssentials#24）。
+  期间下线的玩家不会被传送；模块卸载时仍在等待区块的搜索不会再执行任何操作（UltiKits/UltiEssentials#24）。
 - A vanished player is no longer found through `/tpa` or `/tpahere` (a sender who may not see vanished
   players is told the player is not online, and no request is delivered) or through `/ban` and
   `/tempban` completion, and a vanished player can always un-vanish: `features.hide.enabled: false`

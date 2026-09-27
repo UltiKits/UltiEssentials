@@ -4,6 +4,7 @@ import com.ultikits.plugins.essentials.config.ConfigTextDefaults;
 import com.ultikits.plugins.essentials.config.MotdConfig;
 import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.plugins.essentials.commands.HideCommand;
+import com.ultikits.plugins.essentials.commands.WildCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.RemovedConfigKeys;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
@@ -211,6 +212,9 @@ public class UltiEssentials extends UltiToolsPlugin {
      */
     @Override
     protected void onUnregister() {
+        // A /wild search waiting for a chunk continues under the UltiTools plugin, which stays loaded;
+        // invalidate it so it cannot teleport anyone after this module is gone (UltiKits/UltiEssentials#24).
+        WildCommand.cancelPendingSearches();
         Throwable failure = revealVanishedPlayers();
         failure = shutdownService(failure, ScheduledCommandService.class, ScheduledCommandService::shutdown);
         failure = shutdownService(failure, ScoreboardService.class, ScoreboardService::shutdown);

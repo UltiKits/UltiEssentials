@@ -95,7 +95,9 @@ class WildCommandThreadSafetyTest {
         // inline mock maker resolves UltiTools' entire method-signature closure to do this,
         // which is exactly why the pom now declares VaultAPI at test scope (Pitfall 5).
         TestHelper.mockUltiToolsInstance();
-        mockPlugin = MockBukkit.createMockPlugin();
+        // Named as the framework's Bukkit plugin: the handler schedules its main-thread checks
+        // against the plugin registered as "UltiTools" (UltiKits/UltiEssentials#24).
+        mockPlugin = MockBukkit.createMockPlugin("UltiTools");
         world = server.addSimpleWorld("world");
 
         EssentialsConfig config = new EssentialsConfig();
@@ -170,6 +172,14 @@ class WildCommandThreadSafetyTest {
         }
     }
 
+    /**
+     * Runs enough further ticks for /wild's per-attempt main-thread checks to finish: each attempt
+     * loads its chunk asynchronously and checks it on a later tick (UltiKits/UltiEssentials#24).
+     */
+    private void settle() {
+        server.getScheduler().performTicks(20);
+    }
+
     private DispatchOutcome awaitOne(PendingDispatch pending) throws InterruptedException {
         boolean completed = pending.latch.await(5, TimeUnit.SECONDS);
         return new DispatchOutcome(completed, pending.ranOnPrimaryThread.get(), pending.failure.get());
@@ -178,7 +188,9 @@ class WildCommandThreadSafetyTest {
     private DispatchOutcome dispatchAndAwait(Player player) throws InterruptedException {
         PendingDispatch pending = schedule(player);
         tick();
-        return awaitOne(pending);
+        DispatchOutcome outcome = awaitOne(pending);
+        settle();
+        return outcome;
     }
 
     private CommandContext contextFor(Player player) {
@@ -251,6 +263,7 @@ class WildCommandThreadSafetyTest {
 
         DispatchOutcome aliceOutcome = awaitOne(aliceDispatch);
         DispatchOutcome bobOutcome = awaitOne(bobDispatch);
+        settle();
 
         assertThat(aliceOutcome.completed).isTrue();
         assertThat(bobOutcome.completed).isTrue();

@@ -45,6 +45,15 @@ class WildCommandTest {
 
         // Set up world to return a valid Y coordinate
         when(world.getHighestBlockYAt(anyInt(), anyInt())).thenReturn(64);
+        // The chunk loads at once and the main-thread task runs inline (UltiKits/UltiEssentials#24).
+        lenient().when(world.getChunkAtAsync(anyInt(), anyInt()))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(mock(org.bukkit.Chunk.class)));
+        lenient().when(EssentialsTestHelper.getMockServer().getScheduler()
+                        .runTask(org.mockito.ArgumentMatchers.<org.bukkit.plugin.Plugin>any(), any(Runnable.class)))
+                .thenAnswer(inv -> {
+                    inv.<Runnable>getArgument(1).run();
+                    return mock(org.bukkit.scheduler.BukkitTask.class);
+                });
 
         // Set up safe location blocks
         Block feet = mock(Block.class);

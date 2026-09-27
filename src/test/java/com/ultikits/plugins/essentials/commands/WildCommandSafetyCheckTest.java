@@ -44,6 +44,17 @@ class WildCommandSafetyCheckTest {
         Location playerLoc = new Location(world, 0, 64, 0);
         when(player.getLocation()).thenReturn(playerLoc);
         when(world.getHighestBlockYAt(anyInt(), anyInt())).thenReturn(64);
+        // Each attempt loads its chunk asynchronously and checks it back on the main thread
+        // (UltiKits/UltiEssentials#24): here the load completes at once and the main-thread task
+        // runs inline, so all ten attempts still run inside the one call.
+        lenient().when(world.getChunkAtAsync(anyInt(), anyInt()))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(mock(org.bukkit.Chunk.class)));
+        lenient().when(EssentialsTestHelper.getMockServer().getScheduler()
+                        .runTask(org.mockito.ArgumentMatchers.<org.bukkit.plugin.Plugin>any(), any(Runnable.class)))
+                .thenAnswer(inv -> {
+                    inv.<Runnable>getArgument(1).run();
+                    return mock(org.bukkit.scheduler.BukkitTask.class);
+                });
     }
 
     @AfterEach

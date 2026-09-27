@@ -122,6 +122,48 @@ class TpaServiceTimeoutTaskTest {
     }
 
     @Test
+    @DisplayName("The cooldown table keeps only senders still on cooldown: expired entries are dropped, a live one is kept (#54)")
+    @SuppressWarnings("unchecked")
+    void cooldownTableDropsExpiredEntries() throws Exception {
+        World world = EssentialsTestHelper.createMockWorld("world");
+        Player sender = createPlayerInWorld("Sender", UUID.randomUUID(), world);
+        Player target = createPlayerInWorld("Target", UUID.randomUUID(), world);
+        java.lang.reflect.Field field = TpaService.class.getDeclaredField("cooldowns");
+        field.setAccessible(true);
+        java.util.Map<UUID, Long> cooldowns = (java.util.Map<UUID, Long>) field.get(tpaService);
+        long now = System.currentTimeMillis();
+        long cooldownMillis = config.getTpaCooldown() * 1000L;
+        UUID expiredA = UUID.randomUUID();
+        UUID expiredB = UUID.randomUUID();
+        UUID stillCooling = UUID.randomUUID();
+        cooldowns.put(expiredA, now - cooldownMillis - 5_000L);
+        cooldowns.put(expiredB, now - cooldownMillis - 60_000L);
+        cooldowns.put(stillCooling, now - 1_000L);
+
+        tpaService.sendTpaRequest(sender, target);
+
+        assertThat(cooldowns.keySet()).containsExactlyInAnyOrder(stillCooling, sender.getUniqueId());
+        // Behaviour is unchanged: the sender still cooling down is still refused.
+        assertThat(tpaService.isOnCooldown(stillCooling)).isTrue();
+        assertThat(tpaService.isOnCooldown(expiredA)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Reading an expired cooldown drops its entry (#54)")
+    @SuppressWarnings("unchecked")
+    void readingAnExpiredCooldownDropsIt() throws Exception {
+        java.lang.reflect.Field field = TpaService.class.getDeclaredField("cooldowns");
+        field.setAccessible(true);
+        java.util.Map<UUID, Long> cooldowns = (java.util.Map<UUID, Long>) field.get(tpaService);
+        UUID expired = UUID.randomUUID();
+        cooldowns.put(expired, System.currentTimeMillis() - config.getTpaCooldown() * 1000L - 1_000L);
+
+        assertThat(tpaService.isOnCooldown(expired)).isFalse();
+        assertThat(tpaService.getRemainingCooldown(expired)).isZero();
+        assertThat(cooldowns).doesNotContainKey(expired);
+    }
+
+    @Test
     @DisplayName("A request already resolved before the timeout fires produces no notification")
     void alreadyResolvedRequestProducesNoNotification() {
         World world = EssentialsTestHelper.createMockWorld("world");

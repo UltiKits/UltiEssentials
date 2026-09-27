@@ -8,6 +8,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.lenient;
@@ -162,6 +164,80 @@ class ScoreboardServiceMainTeamsTest {
         service.updateScoreboard(player);
 
         verify(replacement).getScore("Line");
+    }
+
+    // Another plugin can change this module's board while the player views it. Every piece of that
+    // board the update does not rebuild on its own is checked: the objective (recreated above), the
+    // sidebar slot, and the scores; the title and the copied teams are rewritten on every update.
+
+    @Test
+    @DisplayName("When another plugin clears the sidebar slot on the board, the next update puts the objective back in it")
+    void aClearedSidebarSlotIsRestored() {
+        Objective objective = privateBoard.getObjective("ultiessentials");
+        service.enableScoreboard(player);
+        org.mockito.Mockito.clearInvocations(objective);
+        when(privateBoard.getObjective(DisplaySlot.SIDEBAR)).thenReturn(null);
+
+        service.updateScoreboard(player);
+
+        verify(objective).setDisplaySlot(DisplaySlot.SIDEBAR);
+    }
+
+    @Test
+    @DisplayName("When another plugin shows its own objective in the sidebar slot of the board, the next update puts this one back")
+    void aForeignObjectiveInTheSlotIsReplaced() {
+        Objective objective = privateBoard.getObjective("ultiessentials");
+        service.enableScoreboard(player);
+        org.mockito.Mockito.clearInvocations(objective);
+        when(privateBoard.getObjective(DisplaySlot.SIDEBAR)).thenReturn(mock(Objective.class));
+
+        service.updateScoreboard(player);
+
+        verify(objective).setDisplaySlot(DisplaySlot.SIDEBAR);
+    }
+
+    @Test
+    @DisplayName("While this objective holds the slot, an update does not set the slot again")
+    void theSlotIsNotRewrittenWhileHeld() {
+        Objective objective = privateBoard.getObjective("ultiessentials");
+        service.enableScoreboard(player);
+        org.mockito.Mockito.clearInvocations(objective);
+        when(privateBoard.getObjective(DisplaySlot.SIDEBAR)).thenReturn(objective);
+
+        service.updateScoreboard(player);
+
+        verify(objective, never()).setDisplaySlot(any());
+    }
+
+    @Test
+    @DisplayName("When another plugin resets the scores on the board, the next update draws every line again")
+    void resetScoresAreRedrawn() {
+        Objective objective = privateBoard.getObjective("ultiessentials");
+        Score score = mock(Score.class);
+        when(objective.getScore(anyString())).thenReturn(score);
+        when(score.isScoreSet()).thenReturn(true);
+        service.enableScoreboard(player);
+        org.mockito.Mockito.clearInvocations(score);
+        when(score.isScoreSet()).thenReturn(false);
+
+        service.updateScoreboard(player);
+
+        verify(score).setScore(anyInt());
+    }
+
+    @Test
+    @DisplayName("While every shown line keeps its score, an update writes no score")
+    void intactScoresAreNotRewritten() {
+        Objective objective = privateBoard.getObjective("ultiessentials");
+        Score score = mock(Score.class);
+        when(objective.getScore(anyString())).thenReturn(score);
+        when(score.isScoreSet()).thenReturn(true);
+        service.enableScoreboard(player);
+        org.mockito.Mockito.clearInvocations(score);
+
+        service.updateScoreboard(player);
+
+        verify(score, never()).setScore(anyInt());
     }
 
     @Test

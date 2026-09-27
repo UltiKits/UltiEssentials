@@ -4,9 +4,12 @@ import org.bukkit.ChatColor;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Copies the server's main scoreboard teams onto a private scoreboard.
@@ -28,7 +31,18 @@ final class MainTeamMirror {
     }
 
     /**
-     * Makes the teams of {@code target} match the teams of {@code main}.
+     * The names of the teams copied onto each private board, so a team that leaves the main scoreboard
+     * is removed from the copy while a team another plugin put on the board itself stays. Weak keys:
+     * a board this module no longer holds is forgotten with it. Main thread only, like every scoreboard
+     * call; synchronised anyway, as it is shared by every player's board.
+     */
+    private static final Map<Scoreboard, Set<String>> COPIED =
+            Collections.synchronizedMap(new WeakHashMap<Scoreboard, Set<String>>());
+
+    /**
+     * Makes the teams of {@code target} match the teams of {@code main}: every main-scoreboard team is
+     * copied, and a copied team that has left the main scoreboard is removed. A team on {@code target}
+     * that was never copied from the main scoreboard is left alone.
      *
      * @param main   the server's main scoreboard, the source of truth
      * @param target a private scoreboard owned by this module
@@ -37,6 +51,7 @@ final class MainTeamMirror {
         if (main == null || target == null || main.equals(target)) {
             return;
         }
+        Set<String> copied = COPIED.computeIfAbsent(target, board -> new HashSet<>());
         Set<String> mainTeamNames = new HashSet<>();
         for (Team source : main.getTeams()) {
             mainTeamNames.add(source.getName());
@@ -47,10 +62,12 @@ final class MainTeamMirror {
             copyTeam(source, copy);
         }
         for (Team stale : target.getTeams()) {
-            if (!mainTeamNames.contains(stale.getName())) {
+            if (copied.contains(stale.getName()) && !mainTeamNames.contains(stale.getName())) {
                 stale.unregister();
             }
         }
+        copied.clear();
+        copied.addAll(mainTeamNames);
     }
 
     private static void copyTeam(Team source, Team copy) {

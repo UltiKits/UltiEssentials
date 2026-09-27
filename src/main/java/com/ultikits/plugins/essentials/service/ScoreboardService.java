@@ -273,6 +273,8 @@ public class ScoreboardService {
         String title = colorize(parsePlaceholders(player, config.getScoreboardTitle()));
         Scoreboard scoreboard = playerBoards.get(player.getUniqueId());
         Objective objective;
+        // Set when the board no longer shows the remembered lines, so they are drawn again in full.
+        boolean redraw = false;
         if (scoreboard == null) {
             scoreboard = manager.getNewScoreboard();
             objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
@@ -285,7 +287,7 @@ public class ScoreboardService {
                 // the remembered lines no longer describe what is shown: forget them and draw every line.
                 objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
                 objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-                shownLines.remove(player.getUniqueId());
+                redraw = true;
             } else if (!title.equals(objective.getDisplayName())) {
                 objective.setDisplayName(title);
             }
@@ -296,10 +298,10 @@ public class ScoreboardService {
                 objective.setDisplaySlot(DisplaySlot.SIDEBAR);
             }
             List<String> shown = shownLines.get(player.getUniqueId());
-            if (shown != null) {
+            if (shown != null && !redraw) {
                 for (String entry : shown) {
                     if (!objective.getScore(entry).isScoreSet()) {
-                        shownLines.remove(player.getUniqueId());
+                        redraw = true;
                         break;
                     }
                 }
@@ -324,9 +326,17 @@ public class ScoreboardService {
             // Handle duplicate lines by adding invisible characters
             entries.add(ensureUnique(usedEntries, parsedLine));
         }
-        if (!entries.equals(shownLines.get(player.getUniqueId()))) {
-            for (String stale : new HashSet<>(scoreboard.getEntries())) {
-                scoreboard.resetScores(stale);
+        List<String> previous = shownLines.get(player.getUniqueId());
+        if (redraw || !entries.equals(previous)) {
+            // Only this module's own previous lines are removed: resetScores clears an entry on every
+            // objective of the board, so resetting all of the board's entries would also erase the
+            // scores another plugin keeps on it.
+            if (previous != null) {
+                for (String stale : previous) {
+                    if (!entries.contains(stale)) {
+                        scoreboard.resetScores(stale);
+                    }
+                }
             }
             int score = entries.size();
             for (String entry : entries) {

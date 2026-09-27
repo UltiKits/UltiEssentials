@@ -9,6 +9,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- With PlaceholderAPI installed, the scoreboard now shows its built-in placeholders (`%online_players%`,
+  `%max_players%`, `%player_food%` and the others) as values instead of the raw tokens: the module's own
+  placeholders are filled first and PlaceholderAPI's afterwards, in the scoreboard and in name prefixes
+  (UltiKits/UltiEssentials#59).
+- 装有 PlaceholderAPI 时，计分板现在会把内置变量（`%online_players%`、`%max_players%`、`%player_food%` 等）显示为数值，
+  不再原样显示：计分板与名字前缀先填入本模块自己的变量，再交给 PlaceholderAPI（UltiKits/UltiEssentials#59）。
 - `/scoreboard off` run right after joining now sticks: the sidebar no longer appears a moment later
   from the delayed auto-enable. The choice lasts until the player quits or runs `/scoreboard on`
   (UltiKits/UltiEssentials#45).

@@ -196,13 +196,15 @@ public class NamePrefixService {
     }
     
     /**
-     * Parses PlaceholderAPI placeholders.
+     * Fills this module's own {@code %player_name%}, then PlaceholderAPI's placeholders when it is
+     * installed (UltiKits/UltiEssentials#59).
      */
     private String parsePlaceholders(Player player, String text) {
+        String filled = BuiltInPlaceholders.forNamePrefix(player, text);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            return PlaceholderAPI.setPlaceholders(player, text);
+            return PlaceholderAPI.setPlaceholders(player, filled);
         }
-        return text.replace("%player_name%", player.getName());
+        return filled;
     }
     
     /**

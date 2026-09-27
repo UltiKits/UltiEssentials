@@ -373,23 +373,15 @@ public class ScoreboardService {
     }
     
     /**
-     * Parses PlaceholderAPI placeholders.
+     * Fills this module's own placeholders, then PlaceholderAPI's when it is installed, so the shipped
+     * default lines show values whether or not PlaceholderAPI is there (UltiKits/UltiEssentials#59).
      */
     private String parsePlaceholders(Player player, String text) {
+        String filled = BuiltInPlaceholders.forScoreboard(player, text);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            return PlaceholderAPI.setPlaceholders(player, text);
+            return PlaceholderAPI.setPlaceholders(player, filled);
         }
-        
-        // Fallback - basic placeholders
-        text = text.replace("%player_name%", player.getName());
-        text = text.replace("%player_health%", String.valueOf((int) player.getHealth()));
-        text = text.replace("%player_food%", String.valueOf(player.getFoodLevel()));
-        text = text.replace("%player_level%", String.valueOf(player.getLevel()));
-        text = text.replace("%player_world%", player.getWorld().getName());
-        text = text.replace("%online_players%", String.valueOf(Bukkit.getOnlinePlayers().size()));
-        text = text.replace("%max_players%", String.valueOf(Bukkit.getMaxPlayers()));
-        
-        return text;
+        return filled;
     }
     
     /**

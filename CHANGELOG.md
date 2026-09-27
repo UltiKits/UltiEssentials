@@ -367,6 +367,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- Removed the `pardon` alias of `/unban`: `pardon` is the vanilla command that lifts the server's own
+  ban, and the alias made the bare label reach this module or vanilla depending on load order. Use
+  `/unban` for this module's bans (UltiKits/UltiEssentials#48).
+- 删除 `/unban` 的别名 `pardon`：`pardon` 是解除服务器自身封禁的原版命令，该别名会让这一标签视加载顺序进入本模块或原版。
+  本模块的封禁请用 `/unban` 解除（UltiKits/UltiEssentials#48）。
 - Removed the two unban helpers that no command reached — unbanning by player UUID and by IP address —
   and the `/unbanip` line in `/unban`'s documentation, which named a command that does not exist.
   `/unban <player>` is unchanged; an IP-unban command is tracked as a feature request,

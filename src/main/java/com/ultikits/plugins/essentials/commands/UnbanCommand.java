@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  */
 @CmdTarget(CmdTarget.CmdTargetType.BOTH)
 @CmdExecutor(
-    alias = {"unban", "pardon"},
+    alias = {"unban"},
     permission = "ultiessentials.unban",
     description = "essentials.command.unban.description"
 )

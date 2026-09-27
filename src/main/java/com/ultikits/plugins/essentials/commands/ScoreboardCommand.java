@@ -10,14 +10,14 @@ import org.bukkit.entity.Player;
  * Command for toggling scoreboard display.
  * <p>
  * Usage: /scoreboard (toggle)
- *        /sb on/off
+ *        /scoreboard on/off
  *
  * @author wisdomme
  * @version 1.0.0
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(
-    alias = {"scoreboard", "sb"},
+    alias = {"scoreboard"},
     permission = "ultiessentials.scoreboard",
     description = "essentials.command.scoreboard.description"
 )

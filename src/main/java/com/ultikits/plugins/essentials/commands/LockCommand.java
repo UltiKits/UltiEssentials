@@ -17,7 +17,7 @@ import org.bukkit.entity.Player;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(
-    alias = {"lock", "l"},
+    alias = {"lock"},
     permission = "ultiessentials.lock",
     description = "essentials.command.lock.description"
 )

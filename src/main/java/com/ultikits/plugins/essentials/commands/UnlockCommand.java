@@ -20,7 +20,7 @@ import java.util.List;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(
-    alias = {"unlock", "ul"},
+    alias = {"unlock"},
     permission = "ultiessentials.lock",
     description = "essentials.command.unlock.description"
 )

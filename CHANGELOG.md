@@ -367,6 +367,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- Removed three aliases other UltiKits components own: `ul` of `/unlock` (the framework's own `/ul`),
+  `l` of `/lock` (UltiLogin's `/l` for `/login`) and `sb` of `/scoreboard` (UltiSideBar's `/sb` for
+  `/sidebar`). Use `/unlock`, `/lock` and `/scoreboard` (UltiKits/UltiEssentials#62).
+- 删除三个与其它 UltiKits 组件冲突的别名：`/unlock` 的 `ul`（框架自己的 `/ul`）、`/lock` 的 `l`（UltiLogin 登录命令的 `/l`）、
+  `/scoreboard` 的 `sb`（UltiSideBar 侧边栏命令的 `/sb`）。请使用 `/unlock`、`/lock`、`/scoreboard`（UltiKits/UltiEssentials#62）。
 - Removed the `w` alias of `/warp`: `/w` is vanilla's private-message shortcut (`/w <player> <message>`),
   which the alias could take over. Use `/warp` (UltiKits/UltiEssentials#60).
 - 删除 `/warp` 的别名 `w`：`/w` 是原版的私聊快捷命令（`/w <玩家> <消息>`），该别名可能把它抢走。请使用 `/warp`

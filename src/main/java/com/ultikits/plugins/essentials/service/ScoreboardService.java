@@ -44,6 +44,12 @@ public class ScoreboardService {
     // Player UUIDs with active scoreboards
     private final Set<UUID> enabledPlayers = ConcurrentHashMap.newKeySet();
 
+    // Each shown player's own sidebar board, reused across updates (UltiKits/UltiEssentials#40)
+    private final Map<UUID, Scoreboard> playerBoards = new ConcurrentHashMap<>();
+
+    // The line entries last written onto each player's board, so an unchanged sidebar is not rewritten
+    private final Map<UUID, List<String>> shownLines = new ConcurrentHashMap<>();
+
     // Main update task
     private BukkitTask updateTask;
 
@@ -96,6 +102,8 @@ public class ScoreboardService {
                         refreshIsolated(uuid, player);
                     } else {
                         enabledPlayers.remove(uuid);
+                        playerBoards.remove(uuid);
+                        shownLines.remove(uuid);
                         updateFailures.forget(uuid);
                     }
                 }
@@ -139,6 +147,8 @@ public class ScoreboardService {
      */
     public void disableScoreboard(Player player) {
         enabledPlayers.remove(player.getUniqueId());
+        playerBoards.remove(player.getUniqueId());
+        shownLines.remove(player.getUniqueId());
         updateFailures.forget(player.getUniqueId());
         
         // Give back the server's main scoreboard, not a fresh empty one: name-prefix teams and any
@@ -170,38 +180,63 @@ public class ScoreboardService {
     
     /**
      * Updates the scoreboard for a player.
+     * <p>
+     * Each player keeps one sidebar board, built on the first update and reused afterwards: the
+     * title and lines are rewritten in place (the lines only when they changed), and the board is
+     * assigned to the player only when it is not already the one on screen. The main scoreboard's
+     * teams are copied onto it on every update, so name prefixes and every other main-board team
+     * stay visible while the sidebar is on (maintainer decision 2026-09-27,
+     * UltiKits/UltiEssentials#40).
      */
     public void updateScoreboard(Player player) {
         if (manager == null || !enabledPlayers.contains(player.getUniqueId())) {
             return;
         }
 
-        Scoreboard scoreboard = manager.getNewScoreboard();
-        String title = parsePlaceholders(player, config.getScoreboardTitle());
-
-        Objective objective = scoreboard.registerNewObjective(
-            "ultiessentials",
-            "dummy",
-            colorize(title)
-        );
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+        String title = colorize(parsePlaceholders(player, config.getScoreboardTitle()));
+        Scoreboard scoreboard = playerBoards.get(player.getUniqueId());
+        Objective objective;
+        if (scoreboard == null) {
+            scoreboard = manager.getNewScoreboard();
+            objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
+            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+            playerBoards.put(player.getUniqueId(), scoreboard);
+        } else {
+            objective = scoreboard.getObjective("ultiessentials");
+            if (objective == null) {
+                objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
+                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+            } else if (!title.equals(objective.getDisplayName())) {
+                objective.setDisplayName(title);
+            }
+        }
 
         List<String> lines = config.getScoreboardLines();
-        int score = lines.size();
+        List<String> entries = new ArrayList<>();
         Set<String> usedEntries = new HashSet<>();
-        
         for (String line : lines) {
             String parsedLine = parsePlaceholders(player, line);
             parsedLine = colorize(parsedLine);
             
             // Handle duplicate lines by adding invisible characters
-            parsedLine = ensureUnique(usedEntries, parsedLine);
-            
-            Score scoreEntry = objective.getScore(parsedLine);
-            scoreEntry.setScore(score--);
+            entries.add(ensureUnique(usedEntries, parsedLine));
         }
-        
-        player.setScoreboard(scoreboard);
+        if (!entries.equals(shownLines.get(player.getUniqueId()))) {
+            for (String stale : new HashSet<>(scoreboard.getEntries())) {
+                scoreboard.resetScores(stale);
+            }
+            int score = entries.size();
+            for (String entry : entries) {
+                Score scoreEntry = objective.getScore(entry);
+                scoreEntry.setScore(score--);
+            }
+            shownLines.put(player.getUniqueId(), entries);
+        }
+
+        MainTeamMirror.mirror(manager.getMainScoreboard(), scoreboard);
+        if (!scoreboard.equals(player.getScoreboard())) {
+            player.setScoreboard(scoreboard);
+        }
     }
     
     /**
@@ -289,6 +324,8 @@ public class ScoreboardService {
         }
         
         enabledPlayers.clear();
+        playerBoards.clear();
+        shownLines.clear();
         updateFailures.clear();
     }
     

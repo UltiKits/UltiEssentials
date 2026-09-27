@@ -288,9 +288,17 @@ public class ScoreboardService {
             }
         }
 
+        // The main board's teams go on first, and every entry of a team on this board counts as taken:
+        // a line equal to one (a %player_name% line for a player with a name prefix) would otherwise be
+        // that team member's own entry, and the copied team's prefix, suffix and colour would format the
+        // sidebar row. Such a line gets a distinct entry that shows the same text.
+        MainTeamMirror.mirror(manager.getMainScoreboard(), scoreboard);
         List<String> lines = config.getScoreboardLines();
         List<String> entries = new ArrayList<>();
         Set<String> usedEntries = new HashSet<>();
+        for (Team team : scoreboard.getTeams()) {
+            usedEntries.addAll(team.getEntries());
+        }
         for (String line : lines) {
             String parsedLine = parsePlaceholders(player, line);
             parsedLine = colorize(parsedLine);
@@ -310,7 +318,6 @@ public class ScoreboardService {
             shownLines.put(player.getUniqueId(), entries);
         }
 
-        MainTeamMirror.mirror(manager.getMainScoreboard(), scoreboard);
         if (!scoreboard.equals(player.getScoreboard())) {
             player.setScoreboard(scoreboard);
         }

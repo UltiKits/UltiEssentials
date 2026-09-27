@@ -62,12 +62,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Name prefixes (`features.nameprefix`) and other main-scoreboard teams (vanilla `/team` teams, other
   plugins' teams) now show while this module's sidebar is on: the sidebar's own scoreboard now carries
   the server's main-scoreboard teams and follows their changes on every update. Previously every
-  player with the sidebar on saw no team prefix on anybody (UltiKits/UltiEssentials#40).
+  player with the sidebar on saw no team prefix on anybody. A sidebar line that reads exactly like a
+  team member's name keeps its own look rather than taking that team's prefix (UltiKits/UltiEssentials#40).
 - The sidebar is no longer rebuilt every second: each player keeps one sidebar scoreboard that is
   updated in place, and its lines are rewritten only when they change (UltiKits/UltiEssentials#40).
 - 本模块的侧边栏开启时，名字前缀（`features.nameprefix`）和主计分板上的其它队伍（原版 `/team` 队伍、其它插件的队伍）
   现在都会显示：侧边栏自己的计分板会带上服务器主计分板的队伍，并在每次刷新时跟随其变化；此前开着侧边栏的玩家
-  看不到任何人的队伍前缀（UltiKits/UltiEssentials#40）。
+  看不到任何人的队伍前缀。与某个队伍成员名字完全相同的侧边栏行保持原样，不会带上该队伍的前缀（UltiKits/UltiEssentials#40）。
 - 侧边栏不再每秒重建：每位玩家保留同一块侧边栏计分板并原地刷新，内容行只在变化时重写（UltiKits/UltiEssentials#40）。
 - Two scoreboard lines that differ only after their 40th character now both show; previously the
   second one replaced the first (UltiKits/UltiEssentials#41).

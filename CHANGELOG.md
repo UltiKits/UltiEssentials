@@ -9,6 +9,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Two scoreboard lines that differ only after their 40th character now both show; previously the
+  second one replaced the first (UltiKits/UltiEssentials#41).
+- 只在第 40 个字符之后才不同的两行计分板内容现在都会显示；此前第二行会顶替第一行（UltiKits/UltiEssentials#41）。
 - `language: en` now applies to this module's command, ban, kick and console text; most of it showed
   Chinese in every language (UltiKits/UltiEssentials#26). 162 messages whose keys were missing from
   both language files now have English and Chinese text: every command's help and description, the

@@ -38,6 +38,9 @@ public class ScoreboardService {
 
     private Plugin bukkitPlugin;
 
+    /** Longest entry text a scoreboard line keeps (the limit older clients enforce). */
+    private static final int MAX_ENTRY_LENGTH = 40;
+
     // Player UUIDs with active scoreboards
     private final Set<UUID> enabledPlayers = ConcurrentHashMap.newKeySet();
 
@@ -185,13 +188,14 @@ public class ScoreboardService {
 
         List<String> lines = config.getScoreboardLines();
         int score = lines.size();
+        Set<String> usedEntries = new HashSet<>();
         
         for (String line : lines) {
             String parsedLine = parsePlaceholders(player, line);
             parsedLine = colorize(parsedLine);
             
             // Handle duplicate lines by adding invisible characters
-            parsedLine = ensureUnique(scoreboard, parsedLine);
+            parsedLine = ensureUnique(usedEntries, parsedLine);
             
             Score scoreEntry = objective.getScore(parsedLine);
             scoreEntry.setScore(score--);
@@ -201,24 +205,39 @@ public class ScoreboardService {
     }
     
     /**
-     * Ensures a line is unique by adding invisible characters if necessary.
+     * Makes a line unique among the lines of this update: it is truncated to the entry length limit
+     * first and only then compared, so two lines that differ only after the limit still become two
+     * entries (UltiKits/UltiEssentials#41). A duplicate gets an invisible colour code appended, and
+     * enough of its text is cut to keep the whole entry within the limit.
      */
-    private String ensureUnique(Scoreboard scoreboard, String line) {
-        String original = line;
-        String result = line;
+    private String ensureUnique(Set<String> usedEntries, String line) {
+        String base = truncate(line, MAX_ENTRY_LENGTH);
+        String result = base;
         int attempt = 0;
 
-        while (scoreboard.getEntries().contains(result) && attempt < 16) {
-            result = original + ChatColor.values()[attempt].toString();
+        while (usedEntries.contains(result) && attempt < 16) {
+            String code = ChatColor.values()[attempt].toString();
+            result = truncate(base, MAX_ENTRY_LENGTH - code.length()) + code;
             attempt++;
         }
 
-        // Truncate if too long (scoreboard limit is 40 characters in modern MC)
-        if (result.length() > 40) {
-            result = result.substring(0, 40);
-        }
-
+        usedEntries.add(result);
         return result;
+    }
+
+    /**
+     * Cuts text to at most {@code max} characters, dropping a trailing colour-code character that
+     * the cut would leave without its code.
+     */
+    private static String truncate(String text, int max) {
+        if (text.length() <= max) {
+            return text;
+        }
+        String cut = text.substring(0, max);
+        if (cut.endsWith(String.valueOf(ChatColor.COLOR_CHAR))) {
+            cut = cut.substring(0, cut.length() - 1);
+        }
+        return cut;
     }
     
     /**

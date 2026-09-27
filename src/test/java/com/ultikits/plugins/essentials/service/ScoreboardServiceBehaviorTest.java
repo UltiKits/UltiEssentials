@@ -157,47 +157,50 @@ class ScoreboardServiceBehaviorTest {
     }
 
     @Nested
-    @DisplayName("ensureUnique (via updateScoreboard)")
+    @DisplayName("ensureUnique (via updateScoreboard): lines are truncated to 40 characters first, then made unique (#41)")
     class EnsureUniqueTests {
 
-        @Test
-        @DisplayName("A colliding line has a ChatColor code appended instead of being overwritten")
-        void collidingLineGetsColorCodeAppended() throws Exception {
+        private List<String> entriesShown(List<String> lines) throws Exception {
             EssentialsTestHelper.setField(service, "manager", scoreboardManager);
-            config.setScoreboardLines(Collections.singletonList("Same Line"));
-            // The scoreboard already contains the exact line text this update would produce,
-            // forcing the collision-resolution loop to run at least once.
-            when(mockScoreboard.getEntries()).thenReturn(new HashSet<>(Collections.singletonList("Same Line")));
-
+            config.setScoreboardLines(lines);
             Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
             service.enableScoreboard(player);
-
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-            verify(mockObjective).getScore(captor.capture());
-            assertThat(captor.getValue()).isNotEqualTo("Same Line");
-            assertThat(captor.getValue()).startsWith("Same Line");
+            verify(mockObjective, atLeastOnce()).getScore(captor.capture());
+            return captor.getAllValues();
         }
 
         @Test
-        @DisplayName("A resolved line longer than 40 characters is truncated to 40")
-        void resolvedLineIsTruncatedAt40Characters() throws Exception {
-            EssentialsTestHelper.setField(service, "manager", scoreboardManager);
+        @DisplayName("A line equal to an earlier line has a ChatColor code appended instead of overwriting it")
+        void collidingLineGetsColorCodeAppended() throws Exception {
+            List<String> entries = entriesShown(Arrays.asList("Same Line", "Same Line"));
+
+            assertThat(entries).hasSize(2);
+            assertThat(entries.get(0)).isEqualTo("Same Line");
+            assertThat(entries.get(1)).isNotEqualTo("Same Line").startsWith("Same Line");
+        }
+
+        @Test
+        @DisplayName("A line longer than 40 characters is truncated to exactly its first 40")
+        void longLineIsTruncatedAt40Characters() throws Exception {
             String longLine = "This line is exactly long enough to exceed forty characters";
-            config.setScoreboardLines(Collections.singletonList(longLine));
-            // Force at least one collision-resolution pass, appending a color code that pushes
-            // the already-long line over the 40-character limit.
-            when(mockScoreboard.getEntries()).thenReturn(new HashSet<>(Collections.singletonList(longLine)));
 
-            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
-            service.enableScoreboard(player);
+            List<String> entries = entriesShown(Collections.singletonList(longLine));
 
-            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-            verify(mockObjective).getScore(captor.capture());
-            // Exact length (and exact value), not "at most 40" -- ScoreboardService.java does an
-            // exact substring(0, 40), so any truncation short of 40 would still satisfy a "<= 40"
-            // check while visibly breaking the feature. The appended ChatColor code lands past
-            // position 40, so the expected value is simply the original line's first 40 chars.
-            assertThat(captor.getValue()).hasSize(40).isEqualTo(longLine.substring(0, 40));
+            assertThat(entries).containsExactly(longLine.substring(0, 40));
+        }
+
+        @Test
+        @DisplayName("Two lines that differ only after character 40 both show as distinct entries of at most 40 characters (#41)")
+        void linesSharingAFortyCharacterPrefixStayDistinct() throws Exception {
+            String sharedPrefix = "0123456789012345678901234567890123456789012345";
+
+            List<String> entries = entriesShown(Arrays.asList(sharedPrefix + "A", sharedPrefix + "B"));
+
+            assertThat(entries).hasSize(2);
+            assertThat(new HashSet<>(entries)).hasSize(2);
+            assertThat(entries).allSatisfy(entry -> assertThat(entry.length()).isLessThanOrEqualTo(40));
+            assertThat(entries.get(0)).isEqualTo(sharedPrefix.substring(0, 40));
         }
     }
 

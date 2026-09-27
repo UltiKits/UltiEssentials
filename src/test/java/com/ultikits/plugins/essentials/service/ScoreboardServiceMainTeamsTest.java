@@ -240,6 +240,37 @@ class ScoreboardServiceMainTeamsTest {
         verify(score, never()).setScore(anyInt());
     }
 
+    // Only what this module put on the board is ever removed from it: the scores of its own previous
+    // lines, and the teams it copied from the main scoreboard. Anything another plugin put there stays.
+
+    @Test
+    @DisplayName("When the lines change, only this module's previous lines are reset: another objective's scores stay")
+    void aLineChangeResetsOnlyThisModulesLines() {
+        when(privateBoard.getEntries()).thenReturn(new java.util.HashSet<>(java.util.Arrays.asList("Alex", "Line")));
+        service.enableScoreboard(player);
+        config.setScoreboardLines(Collections.singletonList("Other"));
+
+        service.updateScoreboard(player);
+
+        verify(privateBoard).resetScores("Line");
+        verify(privateBoard, never()).resetScores("Alex");
+    }
+
+    @Test
+    @DisplayName("A team another plugin put on the board stays; only teams copied from the main scoreboard are removed")
+    void aForeignTeamOnTheBoardStays() {
+        Team copied = FakeScoreboards.addTeam(mainBoard, "up_x", "[VIP] ", "Alice");
+        FakeScoreboards.addTeam(privateBoard, "tab_sort", "", "Bob");
+        service.enableScoreboard(player);
+        assertThat(privateBoard.getTeam("up_x")).isNotNull();
+
+        copied.unregister();
+        service.updateScoreboard(player);
+
+        assertThat(privateBoard.getTeam("up_x")).as("the copy of a team gone from the main board").isNull();
+        assertThat(privateBoard.getTeam("tab_sort")).as("another plugin's team").isNotNull();
+    }
+
     @Test
     @DisplayName("An unchanged team costs no writes on the next update")
     void unchangedTeamCostsNoWrites() {

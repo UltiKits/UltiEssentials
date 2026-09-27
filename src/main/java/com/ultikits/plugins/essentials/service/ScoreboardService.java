@@ -55,6 +55,10 @@ public class ScoreboardService {
     // Player UUIDs with active scoreboards
     private final Set<UUID> enabledPlayers = ConcurrentHashMap.newKeySet();
 
+    // Players who turned the sidebar off in this session, so the delayed auto-enable on join leaves
+    // them alone (UltiKits/UltiEssentials#45); forgotten when the player quits or turns it on
+    private final Set<UUID> declinedPlayers = ConcurrentHashMap.newKeySet();
+
     // Each shown player's own sidebar board, reused across updates (UltiKits/UltiEssentials#40)
     private final Map<UUID, Scoreboard> playerBoards = new ConcurrentHashMap<>();
 
@@ -177,6 +181,7 @@ public class ScoreboardService {
             return;
         }
         
+        declinedPlayers.remove(player.getUniqueId());
         enabledPlayers.add(player.getUniqueId());
         updateScoreboard(player);
     }
@@ -196,11 +201,35 @@ public class ScoreboardService {
     }
     
     /**
+     * Turns the sidebar off because the player asked to, whether or not it is on yet: the choice is
+     * remembered for the rest of the session, so the delayed auto-enable on join does not turn it
+     * back on a moment later (UltiKits/UltiEssentials#45).
+     */
+    public void declineScoreboard(Player player) {
+        declinedPlayers.add(player.getUniqueId());
+        disableScoreboard(player);
+    }
+
+    /**
+     * Whether the player turned the sidebar off in this session.
+     */
+    public boolean hasDeclined(Player player) {
+        return declinedPlayers.contains(player.getUniqueId());
+    }
+
+    /**
+     * Forgets the player's choice for the session; called when the player quits.
+     */
+    public void forgetChoice(Player player) {
+        declinedPlayers.remove(player.getUniqueId());
+    }
+
+    /**
      * Toggles scoreboard for a player.
      */
     public boolean toggleScoreboard(Player player) {
         if (isEnabled(player)) {
-            disableScoreboard(player);
+            declineScoreboard(player);
             return false;
         } else {
             enableScoreboard(player);

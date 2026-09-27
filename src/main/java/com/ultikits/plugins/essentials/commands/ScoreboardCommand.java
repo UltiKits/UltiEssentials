@@ -69,11 +69,14 @@ public class ScoreboardCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "off")
     public void disable(@CmdSender Player player) {
         if (!scoreboardService.isEnabled(player)) {
+            // Still recorded: right after joining, the sidebar is off only until the delayed
+            // auto-enable runs, and this choice must outlast it (UltiKits/UltiEssentials#45).
+            scoreboardService.declineScoreboard(player);
             player.sendMessage(i18n("essentials.scoreboard.already_disabled"));
             return;
         }
         
-        scoreboardService.disableScoreboard(player);
+        scoreboardService.declineScoreboard(player);
         player.sendMessage(i18n("essentials.scoreboard.disabled"));
     }
     

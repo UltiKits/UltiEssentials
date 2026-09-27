@@ -146,6 +146,23 @@
             <version>1.7.1</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- A JDBC driver and commons-dbutils at test scope, so a test can run a real insert, update
+             and delete through the framework's relational data operator over an in-memory H2
+             database (UltiKits/UltiEssentials#49). Neither is in the framework's jar: on a server
+             both are Paper libraries: entries. The versions mirror Framework/UltiTools-Reborn/pom.xml. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.224</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-dbutils</groupId>
+            <artifactId>commons-dbutils</artifactId>
+            <version>1.8.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

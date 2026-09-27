@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -153,6 +154,42 @@ class ScoreboardOffBeforeAutoEnableTest {
         command.enable(player);
 
         lastDelayedEnable().run();
+
+        assertThat(service.isEnabled(player)).isTrue();
+    }
+
+    // Every automatic enable honours the choice, not only the delayed join enable: a reload that turns
+    // the scoreboard feature on shows it to online players by auto-enable, and that must skip a player
+    // who turned it off this session (found by review on the #45 fix: the reload path was the other
+    // automatic caller of the same enable).
+
+    @Test
+    @DisplayName("/scoreboard off, then the feature is switched off and on by reloads: the sidebar stays off")
+    void aReloadThatTurnsTheFeatureOnKeepsTheChoice() throws Exception {
+        doReturn(Collections.singletonList(player)).when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
+        listener.onPlayerJoin(join());
+        lastDelayedEnable().run();
+        command.disable(player);
+        EssentialsConfig config = (EssentialsConfig) EssentialsTestHelper.getField(service, "config");
+        config.setScoreboardEnabled(false);
+        service.reload();
+
+        config.setScoreboardEnabled(true);
+        service.reload();
+
+        assertThat(service.isEnabled(player)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Control: without a /scoreboard off, a reload that turns the feature on shows the sidebar by auto-enable")
+    void aReloadThatTurnsTheFeatureOnShowsItOtherwise() throws Exception {
+        doReturn(Collections.singletonList(player)).when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
+        EssentialsConfig config = (EssentialsConfig) EssentialsTestHelper.getField(service, "config");
+        config.setScoreboardEnabled(false);
+        service.reload();
+
+        config.setScoreboardEnabled(true);
+        service.reload();
 
         assertThat(service.isEnabled(player)).isTrue();
     }

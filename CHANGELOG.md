@@ -9,6 +9,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `/wild`'s success message now reports the height the player lands at (the feet position); it used to
+  report the ground block one below (UltiKits/UltiEssentials#33).
+- `/wild` 成功提示现在报告玩家落脚的高度（脚所在的位置）；此前报告的是下方一格的地面方块高度（UltiKits/UltiEssentials#33）。
 - `/wild` no longer stalls the server while it looks for a place: each candidate chunk is loaded (and
   generated, if new) asynchronously, and the safety check and the teleport run on the main thread once it
   has loaded. A player who logs out meanwhile is not teleported (UltiKits/UltiEssentials#24).

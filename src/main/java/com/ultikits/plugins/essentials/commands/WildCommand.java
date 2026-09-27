@@ -88,7 +88,10 @@ public class WildCommand extends BaseEssentialsCommand {
                     Location target = new Location(world, x + 0.5, y + 1, z + 0.5);
                     if (isSafeLocation(target)) {
                         player.teleport(target);
-                        player.sendMessage(String.format(i18n("essentials.wild.success"), x, y, z));
+                        // Report where the player lands -- the destination's own block position,
+                        // feet included -- not the ground block below it (UltiKits/UltiEssentials#33).
+                        player.sendMessage(String.format(i18n("essentials.wild.success"),
+                                target.getBlockX(), target.getBlockY(), target.getBlockZ()));
                         return;
                     }
                 }

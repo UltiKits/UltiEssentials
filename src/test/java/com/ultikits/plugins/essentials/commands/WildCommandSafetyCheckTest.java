@@ -39,6 +39,7 @@ class WildCommandSafetyCheckTest {
         command = new WildCommand(config);
         EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
         player = EssentialsTestHelper.createMockPlayer("TestPlayer", UUID.randomUUID());
+        lenient().when(player.isOnline()).thenReturn(true);
         world = player.getWorld();
 
         Location playerLoc = new Location(world, 0, 64, 0);

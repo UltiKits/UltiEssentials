@@ -98,7 +98,19 @@ class WildCommandThreadSafetyTest {
         // Named as the framework's Bukkit plugin: the handler schedules its main-thread checks
         // against the plugin registered as "UltiTools" (UltiKits/UltiEssentials#24).
         mockPlugin = MockBukkit.createMockPlugin("UltiTools");
-        world = server.addSimpleWorld("world");
+        // MockBukkit does not implement World#getChunkAtAsync, which /wild uses to load each
+        // candidate chunk (UltiKits/UltiEssentials#24); this world answers it with its own chunk,
+        // already loaded, the way a loaded chunk completes on a real server.
+        org.mockbukkit.mockbukkit.world.WorldMock asyncWorld = new org.mockbukkit.mockbukkit.world.WorldMock() {
+            @Override
+            public java.util.concurrent.CompletableFuture<org.bukkit.Chunk> getChunkAtAsync(
+                    int x, int z, boolean gen, boolean urgent) {
+                return java.util.concurrent.CompletableFuture.completedFuture(getChunkAt(x, z));
+            }
+        };
+        asyncWorld.setName("world");
+        server.addWorld(asyncWorld);
+        world = asyncWorld;
 
         EssentialsConfig config = new EssentialsConfig();
         // Small, bounded range: the world is a uniform flat plane (grass at height 4 in every

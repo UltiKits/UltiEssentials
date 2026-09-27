@@ -4,12 +4,11 @@ import org.bukkit.ChatColor;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.WeakHashMap;
 
 /**
  * Copies the server's main scoreboard teams onto a private scoreboard.
@@ -31,43 +30,47 @@ final class MainTeamMirror {
     }
 
     /**
-     * The names of the teams copied onto each private board, so a team that leaves the main scoreboard
-     * is removed from the copy while a team another plugin put on the board itself stays. Weak keys:
-     * a board this module no longer holds is forgotten with it. Main thread only, like every scoreboard
-     * call; synchronised anyway, as it is shared by every player's board.
-     */
-    private static final Map<Scoreboard, Set<String>> COPIED =
-            Collections.synchronizedMap(new WeakHashMap<Scoreboard, Set<String>>());
-
-    /**
      * Makes the teams of {@code target} match the teams of {@code main}: every main-scoreboard team is
-     * copied, and a copied team that has left the main scoreboard is removed. A team on {@code target}
-     * that was never copied from the main scoreboard is left alone.
+     * copied, and a copied team that has left the main scoreboard is removed. Only teams this mirror
+     * copied are ever changed or removed: {@code copied} holds the team each earlier call copied under
+     * each name, and a team on {@code target} that is not that team - one another plugin put there,
+     * even under a copied team's name after removing the copy - is left as that plugin set it. Teams
+     * are compared with {@code equals}, because the server hands out a new wrapper for the same team on
+     * every lookup.
      *
      * @param main   the server's main scoreboard, the source of truth
-     * @param target a private scoreboard owned by this module
+     * @param target a private scoreboard owned by the caller
+     * @param copied the teams copied onto {@code target} so far, kept by the caller for as long as it
+     *               keeps {@code target}, and updated here
      */
-    static void mirror(Scoreboard main, Scoreboard target) {
-        if (main == null || target == null || main.equals(target)) {
+    static void mirror(Scoreboard main, Scoreboard target, Map<String, Team> copied) {
+        if (main == null || target == null || copied == null || main.equals(target)) {
             return;
         }
-        Set<String> copied = COPIED.computeIfAbsent(target, board -> new HashSet<>());
-        Set<String> mainTeamNames = new HashSet<>();
+        Map<String, Team> nowCopied = new HashMap<>();
         for (Team source : main.getTeams()) {
-            mainTeamNames.add(source.getName());
-            Team copy = target.getTeam(source.getName());
+            String name = source.getName();
+            Team copy = target.getTeam(name);
             if (copy == null) {
-                copy = target.registerNewTeam(source.getName());
+                copy = target.registerNewTeam(name);
+            } else if (!copy.equals(copied.get(name))) {
+                // Another plugin's team under this name: not this mirror's to change.
+                continue;
             }
             copyTeam(source, copy);
+            nowCopied.put(name, copy);
         }
-        for (Team stale : target.getTeams()) {
-            if (copied.contains(stale.getName()) && !mainTeamNames.contains(stale.getName())) {
-                stale.unregister();
+        for (Map.Entry<String, Team> earlier : copied.entrySet()) {
+            if (nowCopied.containsKey(earlier.getKey())) {
+                continue;
+            }
+            Team current = target.getTeam(earlier.getKey());
+            if (current != null && current.equals(earlier.getValue())) {
+                current.unregister();
             }
         }
         copied.clear();
-        copied.addAll(mainTeamNames);
+        copied.putAll(nowCopied);
     }
 
     private static void copyTeam(Team source, Team copy) {

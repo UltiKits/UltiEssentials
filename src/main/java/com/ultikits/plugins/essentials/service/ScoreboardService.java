@@ -65,6 +65,9 @@ public class ScoreboardService {
     // The line entries last written onto each player's board, so an unchanged sidebar is not rewritten
     private final Map<UUID, List<String>> shownLines = new ConcurrentHashMap<>();
 
+    // The main-scoreboard teams copied onto each player's board, so only those are ever changed or removed
+    private final Map<UUID, Map<String, Team>> copiedTeams = new ConcurrentHashMap<>();
+
     // Main update task
     private BukkitTask updateTask;
 
@@ -151,6 +154,7 @@ public class ScoreboardService {
                         enabledPlayers.remove(uuid);
                         playerBoards.remove(uuid);
                         shownLines.remove(uuid);
+                        copiedTeams.remove(uuid);
                         updateFailures.forget(uuid);
                     }
                 }
@@ -199,6 +203,7 @@ public class ScoreboardService {
         enabledPlayers.remove(player.getUniqueId());
         Scoreboard own = playerBoards.remove(player.getUniqueId());
         shownLines.remove(player.getUniqueId());
+        copiedTeams.remove(player.getUniqueId());
         updateFailures.forget(player.getUniqueId());
         
         // Give back the server's main scoreboard, not a fresh empty one -- and only while this
@@ -275,11 +280,15 @@ public class ScoreboardService {
         Objective objective;
         // Set when the board no longer shows the remembered lines, so they are drawn again in full.
         boolean redraw = false;
+        // Set when the objective was created in this update and so holds no score yet.
+        boolean freshObjective = false;
         if (scoreboard == null) {
             scoreboard = manager.getNewScoreboard();
             objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
             objective.setDisplaySlot(DisplaySlot.SIDEBAR);
             playerBoards.put(player.getUniqueId(), scoreboard);
+            copiedTeams.remove(player.getUniqueId());
+            freshObjective = true;
         } else {
             objective = scoreboard.getObjective("ultiessentials");
             if (objective == null) {
@@ -288,6 +297,7 @@ public class ScoreboardService {
                 objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
                 objective.setDisplaySlot(DisplaySlot.SIDEBAR);
                 redraw = true;
+                freshObjective = true;
             } else if (!title.equals(objective.getDisplayName())) {
                 objective.setDisplayName(title);
             }
@@ -312,7 +322,8 @@ public class ScoreboardService {
         // a line equal to one (a %player_name% line for a player with a name prefix) would otherwise be
         // that team member's own entry, and the copied team's prefix, suffix and colour would format the
         // sidebar row. Such a line gets a distinct entry that shows the same text.
-        MainTeamMirror.mirror(manager.getMainScoreboard(), scoreboard);
+        MainTeamMirror.mirror(manager.getMainScoreboard(), scoreboard,
+                copiedTeams.computeIfAbsent(player.getUniqueId(), uuid -> new HashMap<>()));
         List<String> lines = config.getScoreboardLines();
         List<String> entries = new ArrayList<>();
         Set<String> usedEntries = new HashSet<>();
@@ -328,15 +339,13 @@ public class ScoreboardService {
         }
         List<String> previous = shownLines.get(player.getUniqueId());
         if (redraw || !entries.equals(previous)) {
-            // Only this module's own previous lines are removed: resetScores clears an entry on every
-            // objective of the board, so resetting all of the board's entries would also erase the
-            // scores another plugin keeps on it.
-            if (previous != null) {
-                for (String stale : previous) {
-                    if (!entries.contains(stale)) {
-                        scoreboard.resetScores(stale);
-                    }
-                }
+            // The previous lines go with this module's own objective, replaced by an empty one. Resetting
+            // them with Scoreboard#resetScores would clear each entry on every objective of the board,
+            // another plugin's included, whenever that plugin scores the same name.
+            if (previous != null && !freshObjective) {
+                objective.unregister();
+                objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
+                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
             }
             int score = entries.size();
             for (String entry : entries) {
@@ -457,6 +466,7 @@ public class ScoreboardService {
         enabledPlayers.clear();
         playerBoards.clear();
         shownLines.clear();
+        copiedTeams.clear();
         updateFailures.clear();
     }
     

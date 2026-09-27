@@ -1,73 +1,76 @@
 package com.ultikits.plugins.essentials;
 
-import org.mockbukkit.mockbukkit.MockBukkit;
-import org.mockbukkit.mockbukkit.ServerMock;
+import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
+import com.ultikits.plugins.essentials.service.NamePrefixService;
+import com.ultikits.plugins.essentials.service.ScheduledCommandService;
+import com.ultikits.plugins.essentials.service.ScoreboardService;
+import com.ultikits.plugins.essentials.service.TeleportService;
+import com.ultikits.plugins.essentials.service.TpaService;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.UltiTools;
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
+import com.ultikits.ultitools.context.SimpleContainer;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockbukkit.mockbukkit.MockBukkit;
 
+import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for UltiEssentials main plugin class.
- * <p>
- * 测试 UltiEssentials 主插件类的生命周期。
- *
- * @author wisdomme
- * @version 1.0.0
+ * The module's main class, constructed the way a server constructs it -- from a module jar holding
+ * its {@code plugin.yml} -- and driven through its lifecycle hooks: enabling repairs stored primary
+ * keys, a reload restarts the three task-owning services, and an unload shuts every service down
+ * (UltiKits/UltiEssentials#21).
  */
-@DisplayName("UltiEssentials Tests")
+@DisplayName("UltiEssentials main class lifecycle (#21)")
 @Timeout(value = 30, unit = TimeUnit.SECONDS)
-// Re-measured: the stale reason was never true for this class -- it constructs a REAL
-// UltiEssentials via `new UltiEssentials()` and calls registerSelf() directly, which runs
-// UltiToolsPlugin's no-arg constructor. That constructor's getInputStream() (:439-441)
-// unconditionally builds a "jar:file:" + CodeSource-location + "!/plugin.yml" URL, assuming the
-// running classpath entry is a packaged jar. In a unit test the CodeSource is target/classes/ (a
-// directory), so the jar: URL never resolves, loadPluginConfiguration() falls back to an empty
-// YamlConfiguration, and the constructor throws PluginModuleException ("no 'name:' key in its
-// plugin.yml") -- confirmed after fixing this class's OWN prior, narrower cause (getLogger()
-// left unstubbed by TestHelper.mockUltiToolsInstance(), fixed in setUp() below). Testing a real
-// UltiToolsPlugin's construction needs a packaged jar on the test classpath, which is out of
-// scope for this test harness (it would need a new build step); filed as an issue rather than
-// routed to "needs the bootstrap" -- MockBukkit.load() does not apply either, since
-// UltiToolsPlugin is not a Bukkit Plugin (implements IPlugin directly, per the framework's own
-// architecture notes).
-@Disabled("new UltiEssentials() runs UltiToolsPlugin's no-arg constructor, whose getInputStream()"
-        + " assumes a packaged jar (\"jar:file:\" + CodeSource + \"!/plugin.yml\"); the test"
-        + " classpath is a directory (target/classes/), so plugin.yml never resolves and the"
-        + " constructor throws PluginModuleException for a missing 'name:' key -- see UltiKits/"
-        + "UltiEssentials#21")
 class UltiEssentialsTest {
 
-    private ServerMock server;
-    private UltiEssentials plugin;
+    @TempDir
+    Path folder;
+
+    private UltiToolsPlugin plugin;
+    private SimpleContainer container;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         MockBukkitHelper.ensureCleanState();
-        server = MockBukkit.mock();
+        MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
-        // UltiToolsPlugin.getLogger() wraps UltiTools.getInstance().getLogger() in a
-        // PluginLogger; TestHelper.mockUltiToolsInstance() leaves getLogger() unstubbed
-        // (returns null), and PluginLogger.log's own delegation methods NPE on that --
-        // the actual cause behind this class's stale "MockBukkit Registry/PotionEffectType"
-        // reason. UltiTools.getInstance() already returns the mock that method installed, so it
-        // is stubbed further here rather than in TestHelper.java, which is a file synced
-        // verbatim from the framework and not meant to diverge per test.
-        lenient().when(UltiTools.getInstance().getLogger())
-                .thenReturn(Logger.getLogger("UltiEssentialsTest"));
+        UltiTools framework = UltiTools.getInstance();
+        lenient().when(framework.getLogger()).thenReturn(Logger.getLogger("UltiEssentialsTest"));
+        YamlConfiguration frameworkConfig = new YamlConfiguration();
+        frameworkConfig.set("language", "en");
+        lenient().when(framework.getConfig()).thenReturn(frameworkConfig);
+        lenient().when(framework.getDataFolder()).thenReturn(folder.resolve("UltiTools").toFile());
+        // Configuration registration is the framework's own step and is tested there.
+        lenient().when(framework.getConfigManager()).thenReturn(mock(com.ultikits.ultitools.manager.ConfigManager.class));
+
+        plugin = new UltiEssentials();
+
+        container = new SimpleContainer();
+        container.registerType(EntityIdBackfillService.class, mock(EntityIdBackfillService.class));
+        container.registerType(ScheduledCommandService.class, mock(ScheduledCommandService.class));
+        container.registerType(ScoreboardService.class, mock(ScoreboardService.class));
+        container.registerType(NamePrefixService.class, mock(NamePrefixService.class));
+        container.registerType(TeleportService.class, mock(TeleportService.class));
+        container.registerType(TpaService.class, mock(TpaService.class));
+        plugin.setContext(container);
     }
 
     @AfterEach
@@ -75,18 +78,46 @@ class UltiEssentialsTest {
         MockBukkitHelper.safeUnmock();
     }
 
-    @Nested
-    @DisplayName("Plugin Lifecycle Tests")
-    class PluginLifecycleTests {
+    private void invokeHook(String name) throws Exception {
+        Method hook = UltiToolsPlugin.class.getDeclaredMethod(name);
+        hook.setAccessible(true); // NOPMD - the hooks are protected; the framework calls them the same way
+        hook.invoke(plugin);
+    }
 
-        @Test
-        @DisplayName("Should initialize plugin successfully")
-        void shouldInitializePlugin() {
-            plugin = new UltiEssentials();
+    @Test
+    @DisplayName("The module is constructed from its plugin.yml, named and versioned as that file says")
+    void constructedFromItsPluginYml() {
+        assertThat(plugin.getPluginName()).isEqualTo("UltiEssentials");
+        assertThat(plugin.getMainClass()).isEqualTo("com.ultikits.plugins.essentials.UltiEssentials");
+    }
 
-            boolean result = plugin.registerSelf();
+    @Test
+    @DisplayName("Enabling reports success and repairs stored primary keys")
+    void registerSelfRepairsStoredKeys() throws Exception {
+        assertThat(plugin.registerSelf()).isTrue();
 
-            assertThat(result).isTrue();
-        }
+        verify(container.getBean(EntityIdBackfillService.class)).run();
+    }
+
+    @Test
+    @DisplayName("A reload restarts the scheduled-command, scoreboard and name-prefix services")
+    void onReloadRestartsTheTaskServices() throws Exception {
+        invokeHook("onReload");
+
+        verify(container.getBean(ScheduledCommandService.class)).reload();
+        verify(container.getBean(ScoreboardService.class)).reload();
+        verify(container.getBean(NamePrefixService.class)).reload();
+    }
+
+    @Test
+    @DisplayName("An unload shuts every service down")
+    void onUnregisterShutsEveryServiceDown() throws Exception {
+        invokeHook("onUnregister");
+
+        verify(container.getBean(ScheduledCommandService.class)).shutdown();
+        verify(container.getBean(ScoreboardService.class)).shutdown();
+        verify(container.getBean(NamePrefixService.class)).shutdown();
+        verify(container.getBean(TeleportService.class)).shutdown();
+        verify(container.getBean(TpaService.class)).shutdown();
     }
 }

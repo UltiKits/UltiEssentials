@@ -135,6 +135,22 @@ class ScoreboardServiceMainTeamsTest {
     }
 
     @Test
+    @DisplayName("A sidebar line equal to a team member's name gets its own entry, so the team's prefix does not format the row")
+    void aLineEqualToATeamEntryIsNotFormattedByTheTeam() {
+        FakeScoreboards.addTeam(mainBoard, "up_x", "[VIP] ", "Steve");
+        config.setScoreboardLines(java.util.Arrays.asList("Steve", "Line"));
+        Objective objective = privateBoard.getObjective("ultiessentials");
+
+        service.enableScoreboard(player);
+
+        org.mockito.ArgumentCaptor<String> entries = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(objective, org.mockito.Mockito.atLeastOnce()).getScore(entries.capture());
+        assertThat(entries.getAllValues()).as("the row is not the team member's own entry").doesNotContain("Steve");
+        assertThat(entries.getAllValues()).anySatisfy(e -> assertThat(ChatColor.stripColor(e)).isEqualTo("Steve"));
+        assertThat(privateBoard.getTeam("up_x").getEntries()).containsExactly("Steve");
+    }
+
+    @Test
     @DisplayName("An unchanged team costs no writes on the next update")
     void unchangedTeamCostsNoWrites() {
         FakeScoreboards.addTeam(mainBoard, "up_x", "[VIP] ", "Alice");

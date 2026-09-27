@@ -33,4 +33,23 @@ class DocumentedNamesTest {
             assertThat(matcher.find()).as("%s names the list by a key that does not exist", file).isFalse();
         }
     }
+
+    @Test
+    @DisplayName("/ban, /banlist and /scoreboard are documented as deliberate takeovers of the vanilla commands, which stay reachable as minecraft:<name> (#61)")
+    void vanillaTakeoversAreDocumented() throws Exception {
+        String features = read("FEATURES.md");
+        String readme = read("README.md");
+        String[][] rows = {
+            {"| ultiessentials.ban.ban |", "minecraft:ban"},
+            {"| ultiessentials.banlist.list |", "minecraft:banlist"},
+            {"| ultiessentials.scoreboard.toggle |", "minecraft:scoreboard"},
+        };
+        for (String[] row : rows) {
+            int start = features.indexOf(row[0]);
+            assertThat(start).as("control: the row %s exists", row[0]).isNotNegative();
+            String line = features.substring(start, features.indexOf('\n', start));
+            assertThat(line).as("%s states the takeover", row[0]).contains("deliberately takes over").contains(row[1]);
+            assertThat(readme).as("the README names %s", row[1]).contains(row[1]);
+        }
+    }
 }

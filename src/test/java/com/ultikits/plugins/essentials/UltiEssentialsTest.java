@@ -6,6 +6,7 @@ import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.service.TeleportService;
 import com.ultikits.plugins.essentials.service.TpaService;
+import com.ultikits.plugins.essentials.utils.ModuleJarFixture;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.UltiTools;
@@ -61,7 +62,7 @@ class UltiEssentialsTest {
         // Configuration registration is the framework's own step and is tested there.
         lenient().when(framework.getConfigManager()).thenReturn(mock(com.ultikits.ultitools.manager.ConfigManager.class));
 
-        plugin = new UltiEssentials();
+        plugin = ModuleJarFixture.construct("com.ultikits.plugins.essentials.UltiEssentials", folder);
 
         container = new SimpleContainer();
         container.registerType(EntityIdBackfillService.class, mock(EntityIdBackfillService.class));

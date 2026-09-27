@@ -234,6 +234,57 @@ class ScoreboardServiceBehaviorTest {
     }
 
     @Nested
+    @DisplayName("Built-in placeholders with PlaceholderAPI installed (#59)")
+    class BuiltInPlaceholdersWithPlaceholderApiTests {
+
+        @Test
+        @DisplayName("The module's own placeholders are filled before PlaceholderAPI, so the default lines show values, not tokens")
+        void fillsItsOwnPlaceholdersBeforePlaceholderApi() throws Exception {
+            EssentialsTestHelper.setField(service, "manager", scoreboardManager);
+            PluginManager pluginManager = EssentialsTestHelper.getMockServer().getPluginManager();
+            when(pluginManager.getPlugin("PlaceholderAPI")).thenReturn(mock(Plugin.class));
+            Player other = EssentialsTestHelper.createMockPlayer("Alex", UUID.randomUUID());
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+            doReturn(Arrays.asList(player, other)).when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
+            config.setScoreboardTitle("%player_name%");
+            config.setScoreboardLines(Arrays.asList(
+                    "Online: %online_players%/%max_players%",
+                    "Food: %player_food%",
+                    "Rank: %vault_rank%"));
+
+            try (MockedStatic<PlaceholderAPI> papi = mockStatic(PlaceholderAPI.class)) {
+                // PlaceholderAPI resolves only its own placeholder and leaves anything else as it is.
+                papi.when(() -> PlaceholderAPI.setPlaceholders(eq(player), anyString()))
+                        .thenAnswer(inv -> inv.<String>getArgument(1).replace("%vault_rank%", "VIP"));
+
+                service.enableScoreboard(player);
+
+                ArgumentCaptor<String> entries = ArgumentCaptor.forClass(String.class);
+                verify(mockObjective, times(3)).getScore(entries.capture());
+                assertThat(entries.getAllValues()).containsExactly("Online: 2/100", "Food: 20", "Rank: VIP");
+                verify(mockScoreboard).registerNewObjective(eq("ultiessentials"), eq("dummy"), eq("Steve"));
+            }
+        }
+
+        @Test
+        @DisplayName("A value the module fills in is not filled again: a world named after a placeholder stays literal")
+        void aFilledValueIsNotFilledAgain() throws Exception {
+            EssentialsTestHelper.setField(service, "manager", scoreboardManager);
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+            org.bukkit.World world = mock(org.bukkit.World.class);
+            when(world.getName()).thenReturn("%player_name%");
+            when(player.getWorld()).thenReturn(world);
+            config.setScoreboardLines(Collections.singletonList("World: %player_world%"));
+
+            service.enableScoreboard(player);
+
+            ArgumentCaptor<String> entries = ArgumentCaptor.forClass(String.class);
+            verify(mockObjective).getScore(entries.capture());
+            assertThat(entries.getValue()).isEqualTo("World: %player_name%");
+        }
+    }
+
+    @Nested
     @DisplayName("reload")
     class ReloadTests {
 

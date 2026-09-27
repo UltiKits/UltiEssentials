@@ -120,6 +120,30 @@ class NamePrefixServiceBehaviorTest {
                 verify(team).setPrefix("PAPI-RESOLVED");
             }
         }
+
+        @Test
+        @DisplayName("With PlaceholderAPI installed, the module's own %player_name% is still filled, before PlaceholderAPI runs (#59)")
+        void fillsItsOwnPlaceholderBeforePlaceholderApi() {
+            Team team = mock(Team.class);
+            when(mainScoreboard.getTeam(anyString())).thenReturn(null);
+            when(mainScoreboard.registerNewTeam(anyString())).thenReturn(team);
+            config.setNamePrefixFormat("[%player_name%] %vault_rank% ");
+
+            PluginManager pluginManager = EssentialsTestHelper.getMockServer().getPluginManager();
+            when(pluginManager.getPlugin("PlaceholderAPI")).thenReturn(mock(Plugin.class));
+
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+
+            try (MockedStatic<PlaceholderAPI> papi = mockStatic(PlaceholderAPI.class)) {
+                // PlaceholderAPI resolves only its own placeholder and leaves anything else as it is.
+                papi.when(() -> PlaceholderAPI.setPlaceholders(eq(player), anyString()))
+                        .thenAnswer(inv -> inv.<String>getArgument(1).replace("%vault_rank%", "VIP"));
+
+                service.updatePlayer(player);
+
+                verify(team).setPrefix("[Steve] VIP ");
+            }
+        }
     }
 
     @Nested

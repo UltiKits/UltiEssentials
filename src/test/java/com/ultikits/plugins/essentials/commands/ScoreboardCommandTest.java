@@ -91,7 +91,8 @@ class ScoreboardCommandTest {
 
         command.disable(player);
 
-        verify(scoreboardService).disableScoreboard(player);
+        // Turning it off is recorded as the player's choice for the session (#45).
+        verify(scoreboardService).declineScoreboard(player);
         verify(player).sendMessage(anyString());
     }
 

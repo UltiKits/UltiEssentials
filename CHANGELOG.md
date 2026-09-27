@@ -9,6 +9,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `/wild` no longer stalls the server while it looks for a place: each candidate chunk is loaded (and
+  generated, if new) asynchronously, and the safety check and the teleport run on the main thread once it
+  has loaded. A player who logs out meanwhile is not teleported (UltiKits/UltiEssentials#24).
+- `/wild` 寻找落点时不再卡住服务器：每个候选区块都异步加载（新区块异步生成），加载完成后再在主线程做安全检查并传送；
+  期间下线的玩家不会被传送（UltiKits/UltiEssentials#24）。
 - A vanished player is no longer found through `/tpa` or `/tpahere` (a sender who may not see vanished
   players is told the player is not online, and no request is delivered) or through `/ban` and
   `/tempban` completion, and a vanished player can always un-vanish: `features.hide.enabled: false`

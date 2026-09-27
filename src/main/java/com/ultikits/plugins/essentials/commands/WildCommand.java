@@ -2,6 +2,7 @@ package com.ultikits.plugins.essentials.commands;
 
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.command.*;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -19,6 +20,9 @@ import java.util.Random;
 public class WildCommand extends BaseEssentialsCommand {
 
     private static final Random RANDOM = new Random();
+
+    /** Candidate locations tried before /wild gives up. */
+    private static final int MAX_ATTEMPTS = 10;
 
     private final EssentialsConfig config;
 
@@ -52,25 +56,44 @@ public class WildCommand extends BaseEssentialsCommand {
 
         player.sendMessage(i18n("essentials.wild.searching"));
 
-        // Try up to 10 times to find a safe location
-        for (int attempt = 0; attempt < 10; attempt++) {
-            int range = minRange + RANDOM.nextInt(maxRange - minRange);
-            double angle = RANDOM.nextDouble() * 2 * Math.PI;
+        Location origin = player.getLocation();
+        tryLocation(player, world, origin.getX(), origin.getZ(), minRange, maxRange, 0);
+    }
 
-            int x = (int) (player.getLocation().getX() + range * Math.cos(angle));
-            int z = (int) (player.getLocation().getZ() + range * Math.sin(angle));
-
-            int y = world.getHighestBlockYAt(x, z);
-            Location target = new Location(world, x + 0.5, y + 1, z + 0.5);
-
-            if (isSafeLocation(target)) {
-                player.teleport(target);
-                player.sendMessage(String.format(i18n("essentials.wild.success"), x, y, z));
-                return;
-            }
+    /**
+     * Tries one random candidate location. Its chunk is loaded asynchronously, so an unexplored
+     * chunk is generated without stalling the server tick; the height lookup, the safety check and
+     * the teleport then run in a task on the main thread, where world and player state may be read
+     * and changed. An unsafe candidate tries the next one, up to {@link #MAX_ATTEMPTS} in all
+     * (UltiKits/UltiEssentials#24). A player who logged out while a chunk loaded is left alone.
+     */
+    private void tryLocation(Player player, World world, double originX, double originZ,
+                             int minRange, int maxRange, int attempt) {
+        if (attempt >= MAX_ATTEMPTS) {
+            player.sendMessage(i18n("essentials.wild.no_safe_location"));
+            return;
         }
+        int range = minRange + RANDOM.nextInt(maxRange - minRange);
+        double angle = RANDOM.nextDouble() * 2 * Math.PI;
+        int x = (int) (originX + range * Math.cos(angle));
+        int z = (int) (originZ + range * Math.sin(angle));
 
-        player.sendMessage(i18n("essentials.wild.no_safe_location"));
+        world.getChunkAtAsync(x >> 4, z >> 4).whenComplete((chunk, loadFailure) ->
+            Bukkit.getScheduler().runTask(Bukkit.getPluginManager().getPlugin("UltiTools"), () -> {
+                if (!player.isOnline()) {
+                    return;
+                }
+                if (loadFailure == null) {
+                    int y = world.getHighestBlockYAt(x, z);
+                    Location target = new Location(world, x + 0.5, y + 1, z + 0.5);
+                    if (isSafeLocation(target)) {
+                        player.teleport(target);
+                        player.sendMessage(String.format(i18n("essentials.wild.success"), x, y, z));
+                        return;
+                    }
+                }
+                tryLocation(player, world, originX, originZ, minRange, maxRange, attempt + 1);
+            }));
     }
 
     /**

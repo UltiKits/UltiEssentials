@@ -46,7 +46,9 @@ public class HideCommand extends BaseEssentialsCommand {
 
     @CmdMapping(format = "")
     public void toggleHide(@CmdSender Player player) {
-        if (!config.isHideEnabled()) {
+        // features.hide.enabled refuses only a new vanish: a player already vanished can always
+        // become visible again (UltiKits/UltiEssentials#56).
+        if (!HIDDEN_PLAYERS.contains(player.getUniqueId()) && !config.isHideEnabled()) {
             player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
@@ -78,6 +80,21 @@ public class HideCommand extends BaseEssentialsCommand {
      */
     public static boolean isHidden(Player player) {
         return HIDDEN_PLAYERS.contains(player.getUniqueId());
+    }
+
+    /**
+     * Whether {@code viewer} may know that {@code target} is online: always, unless {@code target} is
+     * vanished and {@code viewer} does not hold {@code ultiessentials.hide.see}. A command that looks a
+     * player up by name treats a player the viewer may not see as offline, so the command does not
+     * reveal the vanish (UltiKits/UltiEssentials#56). The console ({@code viewer} {@code null}) sees
+     * everyone.
+     *
+     * @param viewer the player asking, or {@code null} for the console
+     * @param target the player being looked up
+     * @return {@code true} if {@code viewer} may see {@code target}
+     */
+    public static boolean canSee(Player viewer, Player target) {
+        return viewer == null || !isHidden(target) || viewer.hasPermission(SEE_VANISHED_PERMISSION);
     }
 
     /**

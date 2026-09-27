@@ -35,7 +35,9 @@ public class TpaCommand extends BaseEssentialsCommand {
         }
         
         Player target = Bukkit.getPlayer(playerName);
-        if (target == null || !target.isOnline()) {
+        // A vanished target counts as offline for a sender who may not see vanished players, so the
+        // reply does not reveal that they are online (UltiKits/UltiEssentials#56).
+        if (target == null || !target.isOnline() || !HideCommand.canSee(sender, target)) {
             sender.sendMessage(i18n("essentials.tpa.player_offline"));
             return;
         }

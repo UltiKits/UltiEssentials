@@ -9,6 +9,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A vanished player is no longer found through `/tpa` or `/tpahere` (a sender who may not see vanished
+  players is told the player is not online, and no request is delivered) or through `/ban` and
+  `/tempban` completion, and a vanished player can always un-vanish: `features.hide.enabled: false`
+  now refuses only a new vanish (UltiKits/UltiEssentials#56).
+- 隐身玩家不再能通过 `/tpa`、`/tpahere`（无权看见隐身玩家的发送者会被告知对方不在线，请求也不会送达）或 `/ban`、
+  `/tempban` 的补全被发现；隐身玩家也总能解除隐身：`features.hide.enabled: false` 现在只拒绝新的隐身
+  （UltiKits/UltiEssentials#56）。
 - Unloading this module (`/upm uninstall UltiEssentials`) now also cancels a pending `/tpa` or
   `/tpahere` request's expiry, so neither player gets an expiry message from the uninstalled module, and
   a player who joined in the second before the uninstall is no longer put on a sidebar or into a

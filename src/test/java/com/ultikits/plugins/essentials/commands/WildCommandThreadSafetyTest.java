@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
@@ -36,7 +37,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
 /**
- * Falsification for FIX-01 (13-04): {@code WildCommand.wildTeleport} must run entirely on the
+ * Falsification for {@code WildCommand.wildTeleport}'s thread-safety fix: it must run entirely on the
  * primary thread. The handler's whole body -- the highest-block lookup that loads a chunk, the
  * safety checks that read blocks, and the teleport itself -- must never leave it.
  *
@@ -49,13 +50,12 @@ import static org.mockito.Mockito.mock;
  * the SAME real {@code BukkitSchedulerMock} thread-pool-vs-tick-queue split the framework itself
  * relies on is what proves this test, not a hand-rolled thread check.</p>
  *
- * <p><b>Correction to this plan's own stated falsification mechanism (recorded verbatim in
- * {@code 13-LEDGER-UltiEssentials.md}).</b> The plan expected the pre-fix RED failure to be
- * {@code org.mockbukkit.mockbukkit.AsyncCatcher.catchOp}'s {@code IllegalStateException},
- * mirroring Paper's real asynchronous-operation guard. Measured directly this session (three
- * probes: a bare {@code player.teleport()} off-thread, the real unmodified {@code wildTeleport}
- * off-thread, and the same call on the tick thread) that mockbukkit-v1.21 4.101.0's
- * {@code PlayerMock.teleport(...)} and {@code WorldMock.getHighestBlockYAt(...)} /
+ * <p><b>Correction to the originally stated falsification mechanism.</b> The pre-fix RED failure
+ * was expected to be {@code org.mockbukkit.mockbukkit.AsyncCatcher.catchOp}'s {@code
+ * IllegalStateException}, mirroring Paper's real asynchronous-operation guard. Measured directly
+ * this session (three probes: a bare {@code player.teleport()} off-thread, the real unmodified
+ * {@code wildTeleport} off-thread, and the same call on the tick thread) that mockbukkit-v1.21
+ * 4.101.0's {@code PlayerMock.teleport(...)} and {@code WorldMock.getHighestBlockYAt(...)} /
  * {@code getBlockAt(...)} call zero {@code AsyncCatcher.catchOp} sites (a full disassembly of
  * every one of the jar's 28 {@code catchOp} call sites confirms none sit on this call chain --
  * they guard {@code kick}, {@code addPlayer}, {@code loadChunk}, {@code openInventory} and
@@ -72,11 +72,11 @@ import static org.mockito.Mockito.mock;
  * {@code performOneTick()} on the calling (test) thread, which {@code ServerMock} treats as
  * primary ({@code isPrimaryThread() == true}). The test is still red before the fix and green
  * after it, for the real reason (the wrong thread), not for a setup error -- it does not
- * reproduce the specific exception text the plan predicted, because that exception is not part
+ * reproduce the specific exception text first predicted, because that exception is not part
  * of this dependency's simulated contract for this call chain.
  * </p>
  */
-@DisplayName("WildCommand thread-safety falsification (FIX-01, 13-04)")
+@DisplayName("WildCommand thread-safety falsification")
 class WildCommandThreadSafetyTest {
 
     private ServerMock server;
@@ -107,7 +107,7 @@ class WildCommandThreadSafetyTest {
 
         command = new WildCommand(config);
         UltiToolsPlugin frameworkPlugin = mock(UltiToolsPlugin.class);
-        lenient().when(frameworkPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        lenient().when(frameworkPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
         EssentialsTestHelper.setField(command, "plugin", frameworkPlugin);
 
         handlerMethod = WildCommand.class.getMethod("wildTeleport", Player.class);

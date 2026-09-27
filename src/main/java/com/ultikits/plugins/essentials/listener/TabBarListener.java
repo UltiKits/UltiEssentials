@@ -19,7 +19,7 @@ public class TabBarListener implements Listener {
 
     @Autowired
     private EssentialsConfig config;
-    
+
     @Autowired
     private TabBarConfig tabBarConfig;
 

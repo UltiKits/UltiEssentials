@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @CmdExecutor(
     alias = {"warp", "w"},
     permission = "ultiessentials.warp.use",
-    description = "传送到地标点"
+    description = "essentials.command.warp.description"
 )
 public class WarpCommand extends BaseEssentialsCommand {
     
@@ -36,25 +36,25 @@ public class WarpCommand extends BaseEssentialsCommand {
         
         switch (result) {
             case SUCCESS:
-                player.sendMessage(i18n("已传送到地标点: ") + name);
+                player.sendMessage(i18n("essentials.warp.teleported") + name);
                 break;
             case WARMUP_STARTED:
-                player.sendMessage(i18n("正在传送，请不要移动..."));
+                player.sendMessage(i18n("essentials.warp.warmup"));
                 break;
             case NOT_FOUND:
-                player.sendMessage(i18n("地标点不存在: ") + name);
+                player.sendMessage(i18n("essentials.warp.not_found") + name);
                 break;
             case WORLD_NOT_FOUND:
-                player.sendMessage(i18n("地标点所在世界不存在"));
+                player.sendMessage(i18n("essentials.warp.world_not_found"));
                 break;
             case NO_PERMISSION:
-                player.sendMessage(i18n("你没有权限使用该地标点"));
+                player.sendMessage(i18n("essentials.warp.no_permission"));
                 break;
             case ALREADY_TELEPORTING:
-                player.sendMessage(i18n("你正在传送中，请稍候"));
+                player.sendMessage(i18n("essentials.warp.in_progress"));
                 break;
             case DISABLED:
-                player.sendMessage(i18n("地标功能已禁用"));
+                player.sendMessage(i18n("essentials.warp.disabled"));
                 break;
             default:
                 // Handle any unexpected result types
@@ -64,8 +64,8 @@ public class WarpCommand extends BaseEssentialsCommand {
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /warp <名称>"));
-        sender.sendMessage(i18n("传送到指定的地标点"));
+        sender.sendMessage(i18n("essentials.help.warp.usage"));
+        sender.sendMessage(i18n("essentials.help.warp"));
     }
     
     @Override

@@ -61,6 +61,6 @@ public abstract class BaseEssentialsCommand extends BaseCommandExecutor {
      */
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /help 获取帮助"));
+        sender.sendMessage(i18n("essentials.help.default"));
     }
 }

@@ -133,9 +133,9 @@ public abstract class UuidKeyedDataEntity extends BaseDataEntity<String> {
      * Not {@code toString}: Lombok's {@code @Data} generates one per class with
      * {@code callSuper = false}, so a subclass's {@code toString} omits every inherited field -- which
      * on these entities means a home printed without its world or coordinates and without its own
-     * identity, i.e. exactly the fields needed to re-create it (gate 1 MAJOR-06). Switching
-     * {@code toString} to {@code callSuper = true} would fix today's output and leave the promise
-     * resting on a shape a later change can silently alter again.
+     * identity, i.e. exactly the fields needed to re-create it. Switching {@code toString} to {@code
+     * callSuper = true} would fix today's output and leave the promise resting on a shape a later
+     * change can silently alter again.
      * <p>
      * The field list is not written out here either. It is every {@code @Column}-mapped field of the
      * concrete class, read through the same {@link ReflectionUtil#getFields(Class)} walk the data

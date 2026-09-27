@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
  * Command to restore player hunger.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"feed"}, permission = "ultiessentials.heal.self", description = "恢复饱食度")
+@CmdExecutor(alias = {"feed"}, permission = "ultiessentials.heal.self", description = "essentials.command.feed.description")
 public class FeedCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -21,13 +21,13 @@ public class FeedCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void feedSelf(@CmdSender Player player) {
         if (!config.isHealEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         player.setFoodLevel(20);
         player.setSaturation(20.0f);
-        player.sendMessage(i18n("饱食度已恢复"));
+        player.sendMessage(i18n("essentials.feed.self"));
     }
 
     @CmdMapping(format = "<player>", permission = "ultiessentials.heal.other")
@@ -36,23 +36,23 @@ public class FeedCommand extends BaseEssentialsCommand {
             @CmdParam("player") Player target) {
 
         if (!config.isHealEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在或不在线"));
+            sender.sendMessage(i18n("essentials.error.player_not_found_or_offline"));
             return;
         }
 
         target.setFoodLevel(20);
         target.setSaturation(20.0f);
-        sender.sendMessage(String.format(i18n("已恢复 %s 的饱食度"), target.getName()));
-        target.sendMessage(i18n("你的饱食度已被恢复"));
+        sender.sendMessage(String.format(i18n("essentials.feed.other"), target.getName()));
+        target.sendMessage(i18n("essentials.feed.target"));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /feed 恢复饱食度"));
+        sender.sendMessage(i18n("essentials.help.feed"));
     }
 }

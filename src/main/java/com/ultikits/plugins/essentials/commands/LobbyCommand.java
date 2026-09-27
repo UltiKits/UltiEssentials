@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
  * Command to teleport player to the server lobby/hub.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"lobby", "hub"}, permission = "ultiessentials.lobby.teleport", description = "传送到主城")
+@CmdExecutor(alias = {"lobby", "hub"}, permission = "ultiessentials.lobby.teleport", description = "essentials.command.lobby.description")
 public class LobbyCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -25,22 +25,22 @@ public class LobbyCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void teleportToLobby(@CmdSender Player player) {
         if (!config.isLobbyEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         Location lobby = lobbyConfig.getLobbyLocation();
         if (lobby.getWorld() == null) {
-            player.sendMessage(i18n("主城世界不存在"));
+            player.sendMessage(i18n("essentials.lobby.world_not_found"));
             return;
         }
 
         player.teleport(lobby);
-        player.sendMessage(i18n("已传送到主城"));
+        player.sendMessage(i18n("essentials.lobby.success"));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /lobby 传送到主城"));
+        sender.sendMessage(i18n("essentials.help.lobby"));
     }
 }

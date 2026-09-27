@@ -51,7 +51,7 @@ class BanListenerMockitoTest {
         // BanListener.onPlayerLogin -> getUniqueId(). Routed through the module's shared
         // MockBukkitHelper.bootstrapLiveServer() rather than an inlined MockBukkit.mock()
         // so this class's greenness -- a real production-path test, not a sentinel -- is
-        // exactly what UltiEssentialsRegistrySentinelTest stands guard over (14-13).
+        // exactly what UltiEssentialsRegistrySentinelTest stands guard over.
         MockBukkitHelper.bootstrapLiveServer();
 
         config = new EssentialsConfig();

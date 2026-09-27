@@ -10,7 +10,7 @@ import org.bukkit.entity.Player;
  * Shortcut command to switch to creative mode.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"gmc"}, permission = "ultiessentials.gamemode.self", description = "切换到创造模式")
+@CmdExecutor(alias = {"gmc"}, permission = "ultiessentials.gamemode.self", description = "essentials.command.gmc.description")
 public class GmCreativeCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -22,15 +22,15 @@ public class GmCreativeCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void creative(@CmdSender Player player) {
         if (!config.isGamemodeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         player.setGameMode(GameMode.CREATIVE);
-        player.sendMessage(i18n("游戏模式已切换为 CREATIVE"));
+        player.sendMessage(i18n("essentials.gamemode.changed_creative"));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /gmc 切换到创造模式"));
+        sender.sendMessage(i18n("essentials.help.gmc"));
     }
 }

@@ -1,6 +1,6 @@
 /**
  * Migrated off the legacy `be.seeseemelk.mockbukkit` generation to
- * `org.mockbukkit.mockbukkit` (Phase 14, 14-09) - 2026-09-06.
+ * `org.mockbukkit.mockbukkit` - 2026-09-06.
  * Source of the original pattern: src/test/java/com/ultikits/ultitools/utils/MockBukkitHelper.java
  *
  * 如需更新，请从 UltiTools-Reborn 主项目同步此文件
@@ -73,7 +73,7 @@ public final class MockBukkitHelper {
      * {@code mock(Server.class)}, which several test classes in this repository install via
      * reflection (bypassing {@code Bukkit.setServer()}'s own "already set" guard) and deliberately
      * never clear afterward. Call this immediately before {@code MockBukkit.mock()} in any class
-     * that may run after one of those in the same forked JVM (14-09).</p>
+     * that may run after one of those in the same forked JVM.</p>
      *
      * <p><b>The occupant is classified by its runtime type, not by {@link MockBukkit#isMocked()}.</b>
      * An earlier revision guarded on {@code !isMocked()} and argued that a false reading proved the
@@ -126,9 +126,9 @@ public final class MockBukkitHelper {
      * Nulls MockBukkit's private static {@code mock} holder -- the field {@link MockBukkit#isMocked()}
      * reads and the field {@code MockBukkit.mock(T)} guards on before installing a new server.
      *
-     * <p>NOTE (14-09): on the 1.21 generation this field is named {@code mock} (a private static
-     * {@link ServerMock}), not the legacy {@code mocked} boolean flag -- confirmed via javap,
-     * {@code mocked} does not exist on this generation at all.</p>
+     * <p>NOTE: on the 1.21 generation this field is named {@code mock} (a private static {@link
+     * ServerMock}), not the legacy {@code mocked} boolean flag -- confirmed via javap, {@code
+     * mocked} does not exist on this generation at all.</p>
      */
     private static void clearMockHolder() {
         try {
@@ -169,7 +169,7 @@ public final class MockBukkitHelper {
      * {@code BanListener.onPlayerLogin} against a real {@code Bukkit.createProfile(...)}) never
      * noticed. Routing both classes through this one method means breaking it breaks both --
      * the sentinel is now watching the same wiring the production-path test actually depends on,
-     * not merely its own private copy of it (14-13).</p>
+     * not merely its own private copy of it.</p>
      *
      * @return the freshly-mocked {@link ServerMock}, for callers that need direct access to it
      *         (e.g. to add players or worlds) without a second lookup via {@link MockBukkit#getMock()}

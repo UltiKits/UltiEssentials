@@ -1,10 +1,14 @@
 package com.ultikits.plugins.essentials.config;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+
 import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
 import com.ultikits.ultitools.annotations.ConfigEntity;
 import com.ultikits.ultitools.annotations.ConfigEntry;
-import com.ultikits.ultitools.annotations.config.Range;
 import com.ultikits.ultitools.annotations.config.NotEmpty;
+import com.ultikits.ultitools.annotations.config.Range;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -44,7 +48,7 @@ public class EssentialsConfig extends AbstractConfigEntity {
     // UltiKits/UltiTools-Reborn#531). Must stay an int: the binding accepts only integral fields.
     // Deliberately no @Range: the binding owns the range (0 to Integer.MAX_VALUE), refusing the
     // module at load and keeping the running value with a WARNING on reload. A module @Range would
-    // pre-empt that on reload by aborting the whole reload part-way (maintainer ruling 2026-09-23).
+    // pre-empt that on reload by aborting the whole reload part-way.
     @ConfigEntry(path = "features.wild.cooldown", comment = "随机传送冷却时间(秒)，0 为不冷却")
     private int wildCooldown = 60;
 
@@ -144,23 +148,15 @@ public class EssentialsConfig extends AbstractConfigEntity {
     @ConfigEntry(path = "features.scoreboard.update-interval", comment = "计分板更新间隔(秒)")
     private int scoreboardUpdateInterval = 1;
 
+    // The Java default is the title every earlier version shipped: the framework writes it for a
+    // missing key, and materializeText() then rewrites it in the server's language (maintainer
+    // decision 2026-09-25, UltiKits/UltiEssentials#26).
     @NotEmpty
     @ConfigEntry(path = "features.scoreboard.title", comment = "计分板标题 (支持PlaceholderAPI)")
-    private String scoreboardTitle = "&6&l服务器信息";
+    private String scoreboardTitle = SHIPPED_SCOREBOARD_TITLE;
 
     @ConfigEntry(path = "features.scoreboard.lines", comment = "计分板内容行 (支持PlaceholderAPI)")
-    private java.util.List<String> scoreboardLines = java.util.Arrays.asList(
-        "&7欢迎, &e%player_name%",
-        "&7",
-        "&6在线玩家: &f%online_players%/%max_players%",
-        "&6当前世界: &f%player_world%",
-        "&7",
-        "&6生命值: &c%player_health%",
-        "&6饥饿值: &a%player_food%",
-        "&6等级: &e%player_level%",
-        "&7",
-        "&ewww.example.com"
-    );
+    private java.util.List<String> scoreboardLines = SHIPPED_SCOREBOARD_LINES;
 
     // ============ Scheduled Commands ============
     @ConfigEntry(path = "features.scheduled-commands.enabled", comment = "Enable scheduled command execution / 启用定时命令执行")
@@ -168,10 +164,7 @@ public class EssentialsConfig extends AbstractConfigEntity {
 
     @ConfigEntry(path = "features.scheduled-commands.commands",
         comment = "Scheduled commands, format: interval_seconds:command / 定时命令列表，格式: 间隔秒数:命令")
-    private java.util.List<String> scheduledCommands = java.util.Arrays.asList(
-        "300:say Server is online!",
-        "600:broadcast &cReminder: follow server rules!"
-    );
+    private java.util.List<String> scheduledCommands = SHIPPED_SCHEDULED_COMMANDS;
 
     // ============ ChestLock 箱子锁 ============
     @ConfigEntry(path = "features.chestlock.enabled", comment = "启用箱子锁功能")
@@ -222,9 +215,7 @@ public class EssentialsConfig extends AbstractConfigEntity {
     private boolean deathPunishCommandEnabled = false;
 
     @ConfigEntry(path = "features.deathpunish.command.commands", comment = "死亡执行的命令 ({PLAYER}为玩家名)")
-    private java.util.List<String> deathPunishCommands = java.util.Arrays.asList(
-        "say {PLAYER} 死亡了!"
-    );
+    private java.util.List<String> deathPunishCommands = SHIPPED_DEATHPUNISH_COMMANDS;
 
     @ConfigEntry(path = "features.deathpunish.world-whitelist", comment = "不进行惩罚的世界")
     private java.util.List<String> deathPunishWorldWhitelist = java.util.Arrays.asList(
@@ -266,6 +257,120 @@ public class EssentialsConfig extends AbstractConfigEntity {
     @ConfigEntry(path = "features.data-repair.enabled",
             comment = "启动时修复缺少主键的旧记录（家、地标点、封禁、容器锁）；关闭后这些记录无法删除或更新")
     private boolean dataRepairEnabled = true;
+
+    // ============ Config text materializer (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26) ============
+
+    /** The catalogue key of the scoreboard title's text in the server's language. */
+    static final String SCOREBOARD_TITLE_KEY = "essentials.scoreboard.default_title";
+
+    /** The catalogue key of the scoreboard lines' text, one entry with the lines separated by "\n". */
+    static final String SCOREBOARD_LINES_KEY = "essentials.scoreboard.default_lines";
+
+    /** The catalogue key of the scheduled commands' text, one entry with the entries separated by "\n". */
+    static final String SCHEDULED_COMMANDS_KEY = "essentials.scheduled-commands.default_commands";
+
+    /** The catalogue key of the death-punishment commands' text, one entry with the entries separated by "\n". */
+    static final String DEATHPUNISH_COMMANDS_KEY = "essentials.deathpunish.default_commands";
+
+    /**
+     * The scoreboard title every earlier version shipped; the Java default of {@link #scoreboardTitle},
+     * and one of the values {@link #materializeText} recognises as built-in text, compared byte for byte.
+     */
+    private static final String SHIPPED_SCOREBOARD_TITLE = "&6&l服务器信息";
+
+    /**
+     * The scoreboard lines every earlier version shipped; the Java default of {@link #scoreboardLines},
+     * and one of the values {@link #materializeText} recognises as built-in text, compared byte for byte.
+     */
+    private static final java.util.List<String> SHIPPED_SCOREBOARD_LINES = java.util.Collections.unmodifiableList(java.util.Arrays.asList(
+        "&7欢迎, &e%player_name%",
+        "&7",
+        "&6在线玩家: &f%online_players%/%max_players%",
+        "&6当前世界: &f%player_world%",
+        "&7",
+        "&6生命值: &c%player_health%",
+        "&6饥饿值: &a%player_food%",
+        "&6等级: &e%player_level%",
+        "&7",
+        "&ewww.example.com"
+    ));
+
+    /**
+     * The scheduled commands every earlier version shipped; the Java default of {@link #scheduledCommands},
+     * and one of the values {@link #materializeText} recognises as built-in text, compared byte for byte.
+     * Only the words after {@code say}/{@code broadcast} are translated: the interval prefix, the command
+     * verb and the colour code are the same in every language (maintainer decision 2026-09-25, "纳入，和其他
+     * 文字同样处理").
+     */
+    private static final java.util.List<String> SHIPPED_SCHEDULED_COMMANDS = java.util.Collections.unmodifiableList(java.util.Arrays.asList(
+        "300:say Server is online!",
+        "600:broadcast &cReminder: follow server rules!"
+    ));
+
+    /**
+     * The death-punishment command every earlier version shipped; the Java default of
+     * {@link #deathPunishCommands}, and one of the values {@link #materializeText} recognises as built-in
+     * text, compared byte for byte. Only the word after {@code say} is translated: {@code say} and
+     * {@code {PLAYER}} are the same in every language (maintainer decision 2026-09-25, "纳入，和其他文字同样处理").
+     */
+    private static final java.util.List<String> SHIPPED_DEATHPUNISH_COMMANDS = java.util.Collections.singletonList(
+        "say {PLAYER} 死亡了!"
+    );
+
+    /**
+     * Writes the scoreboard title and lines, the scheduled-command text and the death-punishment command
+     * text in the server's language (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26): each is
+     * replaced with {@code text}'s current text when it is still built-in text -- a default an earlier
+     * version shipped, or this jar's text for it in any language -- and differs from the current text, and
+     * (for the title) fits the field's own constraints. Any other value is the operator's and is kept, and
+     * a blank {@code scoreboardTitle} or empty {@code scoreboardLines} is never materialized -- both are
+     * the operator's way to show nothing, exactly as at {@code origin/master}, and {@code @NotEmpty}
+     * already refuses a blank {@code scoreboardTitle} before this runs. Idempotent. Must run after the
+     * module's language is loaded ({@code registerSelf()} and {@code onReload()}), never from a change
+     * listener; the caller saves the file when this returns {@code true}.
+     *
+     * @param text catalogue key to text in the server's language, from this jar's own catalogue
+     *             ({@code ConfigTextDefaults#jarLanguage}), so every value written is in the tracked set
+     * @return whether any value was rewritten
+     */
+    public boolean materializeText(Function<String, String> text) {
+        Map<String, Map<String, String>> jar = ConfigTextDefaults.jarCatalogues(EssentialsConfig.class);
+        boolean changed = false;
+
+        String newTitle = ConfigTextDefaults.materialize(EssentialsConfig.class, "scoreboardTitle", scoreboardTitle,
+                ConfigTextDefaults.currentText(text, "", SCOREBOARD_TITLE_KEY),
+                ConfigTextDefaults.tracked(jar, "", SCOREBOARD_TITLE_KEY, SHIPPED_SCOREBOARD_TITLE));
+        if (!Objects.equals(newTitle, scoreboardTitle)) {
+            scoreboardTitle = newTitle;
+            changed = true;
+        }
+
+        java.util.List<String> newLines = ConfigTextDefaults.materializeLines(EssentialsConfig.class, "scoreboardLines", scoreboardLines,
+                ConfigTextDefaults.currentLines(text, SCOREBOARD_LINES_KEY),
+                ConfigTextDefaults.trackedLines(jar, SCOREBOARD_LINES_KEY, SHIPPED_SCOREBOARD_LINES));
+        if (!Objects.equals(newLines, scoreboardLines)) {
+            scoreboardLines = newLines;
+            changed = true;
+        }
+
+        java.util.List<String> newScheduled = ConfigTextDefaults.materializeLines(EssentialsConfig.class, "scheduledCommands", scheduledCommands,
+                ConfigTextDefaults.currentLines(text, SCHEDULED_COMMANDS_KEY),
+                ConfigTextDefaults.trackedLines(jar, SCHEDULED_COMMANDS_KEY, SHIPPED_SCHEDULED_COMMANDS));
+        if (!Objects.equals(newScheduled, scheduledCommands)) {
+            scheduledCommands = newScheduled;
+            changed = true;
+        }
+
+        java.util.List<String> newDeathpunish = ConfigTextDefaults.materializeLines(EssentialsConfig.class, "deathPunishCommands", deathPunishCommands,
+                ConfigTextDefaults.currentLines(text, DEATHPUNISH_COMMANDS_KEY),
+                ConfigTextDefaults.trackedLines(jar, DEATHPUNISH_COMMANDS_KEY, SHIPPED_DEATHPUNISH_COMMANDS));
+        if (!Objects.equals(newDeathpunish, deathPunishCommands)) {
+            deathPunishCommands = newDeathpunish;
+            changed = true;
+        }
+
+        return changed;
+    }
 
     public EssentialsConfig() {
         super("config/essentials.yml");

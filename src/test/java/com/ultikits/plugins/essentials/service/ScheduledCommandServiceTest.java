@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.service;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
@@ -26,12 +27,15 @@ class ScheduledCommandServiceTest {
 
     private ScheduledCommandService service;
     private EssentialsConfig mockConfig;
+    private com.ultikits.ultitools.abstracts.UltiToolsPlugin module;
 
     @BeforeEach
     void setUp() throws Exception {
         mockConfig = mock(EssentialsConfig.class);
         service = new ScheduledCommandService();
         setField(service, "config", mockConfig);
+        module = CatalogueText.plugin("zh");
+        setField(service, "plugin", module);
     }
 
     private void setField(Object target, String name, Object value) throws Exception {
@@ -250,6 +254,12 @@ class ScheduledCommandServiceTest {
                 // Only 2 valid tasks should be created
                 List<BukkitTask> tasks = getTasks(service);
                 assertThat(tasks).hasSize(2);
+                // Every line about the entries is looked up in the module's catalogue, so the
+                // operator reads it in the server's language (UltiKits/UltiEssentials#26 sweep).
+                verify(module).i18n("essentials.log.scheduled_missing_interval");
+                verify(module).i18n("essentials.log.scheduled_interval_not_positive");
+                verify(module).i18n("essentials.log.scheduled_invalid_interval");
+                verify(module, times(2)).i18n("essentials.log.scheduled_started");
             }
         }
 

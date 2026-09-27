@@ -70,7 +70,7 @@ class ChestLockListenerTest {
 
             when(chestLockService.isLockable(Material.CHEST)).thenReturn(true);
             // Keyed on the container, not the clicked block: a double chest is one shared inventory
-            // behind two blocks (gate 2 P1).
+            // behind two blocks.
             when(chestLockService.canAccess(block, player)).thenReturn(false);
 
             ChestLockData lockData = ChestLockData.builder()
@@ -231,7 +231,7 @@ class ChestLockListenerTest {
                     .build();
             // Container-scoped: breaking asks for every record protecting the container this block
             // belongs to, not just this block's own. Keyed on the block, a stranger could break the
-            // unrecorded half of a locked double chest and collect the drops (gate 2 round 3).
+            // unrecorded half of a locked double chest and collect the drops.
             when(chestLockService.locksProtecting(block))
                     .thenReturn(Collections.singletonList(lockData));
             when(player.hasPermission("ultiessentials.lock.admin")).thenReturn(false);

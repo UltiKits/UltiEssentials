@@ -12,7 +12,7 @@ import java.io.IOException;
  * Command to set the server spawn point at player's current location.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"setspawn"}, permission = "ultiessentials.spawn.set", description = "设置出生点")
+@CmdExecutor(alias = {"setspawn"}, permission = "ultiessentials.spawn.set", description = "essentials.command.setspawn.description")
 public class SetSpawnCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -26,21 +26,21 @@ public class SetSpawnCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void setSpawn(@CmdSender Player player) {
         if (!config.isSpawnEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         spawnConfig.setSpawnLocation(player.getLocation());
         try {
             spawnConfig.save();
-            player.sendMessage(i18n("出生点已设置"));
+            player.sendMessage(i18n("essentials.spawn.set"));
         } catch (IOException e) {
-            player.sendMessage(i18n("保存出生点失败"));
+            player.sendMessage(i18n("essentials.spawn.save_failed"));
         }
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /setspawn 设置出生点"));
+        sender.sendMessage(i18n("essentials.help.setspawn"));
     }
 }

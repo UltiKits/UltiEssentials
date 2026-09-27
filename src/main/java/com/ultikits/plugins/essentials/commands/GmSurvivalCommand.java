@@ -10,7 +10,7 @@ import org.bukkit.entity.Player;
  * Shortcut command to switch to survival mode.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"gms"}, permission = "ultiessentials.gamemode.self", description = "切换到生存模式")
+@CmdExecutor(alias = {"gms"}, permission = "ultiessentials.gamemode.self", description = "essentials.command.gms.description")
 public class GmSurvivalCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -22,15 +22,15 @@ public class GmSurvivalCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void survival(@CmdSender Player player) {
         if (!config.isGamemodeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         player.setGameMode(GameMode.SURVIVAL);
-        player.sendMessage(i18n("游戏模式已切换为 SURVIVAL"));
+        player.sendMessage(i18n("essentials.gamemode.changed_survival"));
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /gms 切换到生存模式"));
+        sender.sendMessage(i18n("essentials.help.gms"));
     }
 }

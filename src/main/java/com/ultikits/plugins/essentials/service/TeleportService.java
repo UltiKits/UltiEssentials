@@ -127,7 +127,7 @@ public class TeleportService {
                 if (cancelOnMove) {
                     Location startLoc = teleportStartLocations.get(uuid);
                     if (startLoc != null && hasMovedTooFar(player.getLocation(), startLoc)) {
-                        player.sendMessage(i18n("teleport_cancelled_moved"));
+                        player.sendMessage(i18n("essentials.teleport.cancelled_moved"));
                         cleanupTeleport(uuid);
                         cancel();
                         if (onCancel != null) {
@@ -140,7 +140,7 @@ public class TeleportService {
                 // Teleport when countdown reaches 0
                 if (countdown <= 0) {
                     player.teleport(target);
-                    player.sendMessage(i18n("teleport_success"));
+                    player.sendMessage(i18n("essentials.teleport.success_warmup"));
                     cleanupTeleport(uuid);
                     cancel();
                     if (onSuccess != null) {
@@ -150,7 +150,7 @@ public class TeleportService {
                 }
                 
                 // Show countdown message
-                player.sendMessage(i18n("teleport_warmup") + " " + countdown + "s");
+                player.sendMessage(String.format(i18n("essentials.teleport.warmup"), countdown));
                 countdown--;
             }
         }.runTaskTimer(bukkitPlugin, 0L, 20L);

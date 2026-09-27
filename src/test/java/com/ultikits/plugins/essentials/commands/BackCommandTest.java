@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
@@ -124,16 +125,15 @@ class BackCommandTest {
         }
 
         /**
-         * Proves the review round-2 Codex finding on PR#22 (comment 3944429766): every one of
-         * this plugin's own teleport call sites -- {@code TeleportService} (backing /home and
-         * /warp), {@code SpawnCommand}, {@code LobbyCommand} -- calls
-         * {@code Player#teleport(Location)} with no explicit cause, which Bukkit/Paper's
-         * {@code Entity#teleport(Location)} javadoc and source both default to
-         * {@code TeleportCause.PLUGIN}, not {@code COMMAND}. Before this fix, /back after any of
-         * those commands recorded nothing.
+         * Pins a behaviour found reviewing PR #22: every one of this plugin's own teleport call
+         * sites -- {@code TeleportService} (backing /home and /warp), {@code SpawnCommand},
+         * {@code LobbyCommand} -- calls {@code Player#teleport(Location)} with no explicit
+         * cause, which Bukkit/Paper's {@code Entity#teleport(Location)} javadoc and source both
+         * default to {@code TeleportCause.PLUGIN}, not {@code COMMAND}. Before this fix, /back
+         * after any of those commands recorded nothing.
          */
         @Test
-        @DisplayName("Should record location on plugin-triggered teleport (13-11, review round 2)")
+        @DisplayName("Should record location on plugin-triggered teleport")
         @SuppressWarnings("unchecked")
         void shouldRecordLocationOnPluginTeleport() throws Exception {
             World world = EssentialsTestHelper.createMockWorld("world");
@@ -236,18 +236,18 @@ class BackCommandTest {
     }
 
     /**
-     * Proves UltiEssentials#14 (13-CONTEXT.md, 13-RECONFIRMATION.md): {@code BackCommand}
-     * declares {@code implements Listener} but never carried the framework's own
-     * {@code @EventListener} registration annotation, so {@code ListenerManager#registerAll}
-     * -- which skips any {@code Listener}-typed bean for which
-     * {@code MergedAnnotationResolver.find(listener.getClass(), EventListener.class)} returns
-     * {@code null} -- never calls {@code Bukkit.getPluginManager().registerEvents(...)} for it.
+     * Proves UltiEssentials#14: {@code BackCommand} declares {@code implements Listener} but
+     * never carried the framework's own {@code @EventListener} registration annotation, so
+     * {@code ListenerManager#registerAll} -- which skips any {@code Listener}-typed bean for
+     * which {@code MergedAnnotationResolver.find(listener.getClass(), EventListener.class)}
+     * returns {@code null} -- never calls {@code Bukkit.getPluginManager().registerEvents(...)}
+     * for it.
      * {@code onPlayerTeleport} therefore never received a single real event; the pre-existing
      * tests above only ever call it directly, which is exactly the "annotation present but never
      * exercised" shape this task's own read_first warns about.
      */
     @Nested
-    @DisplayName("event listener registration (13-11, UltiEssentials#14)")
+    @DisplayName("event listener registration (UltiEssentials#14)")
     class RegistrationTests {
 
         private ServerMock mockBukkitServer;
@@ -264,7 +264,7 @@ class BackCommandTest {
             liveBackCommand = new BackCommand(new EssentialsConfig());
 
             UltiToolsPlugin i18nPlugin = mock(UltiToolsPlugin.class);
-            lenient().when(i18nPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+            lenient().when(i18nPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
             Field pluginField = com.ultikits.plugins.essentials.commands.BaseEssentialsCommand.class
                     .getDeclaredField("plugin");
             pluginField.setAccessible(true); // NOPMD
@@ -312,13 +312,13 @@ class BackCommandTest {
         }
 
         /**
-         * Proves the review round-3 Codex finding on PR#22 (comment 3944574360): dispatched at
-         * default priority with no {@code ignoreCancelled}, {@code onPlayerTeleport} still
-         * recorded a teleport another listener (or a higher-priority listener acting after this
-         * one) went on to cancel, overwriting a valid previous location with the unchanged
-         * {@code from}. Dispatches through Bukkit's real event bus (not a direct method call) so
-         * the {@code priority}/{@code ignoreCancelled} handler attributes are actually exercised,
-         * not just declared.
+         * Pins a behaviour found reviewing PR #22: dispatched at default priority with no
+         * {@code ignoreCancelled}, {@code onPlayerTeleport} still recorded a teleport another
+         * listener (or a higher-priority listener acting after this one) went on to cancel,
+         * overwriting a valid previous location with the unchanged {@code from}. Dispatches
+         * through Bukkit's real event bus (not a direct method call) so the {@code
+         * priority}/{@code ignoreCancelled} handler attributes are actually exercised, not just
+         * declared.
          */
         @Test
         @DisplayName("aCancelledTeleportDoesNotOverwriteThePreviousLocation: a teleport cancelled by another listener before this class observes it must not replace a previously recorded valid /back location")

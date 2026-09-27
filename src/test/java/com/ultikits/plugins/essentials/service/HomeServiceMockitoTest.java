@@ -357,8 +357,8 @@ class HomeServiceMockitoTest {
         @Test
         @DisplayName("Should have all values")
         void shouldHaveAllValues() {
-            // FAILED was added for gate 1 MAJOR-01: a move that did not reach the store must not be
-            // reported as UPDATED.
+            // FAILED was added so that a move that did not reach the store must not be reported
+            // as UPDATED.
             assertThat(HomeService.SetHomeResult.values()).hasSize(6);
             assertThat(HomeService.SetHomeResult.valueOf("FAILED"))
                     .isEqualTo(HomeService.SetHomeResult.FAILED);

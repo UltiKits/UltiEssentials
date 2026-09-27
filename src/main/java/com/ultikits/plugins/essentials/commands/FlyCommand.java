@@ -9,7 +9,7 @@ import org.bukkit.entity.Player;
  * Command to toggle flight mode for players.
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"fly"}, permission = "ultiessentials.fly", description = "切换飞行模式")
+@CmdExecutor(alias = {"fly"}, permission = "ultiessentials.fly", description = "essentials.command.fly.description")
 public class FlyCommand extends BaseEssentialsCommand {
 
     private final EssentialsConfig config;
@@ -21,7 +21,7 @@ public class FlyCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void toggleFly(@CmdSender Player player) {
         if (!config.isFlyEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
@@ -29,10 +29,10 @@ public class FlyCommand extends BaseEssentialsCommand {
         player.setAllowFlight(newState);
 
         if (newState) {
-            player.sendMessage(i18n("飞行模式已开启"));
+            player.sendMessage(i18n("essentials.fly.enabled"));
         } else {
             player.setFlying(false);
-            player.sendMessage(i18n("飞行模式已关闭"));
+            player.sendMessage(i18n("essentials.fly.disabled"));
         }
     }
 
@@ -47,12 +47,12 @@ public class FlyCommand extends BaseEssentialsCommand {
             @CmdParam("player") Player target) {
 
         if (!config.isFlyEnabled()) {
-            sender.sendMessage(i18n("该功能已禁用"));
+            sender.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
 
         if (target == null) {
-            sender.sendMessage(i18n("玩家不存在或不在线"));
+            sender.sendMessage(i18n("essentials.error.player_not_found_or_offline"));
             return;
         }
 
@@ -60,17 +60,17 @@ public class FlyCommand extends BaseEssentialsCommand {
         target.setAllowFlight(newState);
 
         if (newState) {
-            sender.sendMessage(String.format(i18n("已为 %s 开启飞行模式"), target.getName()));
-            target.sendMessage(i18n("你的飞行模式已被开启"));
+            sender.sendMessage(String.format(i18n("essentials.fly.enabled_other"), target.getName()));
+            target.sendMessage(i18n("essentials.fly.enabled_target"));
         } else {
             target.setFlying(false);
-            sender.sendMessage(String.format(i18n("已为 %s 关闭飞行模式"), target.getName()));
-            target.sendMessage(i18n("你的飞行模式已被关闭"));
+            sender.sendMessage(String.format(i18n("essentials.fly.disabled_other"), target.getName()));
+            target.sendMessage(i18n("essentials.fly.disabled_target"));
         }
     }
 
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("使用 /fly 切换飞行模式"));
+        sender.sendMessage(i18n("essentials.help.fly"));
     }
 }

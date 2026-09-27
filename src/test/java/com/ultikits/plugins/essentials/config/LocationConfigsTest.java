@@ -175,6 +175,9 @@ class LocationConfigsTest {
         void shouldHaveDefaultValues() {
             TabBarConfig config = new TabBarConfig();
 
+            // The Java default is the header and footer every earlier version shipped; materializeText()
+            // rewrites them in the server's language at start-up (maintainer decision 2026-09-25,
+            // UltiKits/UltiEssentials#26).
             assertThat(config.getHeader()).isEqualTo("&6=== 服务器名称 ===");
             assertThat(config.getFooter()).isEqualTo("&7在线: &e%online%&7/&e%max%");
         }

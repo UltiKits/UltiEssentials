@@ -17,12 +17,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Proves UltiEssentials#15 (13-CONTEXT.md, re-confirmed on Paper 1.21.11 in
- * {@code 13-RECONFIRMATION.md}): {@link ScoreboardListener} and {@link NamePrefixListener} both
- * looked the framework up under its artifact name ({@code "UltiTools-API"}), which is never a
- * registered plugin name, so every {@code getPlugin(...)} call returned {@code null} and every
- * player join threw {@code IllegalArgumentException: Plugin cannot be null} inside
- * {@code Bukkit.getScheduler().runTaskLater(...)}.
+ * Proves UltiEssentials#15 (re-confirmed on Paper 1.21.11): {@link ScoreboardListener} and
+ * {@link NamePrefixListener} both looked the framework up under its artifact name ({@code
+ * "UltiTools-API"}), which is never a registered plugin name, so every {@code getPlugin(...)}
+ * call returned {@code null} and every player join threw {@code IllegalArgumentException:
+ * Plugin cannot be null} inside {@code Bukkit.getScheduler().runTaskLater(...)}.
  * <p>
  * The chosen fix resolves the plugin once, under the module's own already-correct registered
  * name (the same string {@code ScoreboardService}, {@code NamePrefixService},

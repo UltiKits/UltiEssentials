@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.listener;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import org.bukkit.entity.Player;
@@ -42,6 +43,7 @@ class DeathPunishListenerBehaviorTest {
         listener = new DeathPunishListener();
         config = new EssentialsConfig();
         EssentialsTestHelper.setField(listener, "config", config);
+        EssentialsTestHelper.setField(listener, "plugin", CatalogueText.plugin("zh"));
 
         // Paper 1.21's PlayerDeathEvent constructors all require a DamageSource; a mock is enough
         // here since none of these tests assert on the death cause itself.
@@ -73,6 +75,40 @@ class DeathPunishListenerBehaviorTest {
         ItemStack item = mock(ItemStack.class);
         lenient().when(item.getType()).thenReturn(material);
         return item;
+    }
+
+    @Nested
+    @DisplayName("The summary line follows the language setting (UltiKits/UltiEssentials#26)")
+    class LanguageTests {
+
+        @Test
+        @DisplayName("under language: en the summary is English")
+        void summaryInEnglish() throws Exception {
+            EssentialsTestHelper.setField(listener, "plugin", CatalogueText.plugin("en"));
+            config.setDeathPunishItemDropChance(100.0);
+            config.setDeathPunishItemWhitelist(Collections.emptyList());
+            config.setDeathPunishKeepOtherItems(false);
+            Player player = createDeathPlayer();
+            List<ItemStack> drops = new ArrayList<>(Collections.singletonList(mockItem(org.bukkit.Material.STONE)));
+
+            listener.onPlayerDeath(new PlayerDeathEvent(player, damageSource, drops, 0, "died"));
+
+            verify(player).sendMessage(org.bukkit.ChatColor.RED + "Death penalty: " + org.bukkit.ChatColor.YELLOW
+                    + "1 items dropped");
+        }
+
+        @Test
+        @DisplayName("under language: en nothing is sent when no penalty was applied")
+        void nothingSentWhenNothingTaken() throws Exception {
+            EssentialsTestHelper.setField(listener, "plugin", CatalogueText.plugin("en"));
+            config.setDeathPunishItemDropChance(0.0);
+            Player player = createDeathPlayer();
+            List<ItemStack> drops = new ArrayList<>(Collections.singletonList(mockItem(org.bukkit.Material.STONE)));
+
+            listener.onPlayerDeath(new PlayerDeathEvent(player, damageSource, drops, 0, "died"));
+
+            verify(player, never()).sendMessage(anyString());
+        }
     }
 
     @Nested

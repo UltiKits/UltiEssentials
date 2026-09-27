@@ -22,7 +22,7 @@ import java.util.List;
 @CmdExecutor(
     alias = {"banlist", "bans"},
     permission = "ultiessentials.banlist",
-    description = "查看封禁列表"
+    description = "essentials.command.banlist.description"
 )
 public class BanListCommand extends BaseEssentialsCommand {
     
@@ -46,7 +46,7 @@ public class BanListCommand extends BaseEssentialsCommand {
         List<BanData> allBans = banService.getActiveBans();
         
         if (allBans.isEmpty()) {
-            sender.sendMessage(i18n("§a没有活跃的封禁"));
+            sender.sendMessage(i18n("essentials.banlist.empty"));
             return;
         }
         
@@ -56,7 +56,7 @@ public class BanListCommand extends BaseEssentialsCommand {
         int start = (currentPage - 1) * PAGE_SIZE;
         int end = Math.min(start + PAGE_SIZE, allBans.size());
         
-        sender.sendMessage(i18n("§6=== 封禁列表 ===") +
+        sender.sendMessage(i18n("essentials.banlist.header") +
             " §7(" + currentPage + "/" + totalPages + ")");
         
         for (int i = start; i < end; i++) {
@@ -66,30 +66,28 @@ public class BanListCommand extends BaseEssentialsCommand {
             info.append("§e").append(ban.getPlayerName());
             
             if (ban.isPermanent()) {
-                info.append(i18n(" §c[永久]"));
+                info.append(i18n("essentials.banlist.permanent"));
             } else {
-                info.append(i18n(" §7[剩余: §f"));
-                info.append(BanService.formatDuration(ban.getRemainingTime()));
-                info.append("§7]");
+                info.append(String.format(i18n("essentials.banlist.remaining"),
+                    banService.formatDuration(ban.getRemainingTime())));
             }
 
             sender.sendMessage(info.toString());
-            sender.sendMessage(i18n("  §7原因: §f") + ban.getReason());
-            sender.sendMessage(i18n("  §7操作者: §f") + ban.getBannedByName() +
-                i18n(" §7于 ") + DATE_FORMAT.format(new Date(ban.getBanTime())));
+            sender.sendMessage(i18n("essentials.banlist.reason") + ban.getReason());
+            sender.sendMessage(String.format(i18n("essentials.banlist.operator"), ban.getBannedByName(),
+                DATE_FORMAT.format(new Date(ban.getBanTime()))));
         }
         
-        sender.sendMessage(i18n("§7共 ") + allBans.size() + 
-            i18n(" 个活跃封禁"));
+        sender.sendMessage(String.format(i18n("essentials.banlist.total"), allBans.size()));
         
         if (totalPages > 1) {
-            sender.sendMessage(i18n("§7使用 /banlist <页码> 查看更多"));
+            sender.sendMessage(i18n("essentials.banlist.more"));
         }
     }
     
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(i18n("用法: /banlist [页码]"));
-        sender.sendMessage(i18n("查看当前活跃的封禁列表"));
+        sender.sendMessage(i18n("essentials.help.banlist.usage"));
+        sender.sendMessage(i18n("essentials.help.banlist"));
     }
 }

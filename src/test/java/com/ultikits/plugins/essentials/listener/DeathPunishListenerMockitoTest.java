@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.listener;
 
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import org.bukkit.World;
@@ -37,6 +38,7 @@ class DeathPunishListenerMockitoTest {
         listener = new DeathPunishListener();
         config = new EssentialsConfig();
         EssentialsTestHelper.setField(listener, "config", config);
+        EssentialsTestHelper.setField(listener, "plugin", CatalogueText.plugin("zh"));
 
         // Paper 1.21's PlayerDeathEvent constructors all require a DamageSource; a mock is enough
         // here since none of these tests assert on the death cause itself.

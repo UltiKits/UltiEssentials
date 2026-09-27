@@ -1,5 +1,8 @@
 package com.ultikits.plugins.essentials;
 
+import com.ultikits.plugins.essentials.config.ConfigTextDefaults;
+import com.ultikits.plugins.essentials.config.MotdConfig;
+import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.plugins.essentials.commands.HideCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.RemovedConfigKeys;
@@ -8,9 +11,11 @@ import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.service.TeleportService;
+import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.UltiToolsModule;
 
+import java.io.IOException;
 import java.util.function.Consumer;
 
 /**
@@ -47,7 +52,12 @@ public class UltiEssentials extends UltiToolsPlugin {
         // All services are automatically initialized by IoC container via @PostConstruct
         repairStoredPrimaryKeys();
         warnAboutRemovedSettings();
-        getLogger().info(i18n("UltiEssentials 已启用！"));
+        if (writeConfigTextInServerLanguage()) {
+            // The container's @PostConstruct pass scheduled the commands before this point, each task
+            // holding the text it was scheduled with; restart them so they send the text just written.
+            reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
+        }
+        getLogger().info(i18n("essentials.log.enabled"));
         return true;
     }
 
@@ -66,16 +76,56 @@ public class UltiEssentials extends UltiToolsPlugin {
     private void repairStoredPrimaryKeys() {
         EntityIdBackfillService repair = getContext().getBean(EntityIdBackfillService.class);
         if (repair == null) {
-            getLogger().warn("The stored-primary-key repair is unavailable; records written before "
-                    + "UltiKits/UltiEssentials#34 was fixed were left as they are");
+            getLogger().warn(i18n("essentials.log.repair_unavailable"));
             return;
         }
         try {
             repair.run();
         } catch (RuntimeException e) {
-            getLogger().error(e, "The stored-primary-key repair failed; records written before "
-                    + "UltiKits/UltiEssentials#34 was fixed were left as they are, and the repair "
-                    + "will run again on the next start-up");
+            getLogger().error(e, i18n("essentials.log.repair_failed"));
+        }
+    }
+
+    /**
+     * Writes the scoreboard title and lines, the tab-list header and footer, the MOTD lines, the
+     * scheduled-command text and the death-punishment command text in the server's language, when each
+     * is still built-in text -- a default an earlier version shipped, or this jar's own text for it in
+     * any language -- and saves the file(s) that changed; any other value is the operator's and is kept
+     * (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26). Runs at start-up and on every
+     * {@code /ul reload}, after the framework has re-read the configuration and rebuilt the language;
+     * idempotent, so a second call writes nothing.
+     * <p>
+     * 计分板标题/内容、Tab 栏头尾、MOTD、定时命令与死亡惩罚命令中的内置文本按服务器语言写入并保存；运维自定义的值保留。
+     *
+     * @return whether {@code config/essentials.yml}'s values changed, which includes the scheduled-command
+     *         text the running tasks were scheduled with
+     */
+    private boolean writeConfigTextInServerLanguage() {
+        EssentialsConfig essentials = getContext().getBean(EssentialsConfig.class);
+        boolean essentialsChanged = essentials != null
+                && essentials.materializeText(ConfigTextDefaults.jarLanguage(EssentialsConfig.class, getLanguageCode())::getLocalizedText);
+        if (essentialsChanged) {
+            saveMaterialized(essentials);
+        }
+        TabBarConfig tabBar = getContext().getBean(TabBarConfig.class);
+        if (tabBar != null
+                && tabBar.materializeText(ConfigTextDefaults.jarLanguage(TabBarConfig.class, getLanguageCode())::getLocalizedText)) {
+            saveMaterialized(tabBar);
+        }
+        MotdConfig motd = getContext().getBean(MotdConfig.class);
+        if (motd != null
+                && motd.materializeText(ConfigTextDefaults.jarLanguage(MotdConfig.class, getLanguageCode())::getLocalizedText)) {
+            saveMaterialized(motd);
+        }
+        return essentialsChanged;
+    }
+
+    private void saveMaterialized(AbstractConfigEntity config) {
+        try {
+            config.save();
+        } catch (IOException e) {
+            getLogger().warn(String.format(i18n("essentials.log.config_default_save_failed"), config.getConfigFilePath(),
+                    e.getMessage()));
         }
     }
 
@@ -89,7 +139,7 @@ public class UltiEssentials extends UltiToolsPlugin {
      * 启动与每次重载时，对运维文件中仍残留的已删除配置项各报一条警告。
      */
     private void warnAboutRemovedSettings() {
-        for (String warning : RemovedConfigKeys.warningsFor(getContext().getBean(EssentialsConfig.class))) {
+        for (String warning : RemovedConfigKeys.warningsFor(getContext().getBean(EssentialsConfig.class), this)) {
             getLogger().warn(warning);
         }
     }
@@ -109,6 +159,7 @@ public class UltiEssentials extends UltiToolsPlugin {
     @Override
     protected void onReload() {
         warnAboutRemovedSettings();
+        writeConfigTextInServerLanguage();
         reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
         reloadService(ScoreboardService.class, ScoreboardService::reload);
         reloadService(NamePrefixService.class, NamePrefixService::reload);
@@ -172,10 +223,10 @@ public class UltiEssentials extends UltiToolsPlugin {
 
     /**
      * Shows every vanished player to everyone again and forgets the vanish state, so the unload does
-     * not leave players hidden by a module that is no longer there to un-hide them (gate-1 WR-01 on
-     * UltiKits/UltiEssentials#32). It runs first and inside the same barrier as the service
-     * shutdowns: a failure here is returned to be rethrown once every service has been shut down, and
-     * a service failure cannot stop the reveal.
+     * not leave players hidden by a module that is no longer there to un-hide them
+     * (UltiKits/UltiEssentials#32).
+     * It runs first and inside the same barrier as the service shutdowns: a failure here is returned to
+     * be rethrown once every service has been shut down, and a service failure cannot stop the reveal.
      *
      * @return the failure raised while revealing, or {@code null}
      */
@@ -271,16 +322,16 @@ public class UltiEssentials extends UltiToolsPlugin {
      * Reloads one service, leaving the others to be reloaded whatever this one does.
      * <p>
      * A service the container cannot resolve is reported as a warning rather than skipped in
-     * silence -- the same defect class {@link #shutdownService} was corrected for (gate 1 WR-02),
-     * found by sweeping this repository for it. It is reported rather than thrown because
-     * {@code reloadSelf()} does not isolate {@link #onReload()}
-     * (UltiKits/UltiTools-Reborn#509), so throwing here would stop the services after it from
-     * reloading at all -- and, because {@code PluginManager#reload()} loops the modules with no
-     * per-module guard either, it would stop every module <em>after</em> this one from reloading
-     * too. A warning that names the service is what this hook can give without that cost, and it
-     * matches {@link #repairStoredPrimaryKeys()}'s precedent in this same class. Note that
-     * {@code /ul reload <name>} replies success unconditionally, so this warning reaches the console
-     * and not the sender (UltiKits/UltiTools-Reborn#529).
+     * silence -- the same defect class {@link #shutdownService} was corrected for, found by
+     * sweeping this repository for it. It is reported rather than thrown because {@code
+     * reloadSelf()} does not isolate {@link #onReload()} (UltiKits/UltiTools-Reborn#509), so
+     * throwing here would stop the services after it from reloading at all -- and, because {@code
+     * PluginManager#reload()} loops the modules with no per-module guard either, it would stop every
+     * module <em>after</em> this one from reloading too. A warning that names the service is what
+     * this hook can give without that cost, and it matches {@link #repairStoredPrimaryKeys()}'s
+     * precedent in this same class. Note that {@code /ul reload <name>} replies success
+     * unconditionally, so this warning reaches the console and not the sender
+     * (UltiKits/UltiTools-Reborn#529).
      * <p>
      * No {@code getContext() == null} guard here, unlike {@link #shutdownService}, and the asymmetry
      * is deliberate: {@code pluginList.add} has one call site, inside
@@ -301,15 +352,13 @@ public class UltiEssentials extends UltiToolsPlugin {
     private <T> void reloadService(Class<T> type, Consumer<T> reload) {
         T service = getContext().getBean(type);
         if (service == null) {
-            getLogger().warn("The reload could not reach " + type.getSimpleName()
-                    + "; it is still running against the configuration it was started with");
+            getLogger().warn(String.format(i18n("essentials.log.reload_unreachable"), type.getSimpleName()));
             return;
         }
         try {
             reload.accept(service);
         } catch (RuntimeException e) {
-            getLogger().error(e, "Reload of " + type.getSimpleName()
-                    + " failed; the other services were still reloaded");
+            getLogger().error(e, String.format(i18n("essentials.log.reload_failed"), type.getSimpleName()));
         }
     }
 }

@@ -16,7 +16,7 @@ import java.util.List;
  * 列出所有家的命令。
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"homes", "homelist"}, permission = "ultiessentials.homes", description = "列出所有家")
+@CmdExecutor(alias = {"homes", "homelist"}, permission = "ultiessentials.homes", description = "essentials.command.homes.description")
 @I18n("homes.description")
 public class HomesCommand extends BaseEssentialsCommand {
     
@@ -32,18 +32,18 @@ public class HomesCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void listHomes(@CmdSender Player player) {
         if (!config.isHomeEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         
         List<HomeData> homes = homeService.getHomes(player.getUniqueId());
         int maxHomes = homeService.getMaxHomes(player);
         
-        player.sendMessage("§6========== " + i18n("你的家") + " §7(" + homes.size() + "/" + maxHomes + ") §6==========");
+        player.sendMessage("§6========== " + i18n("essentials.homes.header") + " §7(" + homes.size() + "/" + maxHomes + ") §6==========");
         
         if (homes.isEmpty()) {
-            player.sendMessage("§7" + i18n("你还没有设置任何家"));
-            player.sendMessage("§7" + i18n("使用 /sethome <名称> 设置一个家"));
+            player.sendMessage("§7" + i18n("essentials.home.none"));
+            player.sendMessage("§7" + i18n("essentials.homes.hint_sethome"));
         } else {
             for (HomeData home : homes) {
                 String worldName = home.getWorld();

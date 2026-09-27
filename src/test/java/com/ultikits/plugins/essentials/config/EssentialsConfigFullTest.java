@@ -305,9 +305,11 @@ class EssentialsConfigFullTest {
         @DisplayName("Should have correct scoreboard defaults")
         void shouldHaveScoreboardDefaults() {
             assertThat(config.getScoreboardUpdateInterval()).isEqualTo(1);
-            assertThat(config.getScoreboardTitle()).contains("服务器信息");
-            assertThat(config.getScoreboardLines()).isNotEmpty();
-            assertThat(config.getScoreboardLines()).hasSizeGreaterThan(5);
+            // The Java default is the title and lines every earlier version shipped; materializeText()
+            // rewrites them in the server's language at start-up (maintainer decision 2026-09-25,
+            // UltiKits/UltiEssentials#26).
+            assertThat(config.getScoreboardTitle()).isEqualTo("&6&l服务器信息");
+            assertThat(config.getScoreboardLines()).hasSize(10);
         }
 
         @Test

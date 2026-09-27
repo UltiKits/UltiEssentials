@@ -53,11 +53,11 @@ class WarpServiceTest {
     // WarpService.getWarp() was refactored from getAll()-then-filter onto
     // warpOperator.query().where("name").eq(...).first() at some point after this class was
     // switched off; per-test when(warpOperator.getAll(...)) stubs are now stale for every path
-    // that calls getWarp (13-04 re-measurement). queryMock mirrors QueryImpl's own real
-    // behaviour (every chainable method `return this;`) rather than relying on Mockito's
-    // RETURNS_DEEP_STUBS -- see HomeServiceTest's field javadoc for the two-hop generic-erasure
-    // failure that made that approach unreliable for a second .where() call; this class only
-    // needs one hop, but the same single mock keeps both classes' fixture shape consistent.
+    // that calls getWarp. queryMock mirrors QueryImpl's own real behaviour (every chainable
+    // method `return this;`) rather than relying on Mockito's RETURNS_DEEP_STUBS -- see
+    // HomeServiceTest's field javadoc for the two-hop generic-erasure failure that made that
+    // approach unreliable for a second .where() call; this class only needs one hop, but the
+    // same single mock keeps both classes' fixture shape consistent.
     @Mock
     private DataOperator<WarpData> warpOperator;
 
@@ -70,7 +70,7 @@ class WarpServiceTest {
         server = MockBukkit.mock();
         // canAccess()'s permission-attachment tests call server.getPluginManager()
         // .getPlugin("MockPlugin"); MockBukkit only registers a plugin under that name once one
-        // is explicitly created (13-04 re-measurement).
+        // is explicitly created.
         MockBukkit.createMockPlugin();
         TestHelper.mockUltiToolsInstance();
         MockitoAnnotations.openMocks(this);

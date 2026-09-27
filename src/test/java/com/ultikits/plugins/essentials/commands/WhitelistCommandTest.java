@@ -178,10 +178,10 @@ class WhitelistCommandTest {
         }
 
         /**
-         * Proves the review round-3 Codex finding on PR#22 (comment 3944574356): the round-2 fix
-         * (commit 7698424) removed remove()'s length/blank guard on the premise that "remove has
-         * no resolution step to protect" -- but the code it left behind still called
-         * {@code Bukkit.getOfflinePlayer(playerName)} unconditionally, the exact platform resolver
+         * Pins a behaviour found reviewing PR #22: an earlier fix (commit 7698424) removed
+         * remove()'s length/blank guard on the premise that "remove has no resolution step to
+         * protect" -- but the code it left behind still called {@code
+         * Bukkit.getOfflinePlayer(playerName)} unconditionally, the exact platform resolver
          * UltiEssentials#17 measured crashing for a name over 16 characters on a real Paper server.
          * A name that is not already on the whitelist must never reach that resolver at all.
          */

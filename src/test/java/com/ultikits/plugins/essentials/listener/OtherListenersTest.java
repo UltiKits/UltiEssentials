@@ -60,7 +60,7 @@ class OtherListenersTest {
             EssentialsTestHelper.setField(listener, "scoreboardService", scoreboardService);
 
             // Mock plugin for scheduler -- resolved under the correct registered name,
-            // "UltiTools" (13-11, UltiEssentials#15), via init() rather than per-join.
+            // "UltiTools" (UltiEssentials#15), via init() rather than per-join.
             PluginManager pm = Bukkit.getServer().getPluginManager();
             Plugin mockPlugin = mock(Plugin.class);
             when(pm.getPlugin("UltiTools")).thenReturn(mockPlugin);
@@ -120,18 +120,17 @@ class OtherListenersTest {
         }
 
         /**
-         * Proves the review round-4 Codex finding on PR#22 (comment 3944635309): a player who
-         * disconnects during the 20-tick auto-enable delay is removed by {@code onPlayerQuit}
-         * (which calls {@code ScoreboardService#disableScoreboard}) before this scheduled
-         * callback runs. Without an online check, the callback would call
-         * {@code enableScoreboard} anyway, which re-adds the player's (now offline) UUID to
-         * {@code ScoreboardService#enabledPlayers} and immediately builds and assigns a
-         * scoreboard to a disconnected {@code Player}, undoing the quit cleanup until a later
-         * periodic update removes it. Same shape and technique as
-         * {@code NamePrefixListenerTests#shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan}.
+         * Pins a behaviour found reviewing PR #22: a player who disconnects during the 20-tick
+         * auto-enable delay is removed by {@code onPlayerQuit} (which calls {@code
+         * ScoreboardService#disableScoreboard}) before this scheduled callback runs. Without an
+         * online check, the callback would call {@code enableScoreboard} anyway, which re-adds
+         * the player's (now offline) UUID to {@code ScoreboardService#enabledPlayers} and
+         * immediately builds and assigns a scoreboard to a disconnected {@code Player}, undoing
+         * the quit cleanup until a later periodic update removes it. Same shape and technique
+         * as {@code NamePrefixListenerTests#shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan}.
          */
         @Test
-        @DisplayName("Should skip the delayed auto-enable if the player quit before it ran (13-11, review round 4)")
+        @DisplayName("Should skip the delayed auto-enable if the player quit before it ran")
         void shouldSkipDelayedEnableIfPlayerQuitBeforeItRan() {
             config.setScoreboardEnabled(true);
             config.setScoreboardAutoEnable(true);
@@ -167,7 +166,7 @@ class OtherListenersTest {
             EssentialsTestHelper.setField(listener, "namePrefixService", namePrefixService);
 
             // Mock plugin for scheduler -- resolved under the correct registered name,
-            // "UltiTools" (13-11, UltiEssentials#15), via init() rather than per-join.
+            // "UltiTools" (UltiEssentials#15), via init() rather than per-join.
             PluginManager pm = Bukkit.getServer().getPluginManager();
             Plugin mockPlugin = mock(Plugin.class);
             when(pm.getPlugin("UltiTools")).thenReturn(mockPlugin);
@@ -212,16 +211,16 @@ class OtherListenersTest {
         }
 
         /**
-         * Proves the review round-2 Codex finding on PR#22 (comment 3944429769): a player who
-         * disconnects during the 10-tick join delay is removed by {@code onPlayerQuit} (which
-         * calls {@code NamePrefixService#removePlayer}) before this scheduled callback runs.
+         * Pins a behaviour found reviewing PR #22: a player who disconnects during the 10-tick
+         * join delay is removed by {@code onPlayerQuit} (which calls {@code
+         * NamePrefixService#removePlayer}) before this scheduled callback runs.
          * Without an online check, the callback would call {@code updatePlayer} anyway, which
          * recreates the player's {@code playerTeams} entry and re-adds their (now offline) name
          * to the main-scoreboard team -- and since the periodic updater only iterates online
          * players, that entry is never pruned again.
          */
         @Test
-        @DisplayName("Should skip the delayed prefix update if the player quit before it ran (13-11, review round 2)")
+        @DisplayName("Should skip the delayed prefix update if the player quit before it ran")
         void shouldSkipDelayedUpdateIfPlayerQuitBeforeItRan() {
             config.setNamePrefixEnabled(true);
 

@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.config;
 
+import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.util.ArrayList;
@@ -35,20 +36,29 @@ public final class RemovedConfigKeys {
     private static final String FILE = "config/essentials.yml";
 
     /**
-     * One entry per removed key: the key path as it appears in the file, then where its job went.
-     * The second element completes the sentence "... and can be deleted from the file -- %s."
+     * One entry per removed key, the key path as it appears in the file; where its job went is
+     * {@link #reason}.
      * <p>
      * {@code features.wild.cooldown} is deliberately absent: it is a live key, bound to
      * {@code /wild}'s cooldown through the framework's config-bound {@code @CmdCD}
      * (UltiKits/UltiTools-Reborn#531), and reporting it here would tell operators to delete a
      * setting that works.
      */
-    private static final String[][] REMOVED = {
-            {"features.recall.enabled",
-                    "this module has no /recall command, so the setting never switched anything; "
-                            + "the command is recorded as a feature request in "
-                            + "UltiKits/UltiEssentials#53 (UltiKits/UltiEssentials#27)"},
+    private static final String[] REMOVED = {
+            "features.recall.enabled",
     };
+
+    /**
+     * Where a removed key's job went, in the server's language; completes the sentence
+     * "... and can be deleted from the file -- %s.". One literal key per removed setting, so the
+     * language guard checks each of them.
+     */
+    private static String reason(String key, UltiToolsPlugin plugin) {
+        if ("features.recall.enabled".equals(key)) {
+            return plugin.i18n("essentials.warn.removed.recall");
+        }
+        throw new IllegalStateException("no reason text for removed key " + key);
+    }
 
     private RemovedConfigKeys() {
     }
@@ -66,21 +76,21 @@ public final class RemovedConfigKeys {
      * same in the log.
      *
      * @param config the module's configuration after the framework has loaded it; may be null
+     * @param plugin the module, whose language catalogue gives the warnings their text
      * @return the warnings to log, never null
      */
-    public static List<String> warningsFor(EssentialsConfig config) {
+    public static List<String> warningsFor(EssentialsConfig config, UltiToolsPlugin plugin) {
         YamlConfiguration onDisk = config == null ? null : config.getConfig();
         if (onDisk == null) {
-            return Collections.singletonList(String.format("%s: could not read %s, so it was not "
-                    + "checked for settings this module has removed (UltiKits/UltiEssentials#27)",
+            return Collections.singletonList(String.format(plugin.i18n("essentials.warn.removed_unreadable"),
                     MODULE, FILE));
         }
         String file = config.getConfigFilePath();
         List<String> warnings = new ArrayList<>();
-        for (String[] removed : REMOVED) {
-            if (onDisk.contains(removed[0])) {
-                warnings.add(String.format("%s: '%s' in %s has no effect and can be deleted from the "
-                        + "file -- %s.", MODULE, removed[0], file, removed[1]));
+        for (String removed : REMOVED) {
+            if (onDisk.contains(removed)) {
+                warnings.add(String.format(plugin.i18n("essentials.warn.removed_key"), MODULE, removed, file,
+                        reason(removed, plugin)));
             }
         }
         return warnings;

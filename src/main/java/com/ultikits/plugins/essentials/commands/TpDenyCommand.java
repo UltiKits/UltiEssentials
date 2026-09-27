@@ -14,7 +14,7 @@ import org.bukkit.entity.Player;
  * 拒绝 TPA 请求的命令。
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
-@CmdExecutor(alias = {"tpdeny", "tpno", "tpcancel"}, permission = "ultiessentials.tpdeny", description = "拒绝传送请求")
+@CmdExecutor(alias = {"tpdeny", "tpno", "tpcancel"}, permission = "ultiessentials.tpdeny", description = "essentials.command.tpdeny.description")
 @I18n("tpdeny.description")
 public class TpDenyCommand extends BaseEssentialsCommand {
     
@@ -30,20 +30,20 @@ public class TpDenyCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "")
     public void denyTpa(@CmdSender Player player) {
         if (!config.isTpaEnabled()) {
-            player.sendMessage(i18n("该功能已禁用"));
+            player.sendMessage(i18n("essentials.error.feature_disabled"));
             return;
         }
         
         TpaService.TpaRequest request = tpaService.getRequest(player.getUniqueId());
         if (request == null) {
-            player.sendMessage(i18n("没有待处理的传送请求"));
+            player.sendMessage(i18n("essentials.tpa.no_pending"));
             return;
         }
         
         TpaService.TpaResult result = tpaService.denyRequest(player);
         
         if (result == TpaService.TpaResult.DENIED) {
-            player.sendMessage(i18n("已拒绝传送请求"));
+            player.sendMessage(i18n("essentials.tpa.denied"));
         }
     }
 }

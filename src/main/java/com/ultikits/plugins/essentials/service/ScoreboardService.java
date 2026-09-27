@@ -23,7 +23,13 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Service for managing player scoreboards.
  * <p>
- * 管理玩家计分板的服务。
+ * The private scoreboard this service assigns to a player belongs to this service alone (maintainer
+ * decision 2026-09-27, UltiKits/UltiEssentials#65): another plugin writing onto it - an objective of its
+ * own named {@code ultiessentials}, or a player placed in its own team on that board - is outside the
+ * contract and may be overwritten. The service restores its own objective, sidebar slot and lines, and
+ * changes only what it created there: its objective and the teams it copied from the main scoreboard.
+ * <p>
+ * 管理玩家计分板的服务。本服务换上的私有计分板只归本服务所有；其他插件不应往上面写东西。
  *
  * @author wisdomme
  * @version 1.0.0

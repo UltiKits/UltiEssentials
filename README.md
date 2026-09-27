@@ -59,6 +59,12 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 
 `/ban`、`/banlist`、`/scoreboard` 有意接管了同名的原版命令：`/ban` 与 `/banlist` 操作本模块自己的封禁记录，而不是服务器的封禁名单；`/scoreboard` 用于开关本模块的侧边栏。原版命令仍可通过 `minecraft:ban`、`minecraft:banlist`、`minecraft:scoreboard` 调用。
 
+### The sidebar's scoreboard / 侧边栏计分板
+
+The sidebar is drawn on a private scoreboard this module assigns to each player who has it on. That scoreboard belongs to this module alone: another plugin must not write onto it (register its own objective named `ultiessentials`, or put a player into its own team on it). Such writes are not supported and may be overwritten. The module copies the main scoreboard's teams onto it, so name prefixes stay visible, and restores its own objective, sidebar slot and lines if another plugin changes them. If another plugin's scoreboard is already on screen, this sidebar waits until the player is back on the main scoreboard.
+
+侧边栏画在本模块为每位开启侧边栏的玩家换上的私有计分板上。这块计分板只归本模块所有：其他插件不应往上面写东西（注册名为 `ultiessentials` 的目标，或把玩家放进自己在这块计分板上的队伍），这类写入不受支持，可能被覆盖。本模块会把主计分板的队伍复制过去，让名字前缀保持可见；若其他插件改动了本模块的目标、侧边栏显示位置或内容行，会自动恢复。若玩家屏幕上已经是其他插件的计分板，本侧边栏会等到玩家回到主计分板后再显示。
+
 ### 🎨 服务器自定义
 
 | 功能 | 描述 | 配置文件 |

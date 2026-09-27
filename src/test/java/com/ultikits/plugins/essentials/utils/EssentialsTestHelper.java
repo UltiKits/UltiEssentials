@@ -140,6 +140,16 @@ public final class EssentialsTestHelper {
         lenient().when(player.getFoodLevel()).thenReturn(20);
         lenient().when(player.getDisplayName()).thenReturn(name);
 
+        // The player's scoreboard is what was last set on them. It starts as null, which the
+        // scoreboard service treats like the main scoreboard (a free sidebar slot).
+        java.util.concurrent.atomic.AtomicReference<org.bukkit.scoreboard.Scoreboard> viewing =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        lenient().doAnswer(inv -> {
+            viewing.set(inv.getArgument(0));
+            return null;
+        }).when(player).setScoreboard(any());
+        lenient().when(player.getScoreboard()).thenAnswer(inv -> viewing.get());
+
         World world = mock(World.class);
         lenient().when(world.getName()).thenReturn("world");
         Location location = new Location(world, 100.5, 64.0, -200.5);

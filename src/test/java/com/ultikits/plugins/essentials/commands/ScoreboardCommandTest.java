@@ -108,6 +108,33 @@ class ScoreboardCommandTest {
     }
 
     @Test
+    @DisplayName("/scoreboard on says the slot is taken when another scoreboard keeps it (#40)")
+    void enableReportsATakenSlot() throws Exception {
+        ScoreboardCommand command = createCommand();
+        when(scoreboardService.isEnabled(player)).thenReturn(false);
+        when(scoreboardService.isSlotTakenByAnother(player)).thenReturn(true);
+
+        command.enable(player);
+
+        verify(scoreboardService).enableScoreboard(player);
+        verify(player).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.enabled_occupied"));
+        verify(player, never()).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.enabled"));
+    }
+
+    @Test
+    @DisplayName("/scoreboard (toggle) says the slot is taken when it turned the sidebar on but another scoreboard keeps it (#40)")
+    void toggleReportsATakenSlot() throws Exception {
+        ScoreboardCommand command = createCommand();
+        when(scoreboardService.toggleScoreboard(player)).thenReturn(true);
+        when(scoreboardService.isSlotTakenByAnother(player)).thenReturn(true);
+
+        command.toggle(player);
+
+        verify(player).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.enabled_occupied"));
+        verify(player, never()).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.enabled"));
+    }
+
+    @Test
     @DisplayName("handleHelp should send usage messages")
     void handleHelpShouldSendUsage() throws Exception {
         ScoreboardCommand command = createCommand();

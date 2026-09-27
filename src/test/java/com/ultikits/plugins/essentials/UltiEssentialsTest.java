@@ -50,7 +50,8 @@ class UltiEssentialsTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        MockBukkitHelper.ensureCleanState();
+        // Another test class may have installed a mocked server through Bukkit's static field.
+        MockBukkitHelper.clearForeignServer();
         MockBukkit.mock();
         TestHelper.mockUltiToolsInstance();
         UltiTools framework = UltiTools.getInstance();

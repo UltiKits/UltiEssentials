@@ -131,6 +131,18 @@ class VanishedPlayerExposureTest {
         }
 
         @Test
+        @DisplayName("A vanished player naming themselves reaches the self-request answer, not \"player offline\"")
+        void aVanishedPlayerStillSeesThemselves() throws Exception {
+            vanish();
+            when(tpaService.sendTpaRequest(vanished, vanished)).thenReturn(TpaService.TpaResult.SELF_REQUEST);
+
+            tpa().sendTpa(vanished, "Ghost");
+
+            verify(tpaService).sendTpaRequest(vanished, vanished);
+            verify(vanished, never()).sendMessage(CatalogueText.text("zh", "essentials.tpa.player_offline"));
+        }
+
+        @Test
         @DisplayName("A sender who may see vanished players still reaches them")
         void aSenderWhoMaySeeVanishedPlayersReachesThem() throws Exception {
             vanish();
@@ -162,6 +174,17 @@ class VanishedPlayerExposureTest {
 
             assertThat(banNames).contains("Seeker").doesNotContain("Ghost");
             assertThat(tempBanNames).contains("Seeker").doesNotContain("Ghost");
+        }
+
+        @Test
+        @DisplayName("A vanished player's own name stays in their own completions")
+        void aVanishedPlayerCompletesTheirOwnName() throws Exception {
+            vanish();
+            BanCommand ban = new BanCommand();
+            EssentialsTestHelper.setField(ban, "plugin", EssentialsTestHelper.getMockPlugin());
+            EssentialsTestHelper.setField(ban, "banService", mock(BanService.class));
+
+            assertThat(ban.suggest(vanished, mock(Command.class), new String[]{""})).contains("Ghost", "Seeker");
         }
 
         @Test

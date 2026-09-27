@@ -281,8 +281,11 @@ public class ScoreboardService {
         } else {
             objective = scoreboard.getObjective("ultiessentials");
             if (objective == null) {
+                // Another plugin removed the objective from this board. The new one starts empty, so
+                // the remembered lines no longer describe what is shown: forget them and draw every line.
                 objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
                 objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+                shownLines.remove(player.getUniqueId());
             } else if (!title.equals(objective.getDisplayName())) {
                 objective.setDisplayName(title);
             }

@@ -117,6 +117,7 @@ class UltiEssentialsServiceUnloadTest {
     private ScoreboardService scoreboardService;
     private ScheduledCommandService scheduledCommandService;
     private TeleportService teleportService;
+    private com.ultikits.plugins.essentials.service.TpaService tpaService;
 
     private final List<ScheduledTimer> timers = new ArrayList<>();
     private Scoreboard mainScoreboard;
@@ -242,6 +243,16 @@ class UltiEssentialsServiceUnloadTest {
     }
 
     @Test
+    @DisplayName("a teleport request's pending expiry is cancelled on unload (#51)")
+    void unloadShutsDownTheTeleportRequests() throws Exception {
+        bootWithEverythingRunning();
+
+        invokeOnUnregister(plugin);
+
+        verify(tpaService).shutdown();
+    }
+
+    @Test
     @DisplayName("a service whose shutdown throws does not stop the others, and the failure is reported to the caller")
     void throwingServiceDoesNotStopTheOthersAndIsReported() throws Exception {
         bootWithEverythingRunning();
@@ -274,6 +285,7 @@ class UltiEssentialsServiceUnloadTest {
         withoutTeleport.registerType(ScheduledCommandService.class, scheduledCommandService);
         withoutTeleport.registerType(ScoreboardService.class, scoreboardService);
         withoutTeleport.registerType(NamePrefixService.class, namePrefixService);
+        withoutTeleport.registerType(com.ultikits.plugins.essentials.service.TpaService.class, tpaService);
         plugin.setContext(withoutTeleport);
 
         assertThatThrownBy(() -> invokeOnUnregister(plugin))
@@ -301,7 +313,7 @@ class UltiEssentialsServiceUnloadTest {
                 .hasMessageContaining("ScheduledCommandService")
                 .satisfies(thrown -> assertThat(thrown.getSuppressed())
                         .as("one per remaining service, none of them lost")
-                        .hasSize(3));
+                        .hasSize(4));
     }
 
     @Test
@@ -355,6 +367,7 @@ class UltiEssentialsServiceUnloadTest {
         scoreboardService = new ScoreboardService();
         scheduledCommandService = new ScheduledCommandService();
         teleportService = new TeleportService();
+        tpaService = spy(new com.ultikits.plugins.essentials.service.TpaService());
         EssentialsTestHelper.setField(namePrefixService, "config", config);
         EssentialsTestHelper.setField(scoreboardService, "config", config);
         EssentialsTestHelper.setField(scheduledCommandService, "config", config);
@@ -377,6 +390,7 @@ class UltiEssentialsServiceUnloadTest {
         container.registerType(ScoreboardService.class, scoreboard);
         container.registerType(NamePrefixService.class, namePrefix);
         container.registerType(TeleportService.class, teleport);
+        container.registerType(com.ultikits.plugins.essentials.service.TpaService.class, tpaService);
         plugin.setContext(container);
     }
 

@@ -97,6 +97,31 @@ class TpaServiceTimeoutTaskTest {
     }
 
     @Test
+    @DisplayName("Shutdown cancels a pending request's expiry, and an expiry that still fires afterwards sends nothing (#51)")
+    void shutdownCancelsThePendingExpiry() {
+        World world = EssentialsTestHelper.createMockWorld("world");
+        UUID senderUuid = UUID.randomUUID();
+        UUID targetUuid = UUID.randomUUID();
+        Player sender = createPlayerInWorld("Sender", senderUuid, world);
+        Player target = createPlayerInWorld("Target", targetUuid, world);
+        when(Bukkit.getPlayer(senderUuid)).thenReturn(sender);
+        when(Bukkit.getPlayer(targetUuid)).thenReturn(target);
+        BukkitTask expiry = mock(BukkitTask.class);
+        when(scheduler.runTaskLater(any(Plugin.class), any(Runnable.class), anyLong())).thenReturn(expiry);
+
+        tpaService.sendTpaRequest(sender, target);
+        Runnable callback = captureScheduledCallback();
+
+        tpaService.shutdown();
+        callback.run();
+
+        verify(expiry).cancel();
+        assertThat(tpaService.getRequest(targetUuid)).isNull();
+        verify(sender, never()).sendMessage(anyString());
+        verify(target, never()).sendMessage(anyString());
+    }
+
+    @Test
     @DisplayName("A request already resolved before the timeout fires produces no notification")
     void alreadyResolvedRequestProducesNoNotification() {
         World world = EssentialsTestHelper.createMockWorld("world");

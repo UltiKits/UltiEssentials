@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.service.OwnTeleports;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.command.*;
 import org.bukkit.Bukkit;
@@ -87,7 +88,7 @@ public class WildCommand extends BaseEssentialsCommand {
                     int y = world.getHighestBlockYAt(x, z);
                     Location target = new Location(world, x + 0.5, y + 1, z + 0.5);
                     if (isSafeLocation(target)) {
-                        player.teleport(target);
+                        OwnTeleports.teleport(player, target);
                         // Report where the player lands -- the destination's own block position,
                         // feet included -- not the ground block below it (UltiKits/UltiEssentials#33).
                         player.sendMessage(String.format(i18n("essentials.wild.success"),

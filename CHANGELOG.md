@@ -9,6 +9,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `/back` now returns only from teleports this module's own commands started (`/home`, `/warp`,
+  `/spawn`, `/lobby`, `/wild`, an accepted `/tpa` or `/tpahere`, and `/back` itself). Another plugin's
+  teleport or a vanilla `/tp` no longer gives `/back` a place to return to, so a teleport by something
+  else after a rejoin no longer re-arms it. A second `/back` still returns to where the first one started
+  (UltiKits/UltiEssentials#39).
+- `/back` 现在只会返回由本模块自己的命令发起的传送（`/home`、`/warp`、`/spawn`、`/lobby`、`/wild`、被接受的 `/tpa` 或
+  `/tpahere`，以及 `/back` 本身）。其它插件的传送或原版 `/tp` 不再为 `/back` 记录返回点，因此重新进服后被其它来源传送
+  也不会再让 `/back` 生效。连续两次 `/back` 仍会回到第一次 `/back` 出发的位置（UltiKits/UltiEssentials#39）。
 - `/wild`'s success message now reports the height the player lands at (the feet position); it used to
   report the ground block one below (UltiKits/UltiEssentials#33).
 - `/wild` 成功提示现在报告玩家落脚的高度（脚所在的位置）；此前报告的是下方一格的地面方块高度（UltiKits/UltiEssentials#33）。

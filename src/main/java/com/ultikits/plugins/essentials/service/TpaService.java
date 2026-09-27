@@ -158,11 +158,11 @@ public class TpaService {
         // Perform teleport based on type
         if (request.getType() == TpaType.TPA) {
             // Sender teleports to target
-            sender.teleport(target.getLocation());
+            OwnTeleports.teleport(sender, target.getLocation());
             sender.sendMessage(plugin.i18n("essentials.teleport.success"));
         } else {
             // Target teleports to sender
-            target.teleport(sender.getLocation());
+            OwnTeleports.teleport(target, sender.getLocation());
             target.sendMessage(plugin.i18n("essentials.teleport.success"));
         }
         

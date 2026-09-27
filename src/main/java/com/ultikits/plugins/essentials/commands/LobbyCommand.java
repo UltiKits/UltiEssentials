@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.service.OwnTeleports;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.LobbyConfig;
 import com.ultikits.ultitools.annotations.command.*;
@@ -35,7 +36,7 @@ public class LobbyCommand extends BaseEssentialsCommand {
             return;
         }
 
-        player.teleport(lobby);
+        OwnTeleports.teleport(player, lobby);
         player.sendMessage(i18n("essentials.lobby.success"));
     }
 

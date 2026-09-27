@@ -9,6 +9,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Unloading this module (`/upm uninstall UltiEssentials`) now also cancels a pending `/tpa` or
+  `/tpahere` request's expiry, so neither player gets an expiry message from the uninstalled module, and
+  a player who joined in the second before the uninstall is no longer put on a sidebar or into a
+  name-prefix team afterwards (UltiKits/UltiEssentials#51).
+- 卸载本模块（`/upm uninstall UltiEssentials`）现在还会取消待处理的 `/tpa`、`/tpahere` 请求的过期任务，双方不会再收到
+  已卸载模块发出的过期提示；在卸载前一秒内加入的玩家也不会在卸载后被放上侧边栏或加入名字前缀队伍
+  （UltiKits/UltiEssentials#51）。
 - With PlaceholderAPI installed, the scoreboard now shows its built-in placeholders (`%online_players%`,
   `%max_players%`, `%player_food%` and the others) as values instead of the raw tokens: the module's own
   placeholders are filled first and PlaceholderAPI's afterwards, in the scoreboard and in name prefixes

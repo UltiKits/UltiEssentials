@@ -287,6 +287,19 @@ public class TpaService {
         });
     }
     
+    /**
+     * Cancels every pending request's expiry and forgets the pending requests, so no expiry fires
+     * after the module is unloaded (UltiKits/UltiEssentials#51). Called from the module's
+     * {@code onUnregister()} hook.
+     */
+    public void shutdown() {
+        for (BukkitTask task : timeoutTasks.values()) {
+            task.cancel();
+        }
+        timeoutTasks.clear();
+        activeRequests.clear();
+    }
+
     public enum TpaType {
         TPA,        // Sender wants to teleport to target
         TPA_HERE    // Sender wants target to teleport to them

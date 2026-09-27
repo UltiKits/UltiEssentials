@@ -68,6 +68,10 @@ public class ScoreboardService {
     // Main update task
     private BukkitTask updateTask;
 
+    // Set by shutdown() and cleared again only by reload(): once the module is unloaded, a delayed
+    // join callback that still fires is a no-op (UltiKits/UltiEssentials#51)
+    private volatile boolean shutDown;
+
     // Scoreboard manager
     private ScoreboardManager manager;
 
@@ -177,7 +181,9 @@ public class ScoreboardService {
      * Enables scoreboard for a player.
      */
     public void enableScoreboard(Player player) {
-        if (!config.isScoreboardEnabled()) {
+        if (shutDown || !config.isScoreboardEnabled()) {
+            // After an unload, the delayed join enable must not put a player on a sidebar that
+            // nothing updates or takes down any more (UltiKits/UltiEssentials#51).
             return;
         }
         
@@ -395,6 +401,7 @@ public class ScoreboardService {
      * Stops the update task and cleans up.
      */
     public void shutdown() {
+        shutDown = true;
         if (updateTask != null) {
             updateTask.cancel();
             updateTask = null;
@@ -437,6 +444,7 @@ public class ScoreboardService {
         boolean wasRunning = updateTask != null;
         Set<UUID> shownBeforeReload = new HashSet<>(enabledPlayers);
         shutdown();
+        shutDown = false;
         
         if (config.isScoreboardEnabled()) {
             startUpdateTask();

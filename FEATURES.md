@@ -339,7 +339,7 @@ OFF), and `DeathPunishListener` (`features.deathpunish.enabled`, default OFF).
 ## Scheduled Commands
 
 `ScheduledCommandService` (`features.scheduled-commands.enabled`, default OFF) parses each entry
-of `scheduled-commands.commands` (format `interval_seconds:command`, malformed entries logged and
+of `features.scheduled-commands.commands` (format `interval_seconds:command`, malformed entries logged and
 skipped) and schedules it as an independent, indefinitely-repeating `BukkitRunnable` via
 `runTaskTimer` at server-console privilege. **This is NOT backed by the framework's own
 `@Scheduled` annotation** — the reconciliation table's `@Scheduled` line reads 0 against this one

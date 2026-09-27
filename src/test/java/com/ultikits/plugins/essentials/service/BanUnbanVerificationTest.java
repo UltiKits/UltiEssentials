@@ -41,11 +41,9 @@ import static org.mockito.Mockito.mock;
  * than against a mock's recorded calls: what matters is the state of the store afterwards, not that
  * a method was invoked.
  * <p>
- * All three paths are covered even though only {@link BanService#unbanPlayerByName(String)} is
- * reachable from a command today: {@link BanService#unbanPlayer(java.util.UUID)} and
- * {@link BanService#unbanIp(String)} have no production caller in this repository (measured;
- * {@code UnbanCommand}'s javadoc names a {@code /unbanip} command that does not exist), and leaving
- * two copies of the same defect behind for whoever wires them up is how this class of bug returns.
+ * {@link BanService#unbanPlayerByName(String)} is the one unban path: the by-UUID and by-IP unban
+ * methods had no caller and were removed (UltiKits/UltiEssentials#47), together with their tests
+ * here.
  *
  * @author wisdomme
  * @version 1.0.0
@@ -139,77 +137,6 @@ class BanUnbanVerificationTest {
             assertThat(store.updateAttempts()).as("both records were offered to the store").isEqualTo(2);
             assertThat(unbanned).isEqualTo(UnbanResult.FAILED);
             assertThat(banService.getActiveBan(target)).isNotNull();
-        }
-    }
-
-    @Nested
-    @DisplayName("By UUID")
-    class ByUuidTests {
-
-        @Test
-        @DisplayName("an unban that really deactivates the record is reported as done")
-        void aDeactivatedBanIsReportedUnbanned() {
-            UUID target = UUID.randomUUID();
-            store.insert(activeBan(target, "BannedPlayer", null));
-
-            UnbanResult unbanned = banService.unbanPlayer(target);
-
-            assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isEqualTo(UnbanResult.REMOVED);
-            assertThat(banService.getActiveBan(target)).isNull();
-        }
-
-        @Test
-        @DisplayName("an unban the store silently ignored is NOT reported as done")
-        void aSurvivingBanIsNotReportedUnbanned() {
-            UUID target = UUID.randomUUID();
-            store.insert(activeBan(target, "BannedPlayer", null));
-            store.ignoreUpdates();
-
-            UnbanResult unbanned = banService.unbanPlayer(target);
-
-            assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isEqualTo(UnbanResult.FAILED);
-            assertThat(banService.getActiveBan(target)).isNotNull();
-        }
-    }
-
-    @Nested
-    @DisplayName("By IP")
-    class ByIpTests {
-
-        @Test
-        @DisplayName("an unban that really deactivates the record is reported as done")
-        void aDeactivatedIpBanIsReportedUnbanned() {
-            store.insert(activeBan(UUID.randomUUID(), "BannedPlayer", "203.0.113.7"));
-
-            UnbanResult unbanned = banService.unbanIp("203.0.113.7");
-
-            assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isEqualTo(UnbanResult.REMOVED);
-            assertThat(banService.getActiveIpBan("203.0.113.7")).isNull();
-        }
-
-        @Test
-        @DisplayName("an unban the store silently ignored is NOT reported as done")
-        void aSurvivingIpBanIsNotReportedUnbanned() {
-            store.insert(activeBan(UUID.randomUUID(), "BannedPlayer", "203.0.113.7"));
-            store.ignoreUpdates();
-
-            UnbanResult unbanned = banService.unbanIp("203.0.113.7");
-
-            assertThat(store.updateAttempts()).isEqualTo(1);
-            assertThat(unbanned).isEqualTo(UnbanResult.FAILED);
-            assertThat(banService.getActiveIpBan("203.0.113.7")).isNotNull();
-        }
-
-        @Test
-        @DisplayName("an IP with no active ban is still reported as not banned, without an update")
-        void anUnbannedIpIsReportedNotBanned() {
-            UnbanResult unbanned = banService.unbanIp("203.0.113.8");
-
-            assertThat(unbanned).isEqualTo(UnbanResult.NOT_BANNED);
-            assertThat(store.updateAttempts()).isZero();
         }
     }
 

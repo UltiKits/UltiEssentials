@@ -90,18 +90,6 @@ class BanServiceFilterCoverageTest {
     }
 
     @Test
-    @DisplayName("unbanPlayer does not unban a record that is active but already expired")
-    void unbanPlayerIgnoresExpiredRecord() throws Exception {
-        when(query.list()).thenReturn(
-                new java.util.ArrayList<>(Collections.singletonList(expiredButStillMarkedActive(null))));
-
-        BanService.UnbanResult result = banService.unbanPlayer(playerUuid);
-
-        assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
-        verify(banOperator, never()).update(any(BanData.class));
-    }
-
-    @Test
     @DisplayName("getActiveBan does not treat an inactive ban record as an active ban")
     void getActiveBanIgnoresInactiveRecord() {
         when(query.list()).thenReturn(Collections.singletonList(inactive()));
@@ -118,18 +106,6 @@ class BanServiceFilterCoverageTest {
                 new java.util.ArrayList<>(Collections.singletonList(expiredButStillMarkedActive(null))));
 
         BanService.UnbanResult result = banService.unbanPlayerByName("TestPlayer");
-
-        assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
-        verify(banOperator, never()).update(any(BanData.class));
-    }
-
-    @Test
-    @DisplayName("unbanIp does not unban a record that is active but already expired")
-    void unbanIpIgnoresExpiredRecord() throws Exception {
-        when(query.list()).thenReturn(
-                new java.util.ArrayList<>(Collections.singletonList(expiredButStillMarkedActive("10.0.0.5"))));
-
-        BanService.UnbanResult result = banService.unbanIp("10.0.0.5");
 
         assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
         verify(banOperator, never()).update(any(BanData.class));

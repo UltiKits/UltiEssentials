@@ -122,6 +122,20 @@ class ScoreboardCommandTest {
     }
 
     @Test
+    @DisplayName("/scoreboard on for a sidebar that is on but waiting for the slot says the slot is taken, not that it is already on (#40)")
+    void enableWhileWaitingReportsATakenSlot() throws Exception {
+        ScoreboardCommand command = createCommand();
+        when(scoreboardService.isEnabled(player)).thenReturn(true);
+        when(scoreboardService.isSlotTakenByAnother(player)).thenReturn(true);
+
+        command.enable(player);
+
+        verify(scoreboardService, never()).enableScoreboard(player);
+        verify(player).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.enabled_occupied"));
+        verify(player, never()).sendMessage(com.ultikits.plugins.essentials.i18n.CatalogueText.text("zh", "essentials.scoreboard.already_enabled"));
+    }
+
+    @Test
     @DisplayName("/scoreboard (toggle) says the slot is taken when it turned the sidebar on but another scoreboard keeps it (#40)")
     void toggleReportsATakenSlot() throws Exception {
         ScoreboardCommand command = createCommand();

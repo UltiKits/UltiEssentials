@@ -185,6 +185,7 @@ class ScoreboardServiceUpdateLoopIsolationTest {
         assertThat(service.isEnabled(first)).isFalse();
 
         when(first.isOnline()).thenReturn(true);
+        first.setScoreboard(mainScoreboard); // a player who comes back online starts on the main scoreboard
         doReturn(firstWorld).when(first).getWorld();
         service.enableScoreboard(first);
         doThrow(failure).when(first).getWorld();

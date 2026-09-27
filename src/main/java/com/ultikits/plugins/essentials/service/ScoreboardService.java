@@ -289,6 +289,21 @@ public class ScoreboardService {
             } else if (!title.equals(objective.getDisplayName())) {
                 objective.setDisplayName(title);
             }
+            // The rest of what another plugin can change on this board while the player views it: the
+            // sidebar slot (cleared, or given to another objective) and the scores (reset). The copied
+            // teams and the title are rewritten on every update anyway.
+            if (!objective.equals(scoreboard.getObjective(DisplaySlot.SIDEBAR))) {
+                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+            }
+            List<String> shown = shownLines.get(player.getUniqueId());
+            if (shown != null) {
+                for (String entry : shown) {
+                    if (!objective.getScore(entry).isScoreSet()) {
+                        shownLines.remove(player.getUniqueId());
+                        break;
+                    }
+                }
+            }
         }
 
         // The main board's teams go on first, and every entry of a team on this board counts as taken:

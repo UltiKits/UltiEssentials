@@ -160,4 +160,73 @@ class WildCommandAsyncChunkTest {
         verify(player, never()).teleport(any(Location.class));
         assertThat(loads).hasSize(1);
     }
+
+    /**
+     * The continuation of a search runs under the {@code UltiTools} Bukkit plugin, which outlives this
+     * module, so unloading the module cannot cancel it by plugin. A search pending at the unload must
+     * therefore do nothing when its chunk arrives: no teleport, no message, no further chunk.
+     */
+    private void unloadTheModule() throws Exception {
+        com.ultikits.plugins.essentials.UltiEssentials module =
+                mock(com.ultikits.plugins.essentials.UltiEssentials.class, org.mockito.Mockito.CALLS_REAL_METHODS);
+        com.ultikits.ultitools.context.SimpleContainer container = new com.ultikits.ultitools.context.SimpleContainer();
+        container.registerType(com.ultikits.plugins.essentials.service.ScheduledCommandService.class,
+                mock(com.ultikits.plugins.essentials.service.ScheduledCommandService.class));
+        container.registerType(com.ultikits.plugins.essentials.service.ScoreboardService.class,
+                mock(com.ultikits.plugins.essentials.service.ScoreboardService.class));
+        container.registerType(com.ultikits.plugins.essentials.service.NamePrefixService.class,
+                mock(com.ultikits.plugins.essentials.service.NamePrefixService.class));
+        container.registerType(com.ultikits.plugins.essentials.service.TeleportService.class,
+                mock(com.ultikits.plugins.essentials.service.TeleportService.class));
+        container.registerType(com.ultikits.plugins.essentials.service.TpaService.class,
+                mock(com.ultikits.plugins.essentials.service.TpaService.class));
+        module.setContext(container);
+        java.lang.reflect.Method hook = com.ultikits.ultitools.abstracts.UltiToolsPlugin.class.getDeclaredMethod("onUnregister");
+        hook.setAccessible(true); // NOPMD - the protected framework hook, invoked as unregisterSelf() does
+        hook.invoke(module);
+    }
+
+    @Test
+    @DisplayName("A search whose chunk is still loading when the module unloads does nothing once it loads")
+    void aSearchPendingAtUnloadDoesNothing() throws Exception {
+        command.wildTeleport(player);
+        org.mockito.Mockito.clearInvocations(player);
+
+        unloadTheModule();
+        loads.get(0).complete(mock(Chunk.class));
+        while (!mainThreadTasks.isEmpty()) {
+            mainThreadTasks.remove(0).run();
+        }
+
+        verify(player, never()).teleport(any(Location.class));
+        verify(player, never()).sendMessage(org.mockito.ArgumentMatchers.anyString());
+        assertThat(loads).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("A search whose chunk has loaded but whose main-thread check has not run yet does nothing after the unload")
+    void aCheckQueuedAtUnloadDoesNothing() throws Exception {
+        command.wildTeleport(player);
+        org.mockito.Mockito.clearInvocations(player);
+        loads.get(0).complete(mock(Chunk.class));
+        assertThat(mainThreadTasks).hasSize(1);
+
+        unloadTheModule();
+        mainThreadTasks.remove(0).run();
+
+        verify(player, never()).teleport(any(Location.class));
+        verify(player, never()).sendMessage(org.mockito.ArgumentMatchers.anyString());
+        assertThat(loads).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Control: a search started after an unload and reload of the module still teleports")
+    void aSearchStartedAfterTheUnloadStillRuns() throws Exception {
+        unloadTheModule();
+
+        command.wildTeleport(player);
+        completeLoadAndRunMainThreadTask();
+
+        verify(player).teleport(any(Location.class));
+    }
 }

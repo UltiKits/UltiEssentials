@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.service.OwnTeleports;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.SpawnConfig;
 import com.ultikits.ultitools.annotations.command.*;
@@ -35,7 +36,7 @@ public class SpawnCommand extends BaseEssentialsCommand {
             return;
         }
 
-        player.teleport(spawn);
+        OwnTeleports.teleport(player, spawn);
         player.sendMessage(i18n("essentials.spawn.success"));
     }
 

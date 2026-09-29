@@ -125,7 +125,7 @@ public class TempBanCommand extends BaseEssentialsCommand {
     @Override
     protected List<String> suggest(Player player, Command command, String[] args) {
         if (args.length == 1) {
-            return suggestOnlinePlayers(args[0]);
+            return suggestOnlinePlayers(player, args[0]);
         }
         if (args.length == 2) {
             return java.util.Arrays.asList("1h", "6h", "12h", "1d", "3d", "7d", "30d", "1w");

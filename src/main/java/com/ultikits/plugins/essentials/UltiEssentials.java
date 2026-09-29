@@ -4,6 +4,7 @@ import com.ultikits.plugins.essentials.config.ConfigTextDefaults;
 import com.ultikits.plugins.essentials.config.MotdConfig;
 import com.ultikits.plugins.essentials.config.TabBarConfig;
 import com.ultikits.plugins.essentials.commands.HideCommand;
+import com.ultikits.plugins.essentials.commands.WildCommand;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.RemovedConfigKeys;
 import com.ultikits.plugins.essentials.service.EntityIdBackfillService;
@@ -11,6 +12,7 @@ import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.service.TeleportService;
+import com.ultikits.plugins.essentials.service.TpaService;
 import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.UltiToolsModule;
@@ -36,7 +38,8 @@ import java.util.function.Consumer;
  * (UltiKits/UltiEssentials#28). Start-up and every reload also warn about any setting this module
  * has removed that is still in the operator's file (UltiKits/UltiEssentials#27). Unloading it, for
  * example with {@code /upm uninstall UltiEssentials}, runs {@link #onUnregister()} first, which
- * stops every repeating task this module started (UltiKits/UltiEssentials#43), and then the
+ * stops every repeating task this module started (UltiKits/UltiEssentials#43) and every pending
+ * teleport request's expiry (UltiKits/UltiEssentials#51), and then the
  * framework's command and listener unregistration.
  * </p>
  *
@@ -209,11 +212,15 @@ public class UltiEssentials extends UltiToolsPlugin {
      */
     @Override
     protected void onUnregister() {
+        // A /wild search waiting for a chunk continues under the UltiTools plugin, which stays loaded;
+        // invalidate it so it cannot teleport anyone after this module is gone (UltiKits/UltiEssentials#24).
+        WildCommand.cancelPendingSearches();
         Throwable failure = revealVanishedPlayers();
         failure = shutdownService(failure, ScheduledCommandService.class, ScheduledCommandService::shutdown);
         failure = shutdownService(failure, ScoreboardService.class, ScoreboardService::shutdown);
         failure = shutdownService(failure, NamePrefixService.class, NamePrefixService::shutdown);
         failure = shutdownService(failure, TeleportService.class, TeleportService::shutdown);
+        failure = shutdownService(failure, TpaService.class, TpaService::shutdown);
         if (failure instanceof RuntimeException) {
             throw (RuntimeException) failure;
         } else if (failure instanceof Error) {
@@ -254,7 +261,7 @@ public class UltiEssentials extends UltiToolsPlugin {
      * noticing -- renaming a service, moving it out of {@code @UltiToolsModule}'s
      * {@code scanBasePackages}, or registering it under an interface type all leave the module
      * loading and its tasks starting from {@code @PostConstruct} while this hook silently stops
-     * covering it. On a stock install it cannot fire: all four services are unconditional
+     * covering it. On a stock install it cannot fire: all five services are unconditional
      * {@code @Service} beans and this module declares no {@code @ConditionalOnConfig}, so this is a
      * guard against a future source change rather than a state an operator can configure into.
      * <p>

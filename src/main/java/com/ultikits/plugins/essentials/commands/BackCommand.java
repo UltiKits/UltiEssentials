@@ -1,5 +1,6 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.service.OwnTeleports;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.EventListener;
 import com.ultikits.ultitools.annotations.command.*;
@@ -52,7 +53,9 @@ public class BackCommand extends BaseEssentialsCommand implements Listener {
             return;
         }
 
-        player.teleport(lastLocation);
+        // /back is one of this module's own teleports: the next /back returns to where this one
+        // started, as before (UltiKits/UltiEssentials#39).
+        OwnTeleports.teleport(player, lastLocation);
         player.sendMessage(i18n("essentials.back.success"));
     }
 
@@ -74,19 +77,14 @@ public class BackCommand extends BaseEssentialsCommand implements Listener {
         }
 
         Player player = event.getPlayer();
-        Location from = event.getFrom();
 
-        // Record command-triggered teleports (e.g. a vanilla /tp) and plugin-triggered
-        // teleports. Every one of this plugin's own teleport call sites -- TeleportService
-        // (backing /home and /warp), SpawnCommand, LobbyCommand, WildCommand, TpaService --
-        // calls Player#teleport(Location) with no explicit cause, and Bukkit/Paper's
-        // Entity#teleport(Location) defaults that to TeleportCause.PLUGIN, not COMMAND.
-        // Tracking only COMMAND meant /back after any of this plugin's own teleport commands
-        // recorded nothing.
-        PlayerTeleportEvent.TeleportCause cause = event.getCause();
-        if (cause == PlayerTeleportEvent.TeleportCause.COMMAND
-                || cause == PlayerTeleportEvent.TeleportCause.PLUGIN) {
-            LAST_LOCATIONS.put(player.getUniqueId(), from);
+        // Record only a teleport this module's own commands started (/home, /warp, /spawn,
+        // /lobby, /wild, an accepted /tpa, /back itself), marked by OwnTeleports around the call.
+        // Another plugin's teleport or a vanilla /tp has the same PLUGIN or COMMAND cause, so the
+        // cause cannot tell them apart; recording them let a teleport after a rejoin re-arm /back
+        // behind the quit cleanup (UltiKits/UltiEssentials#39).
+        if (OwnTeleports.isInProgress(player)) {
+            LAST_LOCATIONS.put(player.getUniqueId(), event.getFrom());
         }
     }
 

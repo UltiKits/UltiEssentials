@@ -241,6 +241,34 @@ class ScoreboardServiceMockitoTest {
     }
 
     @Nested
+    @DisplayName("After shutdown (#51)")
+    class AfterShutdownTests {
+
+        @Test
+        @DisplayName("The delayed join enable that fires after the module was unloaded does nothing")
+        void enableAfterShutdownDoesNothing() {
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+
+            service.shutdown();
+            service.enableScoreboard(player);
+
+            assertThat(service.isEnabled(player)).isFalse();
+            verify(player, never()).setScoreboard(any());
+        }
+
+        @Test
+        @DisplayName("A reload is not an unload: the sidebar can be enabled again afterwards")
+        void enableAfterReloadWorks() {
+            Player player = EssentialsTestHelper.createMockPlayer("Steve", UUID.randomUUID());
+
+            service.reload();
+            service.enableScoreboard(player);
+
+            assertThat(service.isEnabled(player)).isTrue();
+        }
+    }
+
+    @Nested
     @DisplayName("reload")
     class ReloadTests {
 

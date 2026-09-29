@@ -1,8 +1,12 @@
 # UltiEssentials
 
 [![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.2.1-blue)](https://github.com/UltiKits/UltiTools-Reborn)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.8--1.21-green)](https://www.spigotmc.org/)
+[![Paper](https://img.shields.io/badge/Paper-1.19--1.21-green)](https://papermc.io/)
 [![Java](https://img.shields.io/badge/Java-8+-orange)](https://www.java.com/)
+
+Runs on **Paper 1.19 or newer** only, like the UltiTools framework it is built on (the framework declares Bukkit `api-version: 1.19` and uses Paper's Adventure API throughout). Spigot and servers older than 1.19 are not supported.
+
+仅支持 **Paper 1.19 及以上**，与其所依赖的 UltiTools 框架一致（框架声明 Bukkit `api-version: 1.19`，并全面使用 Paper 的 Adventure API）。不支持 Spigot，也不支持 1.19 以前的服务端。
 
 UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插件模块，提供了常用的传送、玩家状态、管理员工具和服务器自定义功能。
 
@@ -52,6 +56,18 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 | `/wl on` | 启用白名单 | `ultiessentials.whitelist.manage` |
 | `/wl off` | 禁用白名单 | `ultiessentials.whitelist.manage` |
 | `/wl status` | 查看白名单状态 | `ultiessentials.whitelist.manage` |
+
+### Commands that take over vanilla commands / 接管原版命令的命令
+
+`/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name: `/ban` and `/banlist` work on this module's own ban records, not on the server's ban list, and `/scoreboard` toggles this module's sidebar. The vanilla commands stay reachable as `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard`.
+
+`/ban`、`/banlist`、`/scoreboard` 有意接管了同名的原版命令：`/ban` 与 `/banlist` 操作本模块自己的封禁记录，而不是服务器的封禁名单；`/scoreboard` 用于开关本模块的侧边栏。原版命令仍可通过 `minecraft:ban`、`minecraft:banlist`、`minecraft:scoreboard` 调用。
+
+### The sidebar's scoreboard / 侧边栏计分板
+
+The sidebar is drawn on a private scoreboard this module assigns to each player who has it on. That scoreboard belongs to this module alone: another plugin must not write onto it (register its own objective named `ultiessentials`, or put a player into its own team on it). Such writes are not supported and may be overwritten. The module copies the main scoreboard's teams onto it, so name prefixes stay visible, and restores its own objective, sidebar slot and lines if another plugin changes them. If another plugin's scoreboard is already on screen, this sidebar waits until the player is back on the main scoreboard.
+
+侧边栏画在本模块为每位开启侧边栏的玩家换上的私有计分板上。这块计分板只归本模块所有：其他插件不应往上面写东西（注册名为 `ultiessentials` 的目标，或把玩家放进自己在这块计分板上的队伍），这类写入不受支持，可能被覆盖。本模块会把主计分板的队伍复制过去，让名字前缀保持可见；若其他插件改动了本模块的目标、侧边栏显示位置或内容行，会自动恢复。若玩家屏幕上已经是其他插件的计分板，本侧边栏会等到玩家回到主计分板后再显示。
 
 ### 🎨 服务器自定义
 

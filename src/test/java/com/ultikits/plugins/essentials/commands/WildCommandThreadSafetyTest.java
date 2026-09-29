@@ -95,8 +95,22 @@ class WildCommandThreadSafetyTest {
         // inline mock maker resolves UltiTools' entire method-signature closure to do this,
         // which is exactly why the pom now declares VaultAPI at test scope (Pitfall 5).
         TestHelper.mockUltiToolsInstance();
-        mockPlugin = MockBukkit.createMockPlugin();
-        world = server.addSimpleWorld("world");
+        // Named as the framework's Bukkit plugin: the handler schedules its main-thread checks
+        // against the plugin registered as "UltiTools" (UltiKits/UltiEssentials#24).
+        mockPlugin = MockBukkit.createMockPlugin("UltiTools");
+        // MockBukkit does not implement World#getChunkAtAsync, which /wild uses to load each
+        // candidate chunk (UltiKits/UltiEssentials#24); this world answers it with its own chunk,
+        // already loaded, the way a loaded chunk completes on a real server.
+        org.mockbukkit.mockbukkit.world.WorldMock asyncWorld = new org.mockbukkit.mockbukkit.world.WorldMock() {
+            @Override
+            public java.util.concurrent.CompletableFuture<org.bukkit.Chunk> getChunkAtAsync(
+                    int x, int z, boolean gen, boolean urgent) {
+                return java.util.concurrent.CompletableFuture.completedFuture(getChunkAt(x, z));
+            }
+        };
+        asyncWorld.setName("world");
+        server.addWorld(asyncWorld);
+        world = asyncWorld;
 
         EssentialsConfig config = new EssentialsConfig();
         // Small, bounded range: the world is a uniform flat plane (grass at height 4 in every
@@ -170,6 +184,14 @@ class WildCommandThreadSafetyTest {
         }
     }
 
+    /**
+     * Runs enough further ticks for /wild's per-attempt main-thread checks to finish: each attempt
+     * loads its chunk asynchronously and checks it on a later tick (UltiKits/UltiEssentials#24).
+     */
+    private void settle() {
+        server.getScheduler().performTicks(20);
+    }
+
     private DispatchOutcome awaitOne(PendingDispatch pending) throws InterruptedException {
         boolean completed = pending.latch.await(5, TimeUnit.SECONDS);
         return new DispatchOutcome(completed, pending.ranOnPrimaryThread.get(), pending.failure.get());
@@ -178,7 +200,9 @@ class WildCommandThreadSafetyTest {
     private DispatchOutcome dispatchAndAwait(Player player) throws InterruptedException {
         PendingDispatch pending = schedule(player);
         tick();
-        return awaitOne(pending);
+        DispatchOutcome outcome = awaitOne(pending);
+        settle();
+        return outcome;
     }
 
     private CommandContext contextFor(Player player) {
@@ -251,6 +275,7 @@ class WildCommandThreadSafetyTest {
 
         DispatchOutcome aliceOutcome = awaitOne(aliceDispatch);
         DispatchOutcome bobOutcome = awaitOne(bobDispatch);
+        settle();
 
         assertThat(aliceOutcome.completed).isTrue();
         assertThat(bobOutcome.completed).isTrue();

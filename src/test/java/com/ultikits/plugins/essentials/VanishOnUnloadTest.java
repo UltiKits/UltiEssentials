@@ -75,6 +75,7 @@ class VanishOnUnloadTest {
         container.registerType(ScoreboardService.class, scoreboardService);
         container.registerType(NamePrefixService.class, mock(NamePrefixService.class));
         container.registerType(TeleportService.class, mock(TeleportService.class));
+        container.registerType(com.ultikits.plugins.essentials.service.TpaService.class, mock(com.ultikits.plugins.essentials.service.TpaService.class));
         plugin.setContext(container);
 
         Field field = HideCommand.class.getDeclaredField("HIDDEN_PLAYERS");

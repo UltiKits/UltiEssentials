@@ -1,7 +1,9 @@
 package com.ultikits.plugins.essentials.commands;
 
+import com.ultikits.plugins.essentials.service.OwnTeleports;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.command.*;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -10,6 +12,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Command to randomly teleport player within a configured range.
@@ -19,6 +22,16 @@ import java.util.Random;
 public class WildCommand extends BaseEssentialsCommand {
 
     private static final Random RANDOM = new Random();
+
+    /** Candidate locations tried before /wild gives up. */
+    private static final int MAX_ATTEMPTS = 10;
+
+    /**
+     * Bumped when the module unloads. A search's continuation runs in a task of the {@code UltiTools}
+     * Bukkit plugin, which outlives this module, so the unload cannot cancel it by plugin; each search
+     * remembers the generation it started in and stops at its next step once that has changed.
+     */
+    private static final AtomicInteger GENERATION = new AtomicInteger();
 
     private final EssentialsConfig config;
 
@@ -52,25 +65,63 @@ public class WildCommand extends BaseEssentialsCommand {
 
         player.sendMessage(i18n("essentials.wild.searching"));
 
-        // Try up to 10 times to find a safe location
-        for (int attempt = 0; attempt < 10; attempt++) {
-            int range = minRange + RANDOM.nextInt(maxRange - minRange);
-            double angle = RANDOM.nextDouble() * 2 * Math.PI;
+        Location origin = player.getLocation();
+        tryLocation(player, world, origin.getX(), origin.getZ(), minRange, maxRange, 0, GENERATION.get());
+    }
 
-            int x = (int) (player.getLocation().getX() + range * Math.cos(angle));
-            int z = (int) (player.getLocation().getZ() + range * Math.sin(angle));
+    /**
+     * Invalidates every search still waiting for a chunk or for its main-thread check, so none of them
+     * teleports or messages a player after the module has unloaded. Called from the module's
+     * {@code onUnregister()} hook.
+     */
+    public static void cancelPendingSearches() {
+        GENERATION.incrementAndGet();
+    }
 
-            int y = world.getHighestBlockYAt(x, z);
-            Location target = new Location(world, x + 0.5, y + 1, z + 0.5);
+    /**
+     * Tries one random candidate location. Its chunk is loaded asynchronously, so an unexplored
+     * chunk is generated without stalling the server tick; the height lookup, the safety check and
+     * the teleport then run in a task on the main thread, where world and player state may be read
+     * and changed. An unsafe candidate tries the next one, up to {@link #MAX_ATTEMPTS} in all
+     * (UltiKits/UltiEssentials#24). A player who logged out while a chunk loaded is left alone.
+     */
+    private void tryLocation(Player player, World world, double originX, double originZ,
+                             int minRange, int maxRange, int attempt, int generation) {
+        if (generation != GENERATION.get()) {
+            return;
+        }
+        if (attempt >= MAX_ATTEMPTS) {
+            player.sendMessage(i18n("essentials.wild.no_safe_location"));
+            return;
+        }
+        int range = minRange + RANDOM.nextInt(maxRange - minRange);
+        double angle = RANDOM.nextDouble() * 2 * Math.PI;
+        int x = (int) (originX + range * Math.cos(angle));
+        int z = (int) (originZ + range * Math.sin(angle));
 
-            if (isSafeLocation(target)) {
-                player.teleport(target);
-                player.sendMessage(String.format(i18n("essentials.wild.success"), x, y, z));
+        world.getChunkAtAsync(x >> 4, z >> 4).whenComplete((chunk, loadFailure) -> {
+            if (generation != GENERATION.get()) {
                 return;
             }
-        }
-
-        player.sendMessage(i18n("essentials.wild.no_safe_location"));
+            Bukkit.getScheduler().runTask(Bukkit.getPluginManager().getPlugin("UltiTools"), () -> {
+                if (generation != GENERATION.get() || !player.isOnline()) {
+                    return;
+                }
+                if (loadFailure == null) {
+                    int y = world.getHighestBlockYAt(x, z);
+                    Location target = new Location(world, x + 0.5, y + 1, z + 0.5);
+                    if (isSafeLocation(target)) {
+                        OwnTeleports.teleport(player, target);
+                        // Report where the player lands -- the destination's own block position,
+                        // feet included -- not the ground block below it (UltiKits/UltiEssentials#33).
+                        player.sendMessage(String.format(i18n("essentials.wild.success"),
+                                target.getBlockX(), target.getBlockY(), target.getBlockZ()));
+                        return;
+                    }
+                }
+                tryLocation(player, world, originX, originZ, minRange, maxRange, attempt + 1, generation);
+            });
+        });
     }
 
     /**

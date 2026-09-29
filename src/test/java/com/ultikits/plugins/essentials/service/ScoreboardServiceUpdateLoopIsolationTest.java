@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -118,7 +119,9 @@ class ScoreboardServiceUpdateLoopIsolationTest {
 
         runUpdate();
 
-        verify(second).setScoreboard(any(Scoreboard.class));
+        // The second player's refresh ran: its line (%player_world%) was rendered again. Its board
+        // is already on screen, so the refresh does not assign it again (UltiKits/UltiEssentials#40).
+        verify(second, atLeastOnce()).getWorld();
         assertThat(service.isEnabled(first)).isTrue();
         assertThat(service.isEnabled(second)).isTrue();
     }
@@ -182,6 +185,7 @@ class ScoreboardServiceUpdateLoopIsolationTest {
         assertThat(service.isEnabled(first)).isFalse();
 
         when(first.isOnline()).thenReturn(true);
+        first.setScoreboard(mainScoreboard); // a player who comes back online starts on the main scoreboard
         doReturn(firstWorld).when(first).getWorld();
         service.enableScoreboard(first);
         doThrow(failure).when(first).getWorld();

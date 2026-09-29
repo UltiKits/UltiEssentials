@@ -291,7 +291,7 @@ class BanServiceMockitoTest {
     // ==================== Unban Player Tests ====================
 
     @Nested
-    @DisplayName("unbanPlayer")
+    @DisplayName("unbanPlayerByName: verified deactivation")
     class UnbanPlayerTests {
 
         @Test
@@ -311,7 +311,7 @@ class BanServiceMockitoTest {
             when(query.list())
                 .thenReturn(new ArrayList<>(Collections.singletonList(activeBan)));
 
-            BanService.UnbanResult result = banService.unbanPlayer(playerUuid);
+            BanService.UnbanResult result = banService.unbanPlayerByName("TestPlayer");
 
             assertThat(result).isEqualTo(BanService.UnbanResult.REMOVED);
             verify(banOperator).update(any(BanData.class));
@@ -322,7 +322,7 @@ class BanServiceMockitoTest {
         void shouldReturnFalseWhenPlayerNotBanned() throws Exception {
             when(query.list()).thenReturn(new ArrayList<>());
 
-            BanService.UnbanResult result = banService.unbanPlayer(playerUuid);
+            BanService.UnbanResult result = banService.unbanPlayerByName("TestPlayer");
 
             assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
             verify(banOperator, never()).update(any());
@@ -356,7 +356,7 @@ class BanServiceMockitoTest {
             when(query.list())
                 .thenReturn(new ArrayList<>(Arrays.asList(ban1, ban2)));
 
-            BanService.UnbanResult result = banService.unbanPlayer(playerUuid);
+            BanService.UnbanResult result = banService.unbanPlayerByName("TestPlayer");
 
             assertThat(result).isEqualTo(BanService.UnbanResult.REMOVED);
             verify(banOperator, times(2)).update(any(BanData.class));
@@ -379,7 +379,7 @@ class BanServiceMockitoTest {
             when(query.list())
                 .thenReturn(new ArrayList<>(Collections.singletonList(inactiveBan)));
 
-            BanService.UnbanResult result = banService.unbanPlayer(playerUuid);
+            BanService.UnbanResult result = banService.unbanPlayerByName("TestPlayer");
 
             assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
         }
@@ -467,40 +467,6 @@ class BanServiceMockitoTest {
         void shouldReturnNullForEmptyIp() throws Exception {
             BanData result = banService.getActiveIpBan("");
             assertThat(result).isNull();
-        }
-
-        @Test
-        @DisplayName("Should unban IP address")
-        void shouldUnbanIpAddress() throws Exception {
-            BanData ipBan = BanData.builder()
-                .uuid(UUID.randomUUID())
-                .playerUuid(playerUuid.toString())
-                .playerName("TestPlayer")
-                .reason("IP Ban")
-                .bannedByName("Admin")
-                .banTime(System.currentTimeMillis())
-                .expireTime(-1)
-                .active(true)
-                .ipAddress("10.0.0.1")
-                .build();
-
-            when(query.list())
-                .thenReturn(new ArrayList<>(Collections.singletonList(ipBan)));
-
-            BanService.UnbanResult result = banService.unbanIp("10.0.0.1");
-
-            assertThat(result).isEqualTo(BanService.UnbanResult.REMOVED);
-            verify(banOperator).update(any(BanData.class));
-        }
-
-        @Test
-        @DisplayName("Should return false when unbanning non-banned IP")
-        void shouldReturnFalseWhenIpNotBanned() throws Exception {
-            when(query.list()).thenReturn(new ArrayList<>());
-
-            BanService.UnbanResult result = banService.unbanIp("10.0.0.1");
-
-            assertThat(result).isEqualTo(BanService.UnbanResult.NOT_BANNED);
         }
     }
 

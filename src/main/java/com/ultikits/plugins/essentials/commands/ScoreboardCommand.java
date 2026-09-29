@@ -10,14 +10,14 @@ import org.bukkit.entity.Player;
  * Command for toggling scoreboard display.
  * <p>
  * Usage: /scoreboard (toggle)
- *        /sb on/off
+ *        /scoreboard on/off
  *
  * @author wisdomme
  * @version 1.0.0
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(
-    alias = {"scoreboard", "sb"},
+    alias = {"scoreboard"},
     permission = "ultiessentials.scoreboard",
     description = "essentials.command.scoreboard.description"
 )
@@ -31,7 +31,7 @@ public class ScoreboardCommand extends BaseEssentialsCommand {
         boolean enabled = scoreboardService.toggleScoreboard(player);
         
         if (enabled) {
-            player.sendMessage(i18n("essentials.scoreboard.enabled"));
+            sendEnabledReply(player);
         } else {
             player.sendMessage(i18n("essentials.scoreboard.disabled"));
         }
@@ -40,22 +40,43 @@ public class ScoreboardCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "on")
     public void enable(@CmdSender Player player) {
         if (scoreboardService.isEnabled(player)) {
-            player.sendMessage(i18n("essentials.scoreboard.already_enabled"));
+            // On, but another scoreboard keeps the slot: say so rather than "already enabled",
+            // which would not explain why no sidebar is on screen (UltiKits/UltiEssentials#40).
+            if (scoreboardService.isSlotTakenByAnother(player)) {
+                player.sendMessage(i18n("essentials.scoreboard.enabled_occupied"));
+            } else {
+                player.sendMessage(i18n("essentials.scoreboard.already_enabled"));
+            }
             return;
         }
         
-        scoreboardService.enableScoreboard(player);
-        player.sendMessage(i18n("essentials.scoreboard.enabled"));
+        scoreboardService.acceptScoreboard(player);
+        sendEnabledReply(player);
+    }
+
+    /**
+     * Confirms that the scoreboard is on, or says that it is on but another scoreboard keeps the
+     * sidebar slot for now (UltiKits/UltiEssentials#40).
+     */
+    private void sendEnabledReply(Player player) {
+        if (scoreboardService.isSlotTakenByAnother(player)) {
+            player.sendMessage(i18n("essentials.scoreboard.enabled_occupied"));
+        } else {
+            player.sendMessage(i18n("essentials.scoreboard.enabled"));
+        }
     }
     
     @CmdMapping(format = "off")
     public void disable(@CmdSender Player player) {
         if (!scoreboardService.isEnabled(player)) {
+            // Still recorded: right after joining, the sidebar is off only until the delayed
+            // auto-enable runs, and this choice must outlast it (UltiKits/UltiEssentials#45).
+            scoreboardService.declineScoreboard(player);
             player.sendMessage(i18n("essentials.scoreboard.already_disabled"));
             return;
         }
         
-        scoreboardService.disableScoreboard(player);
+        scoreboardService.declineScoreboard(player);
         player.sendMessage(i18n("essentials.scoreboard.disabled"));
     }
     

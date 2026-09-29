@@ -40,6 +40,10 @@ public class NamePrefixService {
     private BukkitTask updateTask;
     private Scoreboard scoreboard;
 
+    // Set by shutdown() and cleared again only by reload(): once the module is unloaded, a delayed
+    // join callback that still fires is a no-op (UltiKits/UltiEssentials#51)
+    private volatile boolean shutDown;
+
     // Instance reference to the class logger, so a test can observe the per-player failure reports
     // (the module's test classpath has no slf4j binding to capture them otherwise).
     private org.slf4j.Logger failureLog = log;
@@ -123,7 +127,9 @@ public class NamePrefixService {
      * Updates name prefix/suffix for a player.
      */
     public void updatePlayer(Player player) {
-        if (!config.isNamePrefixEnabled()) {
+        if (shutDown || !config.isNamePrefixEnabled()) {
+            // After an unload, the delayed join update must not add an entry to a team that
+            // nothing clears any more (UltiKits/UltiEssentials#51).
             return;
         }
         
@@ -196,13 +202,15 @@ public class NamePrefixService {
     }
     
     /**
-     * Parses PlaceholderAPI placeholders.
+     * Fills this module's own {@code %player_name%}, then PlaceholderAPI's placeholders when it is
+     * installed (UltiKits/UltiEssentials#59).
      */
     private String parsePlaceholders(Player player, String text) {
+        String filled = BuiltInPlaceholders.forNamePrefix(player, text);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            return PlaceholderAPI.setPlaceholders(player, text);
+            return PlaceholderAPI.setPlaceholders(player, filled);
         }
-        return text.replace("%player_name%", player.getName());
+        return filled;
     }
     
     /**
@@ -216,6 +224,7 @@ public class NamePrefixService {
      * Shuts down the service.
      */
     public void shutdown() {
+        shutDown = true;
         if (updateTask != null) {
             updateTask.cancel();
             updateTask = null;
@@ -245,6 +254,7 @@ public class NamePrefixService {
      */
     public void reload() {
         shutdown();
+        shutDown = false;
         if (config.isNamePrefixEnabled()) {
             init();
         }

@@ -39,15 +39,19 @@ public abstract class BaseEssentialsCommand extends BaseCommandExecutor {
     }
 
     /**
-     * Suggests online player names for tab completion.
-     * Filters players whose names start with the given prefix (case-insensitive).
+     * Suggests the names of the online players {@code viewer} may see, starting with {@code prefix}
+     * (case-insensitive). A vanished player is left out for a viewer without
+     * {@code ultiessentials.hide.see}, so completion does not reveal the vanish
+     * (UltiKits/UltiEssentials#56).
      *
-     * @param prefix the prefix to filter by (usually args[argIndex])
-     * @return list of matching online player names
+     * @param viewer the player completing, or {@code null} for the console
+     * @param prefix the typed prefix, or {@code null}
+     * @return the matching names
      */
-    protected List<String> suggestOnlinePlayers(String prefix) {
+    protected List<String> suggestOnlinePlayers(Player viewer, String prefix) {
         String lowerPrefix = prefix != null ? prefix.toLowerCase() : "";
         return Bukkit.getOnlinePlayers().stream()
+                .filter(online -> HideCommand.canSee(viewer, online))
                 .map(Player::getName)
                 .filter(name -> name.toLowerCase().startsWith(lowerPrefix))
                 .collect(Collectors.toList());

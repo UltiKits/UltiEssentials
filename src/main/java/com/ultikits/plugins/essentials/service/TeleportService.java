@@ -89,7 +89,7 @@ public class TeleportService {
         
         // Instant teleport if no warmup
         if (warmupSeconds <= 0) {
-            player.teleport(target);
+            OwnTeleports.teleport(player, target);
             if (onSuccess != null) {
                 onSuccess.accept(player);
             }
@@ -139,7 +139,7 @@ public class TeleportService {
                 
                 // Teleport when countdown reaches 0
                 if (countdown <= 0) {
-                    player.teleport(target);
+                    OwnTeleports.teleport(player, target);
                     player.sendMessage(i18n("essentials.teleport.success_warmup"));
                     cleanupTeleport(uuid);
                     cancel();

@@ -120,8 +120,12 @@ public class TpaService {
         
         activeRequests.put(target.getUniqueId(), request);
         
-        // Update cooldown
-        cooldowns.put(sender.getUniqueId(), System.currentTimeMillis());
+        // Update cooldown, dropping every entry whose cooldown has run out, so the table holds only
+        // senders still cooling down (maintainer decision 2026-09-27, UltiKits/UltiEssentials#54).
+        long now = System.currentTimeMillis();
+        long cooldownMillis = config.getTpaCooldown() * 1000L;
+        cooldowns.values().removeIf(sentAt -> now - sentAt >= cooldownMillis);
+        cooldowns.put(sender.getUniqueId(), now);
         
         // Start timeout task
         startTimeoutTask(target.getUniqueId());
@@ -154,11 +158,11 @@ public class TpaService {
         // Perform teleport based on type
         if (request.getType() == TpaType.TPA) {
             // Sender teleports to target
-            sender.teleport(target.getLocation());
+            OwnTeleports.teleport(sender, target.getLocation());
             sender.sendMessage(plugin.i18n("essentials.teleport.success"));
         } else {
             // Target teleports to sender
-            target.teleport(sender.getLocation());
+            OwnTeleports.teleport(target, sender.getLocation());
             target.sendMessage(plugin.i18n("essentials.teleport.success"));
         }
         
@@ -216,25 +220,32 @@ public class TpaService {
      * Checks if a player is on cooldown.
      */
     public boolean isOnCooldown(UUID uuid) {
-        Long lastRequest = cooldowns.get(uuid);
-        if (lastRequest == null) {
-            return false;
-        }
-        long elapsed = System.currentTimeMillis() - lastRequest;
-        return elapsed < config.getTpaCooldown() * 1000L;
+        return getRemainingCooldownMillis(uuid) > 0;
     }
     
     /**
      * Gets remaining cooldown time in seconds.
      */
     public int getRemainingCooldown(UUID uuid) {
+        return (int) (getRemainingCooldownMillis(uuid) / 1000);
+    }
+
+    /**
+     * The sender's remaining cooldown in milliseconds, or 0; an entry whose cooldown has run out is
+     * dropped when it is read. A reconnect does not reset a cooldown: nothing else removes an entry
+     * before it expires (UltiKits/UltiEssentials#54).
+     */
+    private long getRemainingCooldownMillis(UUID uuid) {
         Long lastRequest = cooldowns.get(uuid);
         if (lastRequest == null) {
             return 0;
         }
-        long elapsed = System.currentTimeMillis() - lastRequest;
-        long remaining = config.getTpaCooldown() * 1000L - elapsed;
-        return (int) Math.max(0, remaining / 1000);
+        long remaining = config.getTpaCooldown() * 1000L - (System.currentTimeMillis() - lastRequest);
+        if (remaining <= 0) {
+            cooldowns.remove(uuid, lastRequest);
+            return 0;
+        }
+        return remaining;
     }
     
     /**
@@ -287,6 +298,19 @@ public class TpaService {
         });
     }
     
+    /**
+     * Cancels every pending request's expiry and forgets the pending requests, so no expiry fires
+     * after the module is unloaded (UltiKits/UltiEssentials#51). Called from the module's
+     * {@code onUnregister()} hook.
+     */
+    public void shutdown() {
+        for (BukkitTask task : timeoutTasks.values()) {
+            task.cancel();
+        }
+        timeoutTasks.clear();
+        activeRequests.clear();
+    }
+
     public enum TpaType {
         TPA,        // Sender wants to teleport to target
         TPA_HERE    // Sender wants target to teleport to them

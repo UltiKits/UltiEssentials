@@ -97,6 +97,73 @@ class TpaServiceTimeoutTaskTest {
     }
 
     @Test
+    @DisplayName("Shutdown cancels a pending request's expiry, and an expiry that still fires afterwards sends nothing (#51)")
+    void shutdownCancelsThePendingExpiry() {
+        World world = EssentialsTestHelper.createMockWorld("world");
+        UUID senderUuid = UUID.randomUUID();
+        UUID targetUuid = UUID.randomUUID();
+        Player sender = createPlayerInWorld("Sender", senderUuid, world);
+        Player target = createPlayerInWorld("Target", targetUuid, world);
+        when(Bukkit.getPlayer(senderUuid)).thenReturn(sender);
+        when(Bukkit.getPlayer(targetUuid)).thenReturn(target);
+        BukkitTask expiry = mock(BukkitTask.class);
+        when(scheduler.runTaskLater(any(Plugin.class), any(Runnable.class), anyLong())).thenReturn(expiry);
+
+        tpaService.sendTpaRequest(sender, target);
+        Runnable callback = captureScheduledCallback();
+
+        tpaService.shutdown();
+        callback.run();
+
+        verify(expiry).cancel();
+        assertThat(tpaService.getRequest(targetUuid)).isNull();
+        verify(sender, never()).sendMessage(anyString());
+        verify(target, never()).sendMessage(anyString());
+    }
+
+    @Test
+    @DisplayName("The cooldown table keeps only senders still on cooldown: expired entries are dropped, a live one is kept (#54)")
+    @SuppressWarnings("unchecked")
+    void cooldownTableDropsExpiredEntries() throws Exception {
+        World world = EssentialsTestHelper.createMockWorld("world");
+        Player sender = createPlayerInWorld("Sender", UUID.randomUUID(), world);
+        Player target = createPlayerInWorld("Target", UUID.randomUUID(), world);
+        java.lang.reflect.Field field = TpaService.class.getDeclaredField("cooldowns");
+        field.setAccessible(true);
+        java.util.Map<UUID, Long> cooldowns = (java.util.Map<UUID, Long>) field.get(tpaService);
+        long now = System.currentTimeMillis();
+        long cooldownMillis = config.getTpaCooldown() * 1000L;
+        UUID expiredA = UUID.randomUUID();
+        UUID expiredB = UUID.randomUUID();
+        UUID stillCooling = UUID.randomUUID();
+        cooldowns.put(expiredA, now - cooldownMillis - 5_000L);
+        cooldowns.put(expiredB, now - cooldownMillis - 60_000L);
+        cooldowns.put(stillCooling, now - 1_000L);
+
+        tpaService.sendTpaRequest(sender, target);
+
+        assertThat(cooldowns.keySet()).containsExactlyInAnyOrder(stillCooling, sender.getUniqueId());
+        // Behaviour is unchanged: the sender still cooling down is still refused.
+        assertThat(tpaService.isOnCooldown(stillCooling)).isTrue();
+        assertThat(tpaService.isOnCooldown(expiredA)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Reading an expired cooldown drops its entry (#54)")
+    @SuppressWarnings("unchecked")
+    void readingAnExpiredCooldownDropsIt() throws Exception {
+        java.lang.reflect.Field field = TpaService.class.getDeclaredField("cooldowns");
+        field.setAccessible(true);
+        java.util.Map<UUID, Long> cooldowns = (java.util.Map<UUID, Long>) field.get(tpaService);
+        UUID expired = UUID.randomUUID();
+        cooldowns.put(expired, System.currentTimeMillis() - config.getTpaCooldown() * 1000L - 1_000L);
+
+        assertThat(tpaService.isOnCooldown(expired)).isFalse();
+        assertThat(tpaService.getRemainingCooldown(expired)).isZero();
+        assertThat(cooldowns).doesNotContainKey(expired);
+    }
+
+    @Test
     @DisplayName("A request already resolved before the timeout fires produces no notification")
     void alreadyResolvedRequestProducesNoNotification() {
         World world = EssentialsTestHelper.createMockWorld("world");

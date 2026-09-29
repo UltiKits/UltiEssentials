@@ -9,6 +9,75 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `/back` now returns only from teleports this module's own commands started (`/home`, `/warp`,
+  `/spawn`, `/lobby`, `/wild`, an accepted `/tpa` or `/tpahere`, and `/back` itself). Another plugin's
+  teleport or a vanilla `/tp` no longer gives `/back` a place to return to, so a teleport by something
+  else after a rejoin no longer re-arms it. A second `/back` still returns to where the first one started
+  (UltiKits/UltiEssentials#39).
+- `/back` 现在只会返回由本模块自己的命令发起的传送（`/home`、`/warp`、`/spawn`、`/lobby`、`/wild`、被接受的 `/tpa` 或
+  `/tpahere`，以及 `/back` 本身）。其它插件的传送或原版 `/tp` 不再为 `/back` 记录返回点，因此重新进服后被其它来源传送
+  也不会再让 `/back` 生效。连续两次 `/back` 仍会回到第一次 `/back` 出发的位置（UltiKits/UltiEssentials#39）。
+- `/wild`'s success message now reports the height the player lands at (the feet position); it used to
+  report the ground block one below (UltiKits/UltiEssentials#33).
+- `/wild` 成功提示现在报告玩家落脚的高度（脚所在的位置）；此前报告的是下方一格的地面方块高度（UltiKits/UltiEssentials#33）。
+- `/wild` no longer stalls the server while it looks for a place: each candidate chunk is loaded (and
+  generated, if new) asynchronously, and the safety check and the teleport run on the main thread once it
+  has loaded. A player who logs out meanwhile is not teleported, and a search still waiting for a chunk
+  when the module is unloaded does nothing (UltiKits/UltiEssentials#24).
+- `/wild` 寻找落点时不再卡住服务器：每个候选区块都异步加载（新区块异步生成），加载完成后再在主线程做安全检查并传送；
+  期间下线的玩家不会被传送；模块卸载时仍在等待区块的搜索不会再执行任何操作（UltiKits/UltiEssentials#24）。
+- A vanished player is no longer found through `/tpa` or `/tpahere` (a sender who may not see vanished
+  players is told the player is not online, and no request is delivered) or through `/ban` and
+  `/tempban` completion, and a vanished player can always un-vanish: `features.hide.enabled: false`
+  now refuses only a new vanish (UltiKits/UltiEssentials#56).
+- 隐身玩家不再能通过 `/tpa`、`/tpahere`（无权看见隐身玩家的发送者会被告知对方不在线，请求也不会送达）或 `/ban`、
+  `/tempban` 的补全被发现；隐身玩家也总能解除隐身：`features.hide.enabled: false` 现在只拒绝新的隐身
+  （UltiKits/UltiEssentials#56）。
+- Unloading this module (`/upm uninstall UltiEssentials`) now also cancels a pending `/tpa` or
+  `/tpahere` request's expiry, so neither player gets an expiry message from the uninstalled module, and
+  a player who joined in the second before the uninstall is no longer put on a sidebar or into a
+  name-prefix team afterwards (UltiKits/UltiEssentials#51).
+- 卸载本模块（`/upm uninstall UltiEssentials`）现在还会取消待处理的 `/tpa`、`/tpahere` 请求的过期任务，双方不会再收到
+  已卸载模块发出的过期提示；在卸载前一秒内加入的玩家也不会在卸载后被放上侧边栏或加入名字前缀队伍
+  （UltiKits/UltiEssentials#51）。
+- With PlaceholderAPI installed, the scoreboard now shows its built-in placeholders (`%online_players%`,
+  `%max_players%`, `%player_food%` and the others) as values instead of the raw tokens: the module's own
+  placeholders are filled first and PlaceholderAPI's afterwards, in the scoreboard and in name prefixes
+  (UltiKits/UltiEssentials#59).
+- 装有 PlaceholderAPI 时，计分板现在会把内置变量（`%online_players%`、`%max_players%`、`%player_food%` 等）显示为数值，
+  不再原样显示：计分板与名字前缀先填入本模块自己的变量，再交给 PlaceholderAPI（UltiKits/UltiEssentials#59）。
+- `/scoreboard off` run right after joining now sticks: the sidebar no longer appears a moment later
+  from the delayed auto-enable, nor from a reload that turns the scoreboard feature on. The choice lasts
+  until the player quits or runs `/scoreboard on` (UltiKits/UltiEssentials#45).
+- 刚进服就执行的 `/scoreboard off` 现在会生效：侧边栏不会再被延迟的自动开启在片刻后重新显示，重载开启计分板功能时也不会。该选择持续到玩家退出或执行
+  `/scoreboard on` 为止（UltiKits/UltiEssentials#45）。
+- The sidebar no longer replaces another plugin's sidebar (such as UltiSideBar's): whichever sidebar a
+  player sees first stays, and this one appears once the other is turned off. `/scoreboard on` and
+  `/scoreboard` now say when another scoreboard keeps the slot, and `/scoreboard off` no longer removes
+  another plugin's sidebar. When UltiSideBar's sidebar is also enabled, one console line says so after
+  start-up (UltiKits/UltiEssentials#40).
+- 侧边栏不再顶替其它插件的侧边栏（例如 UltiSideBar 的）：玩家先看到哪个侧边栏就保留哪个，另一个关闭后本侧边栏才显示。
+  `/scoreboard on` 与 `/scoreboard` 在另一个计分板占用该位置时会如实说明，`/scoreboard off` 也不再移除其它插件的侧边栏。
+  UltiSideBar 的侧边栏同时开启时，启动后控制台会有一行提示（UltiKits/UltiEssentials#40）。
+- Name prefixes (`features.nameprefix`) and other main-scoreboard teams (vanilla `/team` teams, other
+  plugins' teams) now show while this module's sidebar is on: the sidebar's own scoreboard now carries
+  the server's main-scoreboard teams and follows their changes on every update. Previously every
+  player with the sidebar on saw no team prefix on anybody. A sidebar line that reads exactly like a
+  team member's name keeps its own look rather than taking that team's prefix (UltiKits/UltiEssentials#40).
+- The sidebar is no longer rebuilt every second: each player keeps one sidebar scoreboard that is
+  updated in place, and its lines are rewritten only when they change. If another plugin removes the
+  sidebar's objective, clears or takes its slot, or resets its lines, the next update restores them;
+  what another plugin puts on that board (its own teams, objectives and scores) is left alone
+  (UltiKits/UltiEssentials#40).
+- 本模块的侧边栏开启时，名字前缀（`features.nameprefix`）和主计分板上的其它队伍（原版 `/team` 队伍、其它插件的队伍）
+  现在都会显示：侧边栏自己的计分板会带上服务器主计分板的队伍，并在每次刷新时跟随其变化；此前开着侧边栏的玩家
+  看不到任何人的队伍前缀。与某个队伍成员名字完全相同的侧边栏行保持原样，不会带上该队伍的前缀（UltiKits/UltiEssentials#40）。
+- 侧边栏不再每秒重建：每位玩家保留同一块侧边栏计分板并原地刷新，内容行只在变化时重写。若其他插件删除了侧边栏的目标、
+  清空或占用了其显示位置、或重置了其内容行，下一次刷新会恢复它们；其他插件放在这块计分板上的内容（其队伍、目标和分数）
+  不受影响（UltiKits/UltiEssentials#40）。
+- Two scoreboard lines that differ only after their 40th character now both show; previously the
+  second one replaced the first (UltiKits/UltiEssentials#41).
+- 只在第 40 个字符之后才不同的两行计分板内容现在都会显示；此前第二行会顶替第一行（UltiKits/UltiEssentials#41）。
 - `language: en` now applies to this module's command, ban, kick and console text; most of it showed
   Chinese in every language (UltiKits/UltiEssentials#26). 162 messages whose keys were missing from
   both language files now have English and Chinese text: every command's help and description, the
@@ -267,6 +336,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name, as
+  the maintainer decided; this is now stated in the documentation. The vanilla commands stay reachable as
+  `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard` (UltiKits/UltiEssentials#61).
+- `/ban`、`/banlist`、`/scoreboard` 按维护者决定有意接管同名原版命令，现已写入文档；原版命令仍可用 `minecraft:ban`、
+  `minecraft:banlist`、`minecraft:scoreboard` 调用（UltiKits/UltiEssentials#61）。
 - Changed: message and title settings in `config/essentials.yml` (the scoreboard title and lines, the
   scheduled-command text and the death-punishment command text), `config/tabbar.yml` (the tab-list
   header and footer) and `config/motd.yml` (the two MOTD lines) are written in the server's language
@@ -305,6 +379,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 
+- Removed three aliases other UltiKits components own: `ul` of `/unlock` (the framework's own `/ul`),
+  `l` of `/lock` (UltiLogin's `/l` for `/login`) and `sb` of `/scoreboard` (UltiSideBar's `/sb` for
+  `/sidebar`). Use `/unlock`, `/lock` and `/scoreboard` (UltiKits/UltiEssentials#62).
+- 删除三个与其它 UltiKits 组件冲突的别名：`/unlock` 的 `ul`（框架自己的 `/ul`）、`/lock` 的 `l`（UltiLogin 登录命令的 `/l`）、
+  `/scoreboard` 的 `sb`（UltiSideBar 侧边栏命令的 `/sb`）。请使用 `/unlock`、`/lock`、`/scoreboard`（UltiKits/UltiEssentials#62）。
+- Removed the `w` alias of `/warp`: `/w` is vanilla's private-message shortcut (`/w <player> <message>`),
+  which the alias could take over. Use `/warp` (UltiKits/UltiEssentials#60).
+- 删除 `/warp` 的别名 `w`：`/w` 是原版的私聊快捷命令（`/w <玩家> <消息>`），该别名可能把它抢走。请使用 `/warp`
+  （UltiKits/UltiEssentials#60）。
+- Removed the `pardon` alias of `/unban`: `pardon` is the vanilla command that lifts the server's own
+  ban, and the alias made the bare label reach this module or vanilla depending on load order. Use
+  `/unban` for this module's bans (UltiKits/UltiEssentials#48).
+- 删除 `/unban` 的别名 `pardon`：`pardon` 是解除服务器自身封禁的原版命令，该别名会让这一标签视加载顺序进入本模块或原版。
+  本模块的封禁请用 `/unban` 解除（UltiKits/UltiEssentials#48）。
+- Removed the two unban helpers that no command reached — unbanning by player UUID and by IP address —
+  and the `/unbanip` line in `/unban`'s documentation, which named a command that does not exist.
+  `/unban <player>` is unchanged; an IP-unban command is tracked as a feature request,
+  UltiKits/UltiEssentials#63 (UltiKits/UltiEssentials#47).
+- 删除两个没有任何命令调用的解封方法（按玩家 UUID 解封、按 IP 解封），以及 `/unban` 说明中指向不存在命令的
+  `/unbanip` 一行。`/unban <玩家>` 不变；IP 解封命令作为功能需求在 UltiKits/UltiEssentials#63 跟踪（UltiKits/UltiEssentials#47）。
 - Seven language entries no code has displayed since an earlier change in this release removed the
   helpers that used them
   (`feature_disabled` and six `teleport_*` messages) were removed from both language files. Nothing

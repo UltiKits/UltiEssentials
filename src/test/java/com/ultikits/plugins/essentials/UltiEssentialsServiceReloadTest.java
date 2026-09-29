@@ -437,7 +437,9 @@ class UltiEssentialsServiceReloadTest {
         org.slf4j.Logger reloadFailureLog = mock(org.slf4j.Logger.class);
         EssentialsTestHelper.setField(scoreboardService, "failureLog", reloadFailureLog);
 
-        assertThatCode(() -> rewriteAndReload(yaml(false, 6, true, false, 1, false, Collections.<String>emptyList())))
+        // The reloaded title names the player's world, so rebuilding Steve's sidebar reads it and fails.
+        assertThatCode(() -> rewriteAndReload(yaml(false, 6, true, false, 1, false, Collections.<String>emptyList())
+                .replace("title: 'Title'", "title: '%player_world%'")))
                 .doesNotThrowAnyException();
 
         verify(reloadFailureLog).error(anyString(), eq("Steve"), same(worldUnavailable));

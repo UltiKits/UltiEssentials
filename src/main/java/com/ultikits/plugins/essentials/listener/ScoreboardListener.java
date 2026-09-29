@@ -67,8 +67,10 @@ public class ScoreboardListener implements Listener {
                 bukkitPlugin,
                 () -> {
                     // Re-check auto-enable: a /ul reload during the delay may have turned it off,
-                    // and players who join after a reload follow the reloaded value (#28).
-                    if (event.getPlayer().isOnline() && config.isScoreboardAutoEnable()) {
+                    // and players who join after a reload follow the reloaded value (#28). A player
+                    // who turned the sidebar off during the delay keeps it off (#45).
+                    if (event.getPlayer().isOnline() && config.isScoreboardAutoEnable()
+                            && !scoreboardService.hasDeclined(event.getPlayer())) {
                         scoreboardService.enableScoreboard(event.getPlayer());
                     }
                 },
@@ -80,5 +82,6 @@ public class ScoreboardListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerQuit(PlayerQuitEvent event) {
         scoreboardService.disableScoreboard(event.getPlayer());
+        scoreboardService.forgetChoice(event.getPlayer());
     }
 }

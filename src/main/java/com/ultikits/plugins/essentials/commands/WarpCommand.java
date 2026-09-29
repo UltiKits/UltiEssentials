@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(
-    alias = {"warp", "w"},
+    alias = {"warp"},
     permission = "ultiessentials.warp.use",
     description = "essentials.command.warp.description"
 )

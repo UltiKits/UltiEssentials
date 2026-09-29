@@ -105,9 +105,9 @@ class BackCommandTest {
     class TeleportListenerTests {
 
         @Test
-        @DisplayName("Should record location on command teleport")
+        @DisplayName("Should not record a command teleport this module did not start (#39)")
         @SuppressWarnings("unchecked")
-        void shouldRecordLocationOnCommandTeleport() throws Exception {
+        void shouldNotRecordAForeignCommandTeleport() throws Exception {
             World world = EssentialsTestHelper.createMockWorld("world");
             Location from = new Location(world, 100, 64, 200);
             Location to = new Location(world, 500, 64, 500);
@@ -120,22 +120,19 @@ class BackCommandTest {
             Field field = BackCommand.class.getDeclaredField("LAST_LOCATIONS");
             field.setAccessible(true); // NOPMD
             Map<UUID, Location> map = (Map<UUID, Location>) field.get(null);
-            assertThat(map).containsKey(playerUuid);
-            assertThat(map.get(playerUuid)).isEqualTo(from);
+            assertThat(map).doesNotContainKey(playerUuid);
         }
 
         /**
-         * Pins a behaviour found reviewing PR #22: every one of this plugin's own teleport call
-         * sites -- {@code TeleportService} (backing /home and /warp), {@code SpawnCommand},
-         * {@code LobbyCommand} -- calls {@code Player#teleport(Location)} with no explicit
-         * cause, which Bukkit/Paper's {@code Entity#teleport(Location)} javadoc and source both
-         * default to {@code TeleportCause.PLUGIN}, not {@code COMMAND}. Before this fix, /back
-         * after any of those commands recorded nothing.
+         * A teleport another plugin starts has cause {@code PLUGIN}, like this module's own; it is
+         * not recorded, because /back returns only from this module's own commands
+         * (UltiKits/UltiEssentials#39). Recording this module's own teleports is covered by
+         * {@code BackOwnTeleportsTest}, which dispatches them through a real event bus.
          */
         @Test
-        @DisplayName("Should record location on plugin-triggered teleport")
+        @DisplayName("Should not record a plugin teleport this module did not start (#39)")
         @SuppressWarnings("unchecked")
-        void shouldRecordLocationOnPluginTeleport() throws Exception {
+        void shouldNotRecordAForeignPluginTeleport() throws Exception {
             World world = EssentialsTestHelper.createMockWorld("world");
             Location from = new Location(world, 100, 64, 200);
             Location to = new Location(world, 500, 64, 500);
@@ -148,8 +145,7 @@ class BackCommandTest {
             Field field = BackCommand.class.getDeclaredField("LAST_LOCATIONS");
             field.setAccessible(true); // NOPMD
             Map<UUID, Location> map = (Map<UUID, Location>) field.get(null);
-            assertThat(map).containsKey(playerUuid);
-            assertThat(map.get(playerUuid)).isEqualTo(from);
+            assertThat(map).doesNotContainKey(playerUuid);
         }
 
         @Test
@@ -290,25 +286,28 @@ class BackCommandTest {
         }
 
         @Test
-        @DisplayName("aTeleportIsRecordedAndReturnedTo: a teleport event dispatched through Bukkit's real event bus (not a direct method call) is recorded, and /back returns the player there")
-        void aTeleportIsRecordedAndReturnedTo() {
+        @DisplayName("aTeleportIsRecordedAndReturnedTo: /back's own teleport, dispatched through Bukkit's real event bus (not a direct method call), is recorded, so a second /back returns the player to where the first one started")
+        void aTeleportIsRecordedAndReturnedTo() throws Exception {
             // Registers through the real Bukkit event system -- the same call
             // ListenerManager#registerAll makes once the annotation lets it reach this class --
             // proving the wiring actually works, not merely that the annotation is present.
             mockBukkitServer.getPluginManager().registerEvents(liveBackCommand, mockBukkitPlugin);
 
             World world = mockBukkitServer.addSimpleWorld("registration-world");
-            Location from = new Location(world, 100, 64, 200);
-            Location to = new Location(world, 500, 64, 500);
-            mockBukkitPlayer.setLocation(to);
-
-            PlayerTeleportEvent event = new PlayerTeleportEvent(
-                    mockBukkitPlayer, from, to, PlayerTeleportEvent.TeleportCause.COMMAND);
-            mockBukkitServer.getPluginManager().callEvent(event);
+            Location recorded = new Location(world, 100, 64, 200);
+            Location start = new Location(world, 500, 64, 500);
+            mockBukkitPlayer.setLocation(start);
+            Field field = BackCommand.class.getDeclaredField("LAST_LOCATIONS");
+            field.setAccessible(true); // NOPMD
+            @SuppressWarnings("unchecked")
+            Map<UUID, Location> map = (Map<UUID, Location>) field.get(null);
+            map.put(mockBukkitPlayer.getUniqueId(), recorded);
 
             liveBackCommand.back(mockBukkitPlayer);
+            assertThat(mockBukkitPlayer.getLocation()).isEqualTo(recorded);
 
-            assertThat(mockBukkitPlayer.getLocation()).isEqualTo(from);
+            liveBackCommand.back(mockBukkitPlayer);
+            assertThat(mockBukkitPlayer.getLocation()).isEqualTo(start);
         }
 
         /**

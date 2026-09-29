@@ -112,7 +112,7 @@ public class BanCommand extends BaseEssentialsCommand {
     @Override
     protected List<String> suggest(Player player, Command command, String[] args) {
         if (args.length == 1) {
-            return suggestOnlinePlayers(args[0]);
+            return suggestOnlinePlayers(player, args[0]);
         }
         return super.suggest(player, command, args);
     }

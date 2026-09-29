@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -15,13 +16,20 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.*;
 
 import com.ultikits.ultitools.annotations.PostConstruct;
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for managing player scoreboards.
  * <p>
- * 管理玩家计分板的服务。
+ * The private scoreboard this service assigns to a player belongs to this service alone (maintainer
+ * decision 2026-09-27, UltiKits/UltiEssentials#65): another plugin writing onto it - an objective of its
+ * own named {@code ultiessentials}, or a player placed in its own team on that board - is outside the
+ * contract and may be overwritten. The service restores its own objective, sidebar slot and lines, and
+ * changes only what it created there: its objective and the teams it copied from the main scoreboard.
+ * <p>
+ * 管理玩家计分板的服务。本服务换上的私有计分板只归本服务所有；其他插件不应往上面写东西。
  *
  * @author wisdomme
  * @version 1.0.0
@@ -38,11 +46,40 @@ public class ScoreboardService {
 
     private Plugin bukkitPlugin;
 
+    /** The module whose sidebar shares the player's sidebar slot with this one. */
+    private static final String OTHER_SIDEBAR_MODULE = "UltiSideBar";
+
+    /** That module's configuration file, relative to its module folder. */
+    private static final String OTHER_SIDEBAR_CONFIG = "config/sidebar.yml";
+
+    /** That module's switch for its sidebar. */
+    private static final String OTHER_SIDEBAR_KEY = "enabled";
+
+    /** Longest entry text a scoreboard line keeps (the limit older clients enforce). */
+    private static final int MAX_ENTRY_LENGTH = 40;
+
     // Player UUIDs with active scoreboards
     private final Set<UUID> enabledPlayers = ConcurrentHashMap.newKeySet();
 
+    // Players who turned the sidebar off in this session, so the delayed auto-enable on join leaves
+    // them alone (UltiKits/UltiEssentials#45); forgotten when the player quits or turns it on
+    private final Set<UUID> declinedPlayers = ConcurrentHashMap.newKeySet();
+
+    // Each shown player's own sidebar board, reused across updates (UltiKits/UltiEssentials#40)
+    private final Map<UUID, Scoreboard> playerBoards = new ConcurrentHashMap<>();
+
+    // The line entries last written onto each player's board, so an unchanged sidebar is not rewritten
+    private final Map<UUID, List<String>> shownLines = new ConcurrentHashMap<>();
+
+    // The main-scoreboard teams copied onto each player's board, so only those are ever changed or removed
+    private final Map<UUID, Map<String, Team>> copiedTeams = new ConcurrentHashMap<>();
+
     // Main update task
     private BukkitTask updateTask;
+
+    // Set by shutdown() and cleared again only by reload(): once the module is unloaded, a delayed
+    // join callback that still fires is a no-op (UltiKits/UltiEssentials#51)
+    private volatile boolean shutDown;
 
     // Scoreboard manager
     private ScoreboardManager manager;
@@ -71,7 +108,35 @@ public class ScoreboardService {
         // Start update task if enabled
         if (config.isScoreboardEnabled()) {
             startUpdateTask();
+            Bukkit.getScheduler().runTask(bukkitPlugin, this::reportOtherSidebar);
         }
+    }
+
+    /**
+     * Logs one line, on the first server tick after start-up (when every module has been loaded,
+     * whatever their order), when UltiSideBar's sidebar is also enabled: each player keeps whichever
+     * sidebar is shown first, and the other one waits (UltiKits/UltiEssentials#40).
+     */
+    private void reportOtherSidebar() {
+        for (UltiToolsPlugin module : UltiToolsPlugin.getPluginManager().getPluginList()) {
+            if (OTHER_SIDEBAR_MODULE.equals(module.getPluginName())
+                    && isOtherSidebarEnabled(module.getResourceFolderPath())) {
+                failureLog.info(plugin.i18n("essentials.log.scoreboard_other_sidebar"));
+                return;
+            }
+        }
+    }
+
+    /**
+     * Reads UltiSideBar's own switch for its sidebar from that module's configuration file; the
+     * switch defaults to on, as it ships.
+     */
+    private static boolean isOtherSidebarEnabled(String moduleFolder) {
+        File file = new File(moduleFolder, OTHER_SIDEBAR_CONFIG);
+        if (!file.isFile()) {
+            return true;
+        }
+        return YamlConfiguration.loadConfiguration(file).getBoolean(OTHER_SIDEBAR_KEY, true);
     }
     
     /**
@@ -93,6 +158,9 @@ public class ScoreboardService {
                         refreshIsolated(uuid, player);
                     } else {
                         enabledPlayers.remove(uuid);
+                        playerBoards.remove(uuid);
+                        shownLines.remove(uuid);
+                        copiedTeams.remove(uuid);
                         updateFailures.forget(uuid);
                     }
                 }
@@ -123,12 +191,29 @@ public class ScoreboardService {
      * Enables scoreboard for a player.
      */
     public void enableScoreboard(Player player) {
-        if (!config.isScoreboardEnabled()) {
+        if (shutDown || !config.isScoreboardEnabled()) {
+            // After an unload, the delayed join enable must not put a player on a sidebar that
+            // nothing updates or takes down any more (UltiKits/UltiEssentials#51).
             return;
         }
         
+        if (declinedPlayers.contains(player.getUniqueId())) {
+            // An automatic enable (the delayed join enable, a reload that turns the feature on) never
+            // overrides a player who turned the sidebar off this session; only the player's own
+            // /scoreboard on or toggle does, through acceptScoreboard (UltiKits/UltiEssentials#45).
+            return;
+        }
         enabledPlayers.add(player.getUniqueId());
         updateScoreboard(player);
+    }
+
+    /**
+     * Turns the sidebar on because the player asked to: forgets an earlier decline for the session,
+     * then enables it.
+     */
+    public void acceptScoreboard(Player player) {
+        declinedPlayers.remove(player.getUniqueId());
+        enableScoreboard(player);
     }
     
     /**
@@ -136,24 +221,49 @@ public class ScoreboardService {
      */
     public void disableScoreboard(Player player) {
         enabledPlayers.remove(player.getUniqueId());
+        Scoreboard own = playerBoards.remove(player.getUniqueId());
+        shownLines.remove(player.getUniqueId());
+        copiedTeams.remove(player.getUniqueId());
         updateFailures.forget(player.getUniqueId());
         
-        // Give back the server's main scoreboard, not a fresh empty one: name-prefix teams and any
-        // other main-scoreboard content are only visible on the main scoreboard.
-        if (manager != null) {
-            player.setScoreboard(manager.getMainScoreboard());
-        }
+        // Give back the server's main scoreboard, not a fresh empty one -- and only while this
+        // module's own board is on screen (UltiKits/UltiEssentials#40).
+        returnToMainScoreboard(player, own);
     }
     
+    /**
+     * Turns the sidebar off because the player asked to, whether or not it is on yet: the choice is
+     * remembered for the rest of the session, so the delayed auto-enable on join does not turn it
+     * back on a moment later (UltiKits/UltiEssentials#45).
+     */
+    public void declineScoreboard(Player player) {
+        declinedPlayers.add(player.getUniqueId());
+        disableScoreboard(player);
+    }
+
+    /**
+     * Whether the player turned the sidebar off in this session.
+     */
+    public boolean hasDeclined(Player player) {
+        return declinedPlayers.contains(player.getUniqueId());
+    }
+
+    /**
+     * Forgets the player's choice for the session; called when the player quits.
+     */
+    public void forgetChoice(Player player) {
+        declinedPlayers.remove(player.getUniqueId());
+    }
+
     /**
      * Toggles scoreboard for a player.
      */
     public boolean toggleScoreboard(Player player) {
         if (isEnabled(player)) {
-            disableScoreboard(player);
+            declineScoreboard(player);
             return false;
         } else {
-            enableScoreboard(player);
+            acceptScoreboard(player);
             return true;
         }
     }
@@ -167,78 +277,181 @@ public class ScoreboardService {
     
     /**
      * Updates the scoreboard for a player.
+     * <p>
+     * Each player keeps one sidebar board, built on the first update and reused afterwards: the
+     * title and lines are rewritten in place (the lines only when they changed), and the board is
+     * assigned to the player only when it is not already the one on screen. The main scoreboard's
+     * teams are copied onto it on every update, so name prefixes and every other main-board team
+     * stay visible while the sidebar is on (maintainer decision 2026-09-27,
+     * UltiKits/UltiEssentials#40).
      */
     public void updateScoreboard(Player player) {
         if (manager == null || !enabledPlayers.contains(player.getUniqueId())) {
             return;
         }
+        if (isSlotTakenByAnother(player)) {
+            // Another scoreboard holds the sidebar slot; it stays until it is put away, and a later
+            // update shows this sidebar then (UltiKits/UltiEssentials#40, UltiKits/UltiSideBar#26).
+            return;
+        }
 
-        Scoreboard scoreboard = manager.getNewScoreboard();
-        String title = parsePlaceholders(player, config.getScoreboardTitle());
+        String title = colorize(parsePlaceholders(player, config.getScoreboardTitle()));
+        Scoreboard scoreboard = playerBoards.get(player.getUniqueId());
+        Objective objective;
+        // Set when the board no longer shows the remembered lines, so they are drawn again in full.
+        boolean redraw = false;
+        // Set when the objective was created in this update and so holds no score yet.
+        boolean freshObjective = false;
+        if (scoreboard == null) {
+            scoreboard = manager.getNewScoreboard();
+            objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
+            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+            playerBoards.put(player.getUniqueId(), scoreboard);
+            copiedTeams.remove(player.getUniqueId());
+            freshObjective = true;
+        } else {
+            objective = scoreboard.getObjective("ultiessentials");
+            if (objective == null) {
+                // Another plugin removed the objective from this board. The new one starts empty, so
+                // the remembered lines no longer describe what is shown: forget them and draw every line.
+                objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
+                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+                redraw = true;
+                freshObjective = true;
+            } else if (!title.equals(objective.getDisplayName())) {
+                objective.setDisplayName(title);
+            }
+            // The rest of what another plugin can change on this board while the player views it: the
+            // sidebar slot (cleared, or given to another objective) and the scores (reset). The copied
+            // teams and the title are rewritten on every update anyway.
+            if (!objective.equals(scoreboard.getObjective(DisplaySlot.SIDEBAR))) {
+                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+            }
+            List<String> shown = shownLines.get(player.getUniqueId());
+            if (shown != null && !redraw) {
+                for (String entry : shown) {
+                    if (!objective.getScore(entry).isScoreSet()) {
+                        redraw = true;
+                        break;
+                    }
+                }
+            }
+        }
 
-        Objective objective = scoreboard.registerNewObjective(
-            "ultiessentials",
-            "dummy",
-            colorize(title)
-        );
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-
+        // The main board's teams go on first, and every entry of a team on this board counts as taken:
+        // a line equal to one (a %player_name% line for a player with a name prefix) would otherwise be
+        // that team member's own entry, and the copied team's prefix, suffix and colour would format the
+        // sidebar row. Such a line gets a distinct entry that shows the same text.
+        MainTeamMirror.mirror(manager.getMainScoreboard(), scoreboard,
+                copiedTeams.computeIfAbsent(player.getUniqueId(), uuid -> new HashMap<>()));
         List<String> lines = config.getScoreboardLines();
-        int score = lines.size();
-        
+        List<String> entries = new ArrayList<>();
+        Set<String> usedEntries = new HashSet<>();
+        for (Team team : scoreboard.getTeams()) {
+            usedEntries.addAll(team.getEntries());
+        }
         for (String line : lines) {
             String parsedLine = parsePlaceholders(player, line);
             parsedLine = colorize(parsedLine);
             
             // Handle duplicate lines by adding invisible characters
-            parsedLine = ensureUnique(scoreboard, parsedLine);
-            
-            Score scoreEntry = objective.getScore(parsedLine);
-            scoreEntry.setScore(score--);
+            entries.add(ensureUnique(usedEntries, parsedLine));
         }
-        
-        player.setScoreboard(scoreboard);
+        List<String> previous = shownLines.get(player.getUniqueId());
+        if (redraw || !entries.equals(previous)) {
+            // The previous lines go with this module's own objective, replaced by an empty one. Resetting
+            // them with Scoreboard#resetScores would clear each entry on every objective of the board,
+            // another plugin's included, whenever that plugin scores the same name.
+            if (previous != null && !freshObjective) {
+                objective.unregister();
+                objective = scoreboard.registerNewObjective("ultiessentials", "dummy", title);
+                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+            }
+            int score = entries.size();
+            for (String entry : entries) {
+                Score scoreEntry = objective.getScore(entry);
+                scoreEntry.setScore(score--);
+            }
+            shownLines.put(player.getUniqueId(), entries);
+        }
+
+        if (!scoreboard.equals(player.getScoreboard())) {
+            player.setScoreboard(scoreboard);
+        }
     }
     
     /**
-     * Ensures a line is unique by adding invisible characters if necessary.
+     * Whether another plugin's scoreboard holds the player's sidebar slot: the player views neither
+     * the server's main scoreboard nor this module's own board. The first sidebar shown keeps the
+     * slot; this module's sidebar waits (maintainer decision 2026-09-27, UltiKits/UltiEssentials#40).
+     *
+     * @param player the player
+     * @return {@code true} if this module's sidebar yields to the scoreboard on screen
      */
-    private String ensureUnique(Scoreboard scoreboard, String line) {
-        String original = line;
-        String result = line;
+    public boolean isSlotTakenByAnother(Player player) {
+        Scoreboard current = player.getScoreboard();
+        if (current == null || manager == null || current.equals(playerBoards.get(player.getUniqueId()))) {
+            return false;
+        }
+        return !current.equals(manager.getMainScoreboard());
+    }
+
+    /**
+     * Returns the player to the main scoreboard, but only while this module's own board is the one
+     * on screen: another plugin's scoreboard is left where it is.
+     */
+    private void returnToMainScoreboard(Player player, Scoreboard own) {
+        if (manager != null && own != null && own.equals(player.getScoreboard())) {
+            player.setScoreboard(manager.getMainScoreboard());
+        }
+    }
+
+    /**
+     * Makes a line unique among the lines of this update: it is truncated to the entry length limit
+     * first and only then compared, so two lines that differ only after the limit still become two
+     * entries (UltiKits/UltiEssentials#41). A duplicate gets an invisible colour code appended, and
+     * enough of its text is cut to keep the whole entry within the limit.
+     */
+    private String ensureUnique(Set<String> usedEntries, String line) {
+        String base = truncate(line, MAX_ENTRY_LENGTH);
+        String result = base;
         int attempt = 0;
 
-        while (scoreboard.getEntries().contains(result) && attempt < 16) {
-            result = original + ChatColor.values()[attempt].toString();
+        while (usedEntries.contains(result) && attempt < 16) {
+            String code = ChatColor.values()[attempt].toString();
+            result = truncate(base, MAX_ENTRY_LENGTH - code.length()) + code;
             attempt++;
         }
 
-        // Truncate if too long (scoreboard limit is 40 characters in modern MC)
-        if (result.length() > 40) {
-            result = result.substring(0, 40);
-        }
-
+        usedEntries.add(result);
         return result;
+    }
+
+    /**
+     * Cuts text to at most {@code max} characters, dropping a trailing colour-code character that
+     * the cut would leave without its code.
+     */
+    private static String truncate(String text, int max) {
+        if (text.length() <= max) {
+            return text;
+        }
+        String cut = text.substring(0, max);
+        if (cut.endsWith(String.valueOf(ChatColor.COLOR_CHAR))) {
+            cut = cut.substring(0, cut.length() - 1);
+        }
+        return cut;
     }
     
     /**
-     * Parses PlaceholderAPI placeholders.
+     * Fills this module's own placeholders, then PlaceholderAPI's when it is installed, so the shipped
+     * default lines show values whether or not PlaceholderAPI is there (UltiKits/UltiEssentials#59).
      */
     private String parsePlaceholders(Player player, String text) {
+        String filled = BuiltInPlaceholders.forScoreboard(player, text);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            return PlaceholderAPI.setPlaceholders(player, text);
+            return PlaceholderAPI.setPlaceholders(player, filled);
         }
-        
-        // Fallback - basic placeholders
-        text = text.replace("%player_name%", player.getName());
-        text = text.replace("%player_health%", String.valueOf((int) player.getHealth()));
-        text = text.replace("%player_food%", String.valueOf(player.getFoodLevel()));
-        text = text.replace("%player_level%", String.valueOf(player.getLevel()));
-        text = text.replace("%player_world%", player.getWorld().getName());
-        text = text.replace("%online_players%", String.valueOf(Bukkit.getOnlinePlayers().size()));
-        text = text.replace("%max_players%", String.valueOf(Bukkit.getMaxPlayers()));
-        
-        return text;
+        return filled;
     }
     
     /**
@@ -252,17 +465,18 @@ public class ScoreboardService {
      * Stops the update task and cleans up.
      */
     public void shutdown() {
+        shutDown = true;
         if (updateTask != null) {
             updateTask.cancel();
             updateTask = null;
         }
         
-        // Return every player who had a sidebar to the main scoreboard
+        // Return every player who is viewing this module's sidebar to the main scoreboard
         for (UUID uuid : enabledPlayers) {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && manager != null) {
                 try {
-                    player.setScoreboard(manager.getMainScoreboard());
+                    returnToMainScoreboard(player, playerBoards.get(uuid));
                 } catch (RuntimeException e) {
                     failureLog.error(plugin.i18n("essentials.log.scoreboard_reset_failed"), player.getName(), e);
                 }
@@ -270,6 +484,9 @@ public class ScoreboardService {
         }
         
         enabledPlayers.clear();
+        playerBoards.clear();
+        shownLines.clear();
+        copiedTeams.clear();
         updateFailures.clear();
     }
     
@@ -292,6 +509,7 @@ public class ScoreboardService {
         boolean wasRunning = updateTask != null;
         Set<UUID> shownBeforeReload = new HashSet<>(enabledPlayers);
         shutdown();
+        shutDown = false;
         
         if (config.isScoreboardEnabled()) {
             startUpdateTask();

@@ -9,6 +9,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- On UltiTools-API 6.3.0 with JSON storage (`datasource.type: json`), the start-up repair of records written
+  before UltiKits/UltiEssentials#34 gives them their primary key again. 6.3.0 hands out copies of stored
+  records, so the repair wrote nothing there, logged an error at every start, and `/delhome`, `/delwarp`,
+  `/unban` and an owner's lock removal kept failing on those records. If writing a record's key fails, every
+  record of that type is left exactly as it was and the next start tries again (UltiKits/UltiEssentials#69).
+- 在 UltiTools-API 6.3.0 上使用 JSON 存储（`datasource.type: json`）时，启动修复重新能为 #34 修复之前写入的记录补上主键。
+  6.3.0 读取记录时返回副本，修复因此什么都没写入、每次启动都记录一条错误，`/delhome`、`/delwarp`、`/unban` 以及主人拆除上锁
+  容器对这些记录仍然无效。若某条记录的主键写入失败，该类型的所有记录保持原样，下次启动重试（UltiKits/UltiEssentials#69）。
 - The module loads on UltiTools-API 6.3.0. 6.3.0 removes the configuration object the removed-settings
   warning read, so this module was refused at load; the warning now asks the framework whether a removed key
   is in `config/essentials.yml`, and warns exactly as before at start-up and on every `/ul reload` for a file

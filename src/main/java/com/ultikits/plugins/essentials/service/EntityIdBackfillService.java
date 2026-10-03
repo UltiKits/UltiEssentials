@@ -268,15 +268,18 @@ public class EntityIdBackfillService {
      */
     private <T extends UuidKeyedDataEntity> int rewriteAll(DataOperator<T> operator,
                                                            List<T> candidates, String label) {
-        // The delete is needed only where a row can exist independently of the object that
-        // represents it. A cache-backed store hands out the instances it holds, so insert's
-        // onCreate() writes the key onto the stored record itself and the delete would remove and
-        // re-add the same entry -- while costing a full-cache Gson pass per call, because the
-        // framework's own del(WhereCondition) serialises every entry to evaluate the condition. That
-        // was the second superlinear term behind the repair's slowness, and dropping the delete where
-        // it is redundant removes it rather than shrinking it. Whether the key really was written is
-        // then confirmed below rather than assumed, so relying on that behaviour cannot fail
-        // silently.
+        // The legacy entry has to go before the keyed record is written back, on every store.
+        // A row-backed store is told by the identity column, because the id column it would key on
+        // is the NULL being repaired. A cache-backed store is told by the identity too, through
+        // delById: the entry is cached under it, so this is one lookup. It is never told through
+        // del(WhereCondition), which on the JSON backend serialises every cached entry to evaluate
+        // the condition -- the second superlinear term behind the repair's slowness, measured at
+        // 11.64 s for 800 records before it was removed and 0.20 s after. Before UltiTools-API 6.3.0
+        // a cache-backed store needed no delete at all, because insert's onCreate() wrote the key
+        // onto the cached instance itself; from 6.3.0 reads are detached copies and insert caches a
+        // copy with putIfAbsent (UltiKits/UltiTools-Reborn#522), so without the delete the insert is
+        // a no-op and nothing is repaired (UltiKits/UltiEssentials#69). Whether the key really was
+        // written is confirmed below rather than assumed.
         boolean cacheBacked = operator instanceof Cached;
         Set<String> expected = new HashSet<>();
         for (T record : candidates) {
@@ -285,20 +288,36 @@ public class EntityIdBackfillService {
         try {
             operator.transaction(() -> {
                 for (T record : candidates) {
-                    if (!cacheBacked) {
+                    if (cacheBacked) {
+                        operator.delById(record.getId());
+                        operator.insert(record);
+                        // The delete above already removed the legacy entry, so an insert that
+                        // reached nothing would lose the record: fail the transaction instead, whose
+                        // rollback restores every entry this repair removed.
+                        T written = operator.getById(record.getId());
+                        if (written == null || !record.getId().equals(written.getPersistedId())) {
+                            throw new IllegalStateException("the keyed record did not reach the store");
+                        }
+                    } else {
                         operator.del(WhereCondition.builder()
                                 .column("uuid").value(record.getId()).build());
+                        operator.insert(record);
                     }
-                    operator.insert(record);
                 }
                 return null;
             });
-            int written = 0;
+            // A record counts as repaired only when its identity is held by a keyed record and by no
+            // un-keyed copy: an entry cached under some other name survives the delete by identity,
+            // and counting it would make the INFO line claim a repair the store does not hold.
+            Set<String> keyed = new HashSet<>();
+            Set<String> stillUnkeyed = new HashSet<>();
             for (T record : operator.getAll()) {
-                if (expected.contains(record.getId()) && record.getPersistedId() != null) {
-                    written++;
+                if (expected.contains(record.getId())) {
+                    (record.getPersistedId() != null ? keyed : stillUnkeyed).add(record.getId());
                 }
             }
+            keyed.removeAll(stillUnkeyed);
+            int written = keyed.size();
             if (written != candidates.size()) {
                 log.error(plugin.i18n("essentials.log.repair_partial"), candidates.size(), label, written);
             }

@@ -16,22 +16,22 @@ import org.bukkit.Location;
 @ConfigEntity("config/lobby.yml")
 public class LobbyConfig extends AbstractConfigEntity {
 
-    @ConfigEntry(path = "lobby.location.world", comment = "主城世界名称")
+    @ConfigEntry(path = "lobby.location.world", comment = "{essentials.config.lobby.lobby.location.world}")
     private String world = "world";
 
-    @ConfigEntry(path = "lobby.location.x", comment = "X 坐标")
+    @ConfigEntry(path = "lobby.location.x", comment = "{essentials.config.lobby.lobby.location.x}")
     private double x = 0.0;
 
-    @ConfigEntry(path = "lobby.location.y", comment = "Y 坐标")
+    @ConfigEntry(path = "lobby.location.y", comment = "{essentials.config.lobby.lobby.location.y}")
     private double y = 64.0;
 
-    @ConfigEntry(path = "lobby.location.z", comment = "Z 坐标")
+    @ConfigEntry(path = "lobby.location.z", comment = "{essentials.config.lobby.lobby.location.z}")
     private double z = 0.0;
 
-    @ConfigEntry(path = "lobby.location.yaw", comment = "水平朝向")
+    @ConfigEntry(path = "lobby.location.yaw", comment = "{essentials.config.lobby.lobby.location.yaw}")
     private double yaw = 0.0;
 
-    @ConfigEntry(path = "lobby.location.pitch", comment = "垂直朝向")
+    @ConfigEntry(path = "lobby.location.pitch", comment = "{essentials.config.lobby.lobby.location.pitch}")
     private double pitch = 0.0;
 
     public LobbyConfig() {

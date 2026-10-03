@@ -16,28 +16,28 @@ import org.bukkit.Location;
 @ConfigEntity("config/spawn.yml")
 public class SpawnConfig extends AbstractConfigEntity {
 
-    @ConfigEntry(path = "spawn.location.world", comment = "出生点世界名称")
+    @ConfigEntry(path = "spawn.location.world", comment = "{essentials.config.spawn.spawn.location.world}")
     private String world = "world";
 
-    @ConfigEntry(path = "spawn.location.x", comment = "X 坐标")
+    @ConfigEntry(path = "spawn.location.x", comment = "{essentials.config.spawn.spawn.location.x}")
     private double x = 0.0;
 
-    @ConfigEntry(path = "spawn.location.y", comment = "Y 坐标")
+    @ConfigEntry(path = "spawn.location.y", comment = "{essentials.config.spawn.spawn.location.y}")
     private double y = 64.0;
 
-    @ConfigEntry(path = "spawn.location.z", comment = "Z 坐标")
+    @ConfigEntry(path = "spawn.location.z", comment = "{essentials.config.spawn.spawn.location.z}")
     private double z = 0.0;
 
-    @ConfigEntry(path = "spawn.location.yaw", comment = "水平朝向")
+    @ConfigEntry(path = "spawn.location.yaw", comment = "{essentials.config.spawn.spawn.location.yaw}")
     private double yaw = 0.0;
 
-    @ConfigEntry(path = "spawn.location.pitch", comment = "垂直朝向")
+    @ConfigEntry(path = "spawn.location.pitch", comment = "{essentials.config.spawn.spawn.location.pitch}")
     private double pitch = 0.0;
 
-    @ConfigEntry(path = "spawn.teleport-on-first-join", comment = "首次加入时传送到出生点")
+    @ConfigEntry(path = "spawn.teleport-on-first-join", comment = "{essentials.config.spawn.spawn.teleport-on-first-join}")
     private boolean teleportOnFirstJoin = true;
 
-    @ConfigEntry(path = "spawn.teleport-on-respawn", comment = "重生时传送到出生点")
+    @ConfigEntry(path = "spawn.teleport-on-respawn", comment = "{essentials.config.spawn.spawn.teleport-on-respawn}")
     private boolean teleportOnRespawn = true;
 
     public SpawnConfig() {

@@ -18,13 +18,13 @@ import lombok.Setter;
 @ConfigEntity("config/motd.yml")
 public class MotdConfig extends AbstractConfigEntity {
 
-    @ConfigEntry(path = "motd.line1", comment = "MOTD 第一行")
+    @ConfigEntry(path = "motd.line1", comment = "{essentials.config.motd.motd.line1}")
     private String line1 = SHIPPED_LINE1;
 
-    @ConfigEntry(path = "motd.line2", comment = "MOTD 第二行")
+    @ConfigEntry(path = "motd.line2", comment = "{essentials.config.motd.motd.line2}")
     private String line2 = SHIPPED_LINE2;
 
-    @ConfigEntry(path = "motd.max-players", comment = "显示的最大玩家数 (-1 使用服务器默认)")
+    @ConfigEntry(path = "motd.max-players", comment = "{essentials.config.motd.motd.max-players}")
     private int maxPlayers = -1;
 
     /** The catalogue key of the first MOTD line's text in the server's language. */

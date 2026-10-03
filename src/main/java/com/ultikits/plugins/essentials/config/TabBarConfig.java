@@ -21,10 +21,10 @@ public class TabBarConfig extends AbstractConfigEntity {
     // The Java default is the header every earlier version shipped: the framework writes it for a
     // missing key, and materializeText() then rewrites it in the server's language (maintainer
     // decision 2026-09-25, UltiKits/UltiEssentials#26).
-    @ConfigEntry(path = "tabbar.header", comment = "Tab 栏头部")
+    @ConfigEntry(path = "tabbar.header", comment = "{essentials.config.tabbar.tabbar.header}")
     private String header = SHIPPED_HEADER;
 
-    @ConfigEntry(path = "tabbar.footer", comment = "Tab 栏底部，支持 %online% %max% 变量")
+    @ConfigEntry(path = "tabbar.footer", comment = "{essentials.config.tabbar.tabbar.footer}")
     private String footer = SHIPPED_FOOTER;
 
     /** The catalogue key of the header's text in the server's language. */

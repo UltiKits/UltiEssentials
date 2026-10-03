@@ -326,7 +326,7 @@ public class EssentialsConfig extends AbstractConfigEntity {
      * a blank {@code scoreboardTitle} or empty {@code scoreboardLines} is never materialized -- both are
      * the operator's way to show nothing, exactly as at {@code origin/master}, and {@code @NotEmpty}
      * already refuses a blank {@code scoreboardTitle} before this runs. Idempotent. Must run after the
-     * module's language is loaded ({@code registerSelf()} and {@code onReload()}), never from a change
+     * module's language is loaded ({@code registerSelf()} and {@code onReload(ReloadReport)}), never from a change
      * listener; the caller saves the file when this returns {@code true}.
      *
      * @param text catalogue key to text in the server's language, from this jar's own catalogue

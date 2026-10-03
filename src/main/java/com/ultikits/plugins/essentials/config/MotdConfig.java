@@ -51,7 +51,7 @@ public class MotdConfig extends AbstractConfigEntity {
      * built-in text -- the line an earlier version shipped, or this jar's text for it in any language
      * -- and differs from the current text. Any other value is the operator's and is kept. A blank
      * value is never materialized. Idempotent. Must run after the module's language is loaded
-     * ({@code registerSelf()} and {@code onReload()}), never from a change listener; the caller saves
+     * ({@code registerSelf()} and {@code onReload(ReloadReport)}), never from a change listener; the caller saves
      * the file when this returns {@code true}.
      *
      * @param text catalogue key to text in the server's language, from this jar's own catalogue

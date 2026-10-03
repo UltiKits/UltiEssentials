@@ -66,7 +66,7 @@ import java.util.jar.JarFile;
  * <p>
  * The caller rewrites its fields with the returned values and saves the file once when anything
  * changed. It must run after the module's language is loaded ({@code registerSelf()} and
- * {@code onReload()}), never from a configuration change listener, which the framework fires before
+ * {@code onReload(ReloadReport)}), never from a configuration change listener, which the framework fires before
  * it reloads the language.
  */
 public final class ConfigTextDefaults {

@@ -103,6 +103,8 @@
   "essentials.log.repair_failed": "The stored-primary-key repair failed; records written before UltiKits/UltiEssentials#34 was fixed were left as they are, and the repair will run again on the next start-up",
   "essentials.log.reload_unreachable": "The reload could not reach %s; it is still running against the configuration it was started with",
   "essentials.log.reload_failed": "Reload of %s failed; the other services were still reloaded",
+  "essentials.reload.partial_unreachable": "%s could not be reached and was not restarted; it still runs with the configuration it was started with",
+  "essentials.reload.partial_failed": "%s did not restart: %s",
   "essentials.command.armorsee.description": "View a player's equipment",
   "essentials.help.armorsee": "Use /armorsee <player> to view a player's equipment",
   "essentials.command.back.description": "Return to your previous teleport location",

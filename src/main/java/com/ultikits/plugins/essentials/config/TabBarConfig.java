@@ -52,7 +52,7 @@ public class TabBarConfig extends AbstractConfigEntity {
      * language -- and differs from the current text. Any other value is the operator's and is kept,
      * including a blank one: neither field carries {@code @NotEmpty}, a blank header or footer shows
      * nothing exactly as at {@code origin/master}, and a blank value is never materialized. Idempotent.
-     * Must run after the module's language is loaded ({@code registerSelf()} and {@code onReload()}),
+     * Must run after the module's language is loaded ({@code registerSelf()} and {@code onReload(ReloadReport)}),
      * never from a change listener; the caller saves the file when this returns {@code true}.
      *
      * @param text catalogue key to text in the server's language, from this jar's own catalogue

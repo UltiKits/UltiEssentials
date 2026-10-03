@@ -9,6 +9,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `/ul reload UltiEssentials` no longer replies that the module reloaded when one of its three background
+  services (scheduled commands, scoreboard, name prefixes) did not restart: the reply now says the reload was
+  partial and names the service and why, and the framework logs its partial-reload warning instead of its
+  success line. The other services still restart (UltiKits/UltiEssentials#66).
+- `/ul reload UltiEssentials` 在三个后台服务（定时命令、计分板、头顶称号）中有服务未能重启时，不再回复模块已重载：回复会说明
+  这是一次部分重载，并指出是哪个服务、原因是什么；框架记录的也是部分重载警告而不是成功日志。其他服务仍会重启
+  （UltiKits/UltiEssentials#66）。
 - The comments above the 78 keys of this module's five configuration files (`config/essentials.yml`,
   `config/lobby.yml`, `config/motd.yml`, `config/spawn.yml`, `config/tabbar.yml`) now come from the module's
   language files: a server set to `language: en` writes English comments on a fresh install (they were

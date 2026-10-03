@@ -357,10 +357,10 @@ UltiTools 6.3.0 makes `UltiToolsPlugin#reloadSelf()` and `#unregisterSelf()` `fi
 methods. Before UltiKits/UltiEssentials#23's lifecycle migration this module overrode both with a
 body that only logged a line, replacing the framework's own steps; both overrides were deleted
 rather than renamed, and it prints no reload or unload line of its own. It declares two hooks,
-`onReload()` (UltiKits/UltiEssentials#28) and `onUnregister()` (UltiKits/UltiEssentials#43).
+`onReload(ReloadReport)` (UltiKits/UltiEssentials#28, reporting since UltiKits/UltiEssentials#66) and `onUnregister()` (UltiKits/UltiEssentials#43).
 `/ul reload UltiEssentials` runs the framework's reload steps (configuration reload, language
 refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
-per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload()`, which calls
+per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload(ReloadReport)`, which calls
 `reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
 (see `## Configuration` for what each restart does) after first repeating the start-up check for
 removed settings left in `config/essentials.yml` (`ultiessentials.lifecycle.removed-key-warning`),
@@ -372,8 +372,10 @@ only after a source change — a renamed service, one moved out of `scanBasePack
 registered under an interface type. They are guards against that, not states an operator can
 configure into, and what holds them instead is `UltiEssentialsServiceUnloadTest` (three tests)
 and `UltiEssentialsServiceReloadTest#unresolvableServiceIsReportedOnReload`, each pinned by its
-own mutation pair. Note also that `/ul reload <name>` replies success unconditionally, so the
-reload warning reaches the console and never the sender (UltiKits/UltiTools-Reborn#529).
+own mutation pair. Since UltiKits/UltiEssentials#66 a service that cannot be resolved or whose
+`reload()` throws is also recorded in the framework's `ReloadReport`, naming the service, so
+`/ul reload UltiEssentials` tells the sender the reload was partial instead of replying success
+(`ultiessentials.lifecycle.reload-partial`, UltiKits/UltiTools-Reborn#529).
 `/upm uninstall UltiEssentials` runs `onUnregister()` first — it calls `shutdown()` on
 `ScheduledCommandService`, `ScoreboardService`, `NamePrefixService` and `TeleportService`, each on
 its own and each even when an earlier one fails, then reports the first failure — and only then the
@@ -400,8 +402,9 @@ container injected into `SpeedCommand`, which reads `features.speed.max-speed` a
 observable the first row below uses. The second row turns name prefixes on through a reload, the
 third turns the scoreboard off through a reload, the fourth reads the warnings a removed setting left
 in the file produces, the fifth unloads the module and reads whether
-its repeating tasks stopped, and the sixth unloads it while a player is vanished and reads that the
-vanish is lifted for everyone.
+its repeating tasks stopped, the sixth unloads it while a player is vanished and reads that the
+vanish is lifted for everyone, and the seventh states that a service which does not restart makes
+the reload partial.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
@@ -411,6 +414,7 @@ vanish is lifted for everyone.
 | ultiessentials.lifecycle.removed-key-warning | At start-up and on every `/ul reload UltiEssentials`, log one WARN line for each setting this module has removed that is still in the operator's `config/essentials.yml` — `features.recall.enabled` (UltiKits/UltiEssentials#27) — naming the module, the file and the key and saying where the setting's job went (`UltiKits/UltiEssentials#53`, the `/recall` feature request); `features.wild.cooldown` is a live key and is never reported; a key holding an empty (null) value counts as present; a file without the removed key produces no such line; presence is read through the framework's `isPresentInFile` (UltiTools-API 6.3.0 removed the parsed-file accessor, UltiKits/UltiEssentials#68), so a file the framework could not read or parse produces no removed-key line — only the framework's own SEVERE `Cannot load config/essentials.yml` line — and a missing configuration bean produces one line saying the file was not checked rather than none | event | start the server, or run `/ul reload UltiEssentials`, with a removed key left in `plugins/UltiTools/pluginConfig/UltiEssentials/config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#warnAboutRemovedSettings, RemovedConfigKeys#warningsFor |
 | ultiessentials.lifecycle.unload-tasks | `/upm uninstall UltiEssentials` stops every repeating task this module started: configured entries of `features.scheduled-commands.commands` stop being dispatched to the console, the sidebar and name-prefix update tasks stop, and a teleport warmup still counting down is cancelled rather than completed. Players who had a sidebar are returned to the server's main scoreboard and this module's name-prefix team entries are removed, although the now-empty teams stay registered. Before UltiKits/UltiEssentials#43 the module declared no `onUnregister()` hook, so all of these kept running against the uninstalled module until the server was restarted while the uninstall reported success. The one-shot delayed tasks are covered too (UltiKits/UltiEssentials#51, fixed): a pending `/tpa`/`/tpahere` request's expiry is cancelled, so neither player gets an expiry message from the uninstalled module, and a player who joined in the second before the uninstall is not put on a sidebar or into a name-prefix team afterwards, because the delayed join callbacks do nothing once their service is shut down | event | `/upm uninstall UltiEssentials` from the server console (framework calls `unregisterSelf()`, which runs `onUnregister()` and then unregisters this module's commands and listeners) | n/a | n/a | admin | brief | UltiEssentials#onUnregister, ScheduledCommandService#shutdown, ScoreboardService#shutdown, NamePrefixService#shutdown, TeleportService#shutdown, TpaService#shutdown |
 | ultiessentials.lifecycle.unload-reveals-vanished | `/upm uninstall UltiEssentials` first shows every player vanished with `/hide` to every other online player, using the same `UltiTools` plugin reference `/hide` used to hide them, and forgets all vanish state (including players who already left), so a reinstall starts consistent with what players see. Before the fix for UltiKits/UltiEssentials#32 the hides outlived the module, because they are recorded against the `UltiTools` Bukkit plugin, which stays enabled: a vanished player stayed hidden from the players online when they vanished, became visible to later joiners, and could not un-vanish until they relogged. The vanished player is not messaged | event | `/upm uninstall UltiEssentials` from the server console while a player is vanished | n/a | n/a | admin | brief | UltiEssentials#onUnregister, HideCommand#revealAllVanished |
+| ultiessentials.lifecycle.reload-partial | When one of the three services `/ul reload UltiEssentials` restarts (`ScheduledCommandService`, `ScoreboardService`, `NamePrefixService`) cannot be resolved or its `reload()` throws, the module still restarts the others, logs the failure naming the service (WARNING or SEVERE, as before), and records it in the framework's `ReloadReport` as `<Service> could not be reached and was not restarted; …` or `<Service> did not restart: <cause>`, so the sender's reply is `Module UltiEssentials reloaded partially; not reloaded: <reasons>` and the framework logs `Module 'UltiEssentials' reloaded partially; not reloaded: <reasons>` instead of the plain success line; a reload in which all three restart is reported as a plain success. Before this, `/ul reload UltiEssentials` replied success unconditionally (UltiKits/UltiEssentials#66, UltiKits/UltiTools-Reborn#529) | event | `/ul reload UltiEssentials` | n/a | n/a | admin | brief | UltiEssentials#onReload, UltiEssentials#reloadService |
 
 ## Data Persistence
 

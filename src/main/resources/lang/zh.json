@@ -103,6 +103,8 @@
   "essentials.log.repair_failed": "存储主键修复失败；在 UltiKits/UltiEssentials#34 修复之前写入的记录保持原样，下次启动时会再次执行修复",
   "essentials.log.reload_unreachable": "重载无法访问 %s；它仍在使用启动时的配置运行",
   "essentials.log.reload_failed": "重载 %s 失败；其他服务仍已重载",
+  "essentials.reload.partial_unreachable": "无法访问 %s，未重启；它仍在使用启动时的配置运行",
+  "essentials.reload.partial_failed": "%s 未能重启：%s",
   "essentials.command.armorsee.description": "查看玩家装备",
   "essentials.help.armorsee": "使用 /armorsee <玩家> 查看玩家装备",
   "essentials.command.back.description": "返回上一个传送点",

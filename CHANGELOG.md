@@ -9,6 +9,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The module loads on UltiTools-API 6.3.0. 6.3.0 removes the configuration object the removed-settings
+  warning read, so this module was refused at load; the warning now asks the framework whether a removed key
+  is in `config/essentials.yml`, and warns exactly as before at start-up and on every `/ul reload` for a file
+  holding one (a key left with an empty value included) and not at all otherwise. A file the framework could
+  not read or parse produces the framework's own `Cannot load` line and no removed-setting warning
+  (UltiKits/UltiEssentials#68).
+- 本模块可在 UltiTools-API 6.3.0 上加载。6.3.0 删除了「已删除配置项」警告所读取的配置对象，本模块因此无法加载；现在改为
+  向框架询问 `config/essentials.yml` 中是否仍有某个已删除的键，启动时和每次 `/ul reload` 时的警告与之前完全一致（值为空的
+  键同样会报告），文件中没有时不报。框架无法读取或解析的文件只会出现框架自己的 `Cannot load` 日志，不再报已删除配置项
+  （UltiKits/UltiEssentials#68）。
 - `/back` now returns only from teleports this module's own commands started (`/home`, `/warp`,
   `/spawn`, `/lobby`, `/wild`, an accepted `/tpa` or `/tpahere`, and `/back` itself). Another plugin's
   teleport or a vanilla `/tp` no longer gives `/back` a place to return to, so a teleport by something

@@ -1044,9 +1044,11 @@ class EssentialsConfigTextTest {
     /** The module's {@code onReload()} (protected), as the framework calls it after rebuilding the language. */
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")
     private void reload() throws Exception {
-        Method onReload = UltiEssentials.class.getDeclaredMethod("onReload");
+        // The framework calls the reload hook with a fresh report (UltiKits/UltiEssentials#66).
+        Method onReload = com.ultikits.ultitools.abstracts.UltiToolsPlugin.class
+                .getDeclaredMethod("onReload", com.ultikits.ultitools.abstracts.ReloadReport.class);
         onReload.setAccessible(true);
-        onReload.invoke(plugin);
+        onReload.invoke(plugin, new com.ultikits.ultitools.abstracts.ReloadReport());
     }
 
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration")

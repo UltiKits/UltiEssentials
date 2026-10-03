@@ -10,6 +10,7 @@ import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.UltiTools;
+import com.ultikits.ultitools.abstracts.ReloadReport;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.ConfigEntry;
 import com.ultikits.ultitools.context.SimpleContainer;
@@ -494,13 +495,14 @@ class UltiEssentialsRemovedConfigKeyTest {
         void run() throws Exception;
     }
 
-    // onReload() is protected in the framework's package; reloadSelf() calls it virtually, and so
-    // does this reflective call, so it reaches whatever this module declares.
+    // onReload(ReloadReport) is protected in the framework's package; reloadSelf() calls it virtually
+    // with a fresh report, and so does this reflective call, so it reaches whatever this module
+    // declares (UltiKits/UltiEssentials#66).
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration") // invokes the protected framework hook as reloadSelf() does
     private static void invokeOnReload(UltiToolsPlugin plugin) throws Exception {
-        Method hook = UltiToolsPlugin.class.getDeclaredMethod("onReload");
+        Method hook = UltiToolsPlugin.class.getDeclaredMethod("onReload", ReloadReport.class);
         hook.setAccessible(true);
-        hook.invoke(plugin);
+        hook.invoke(plugin, new ReloadReport());
     }
 
     // No supported setter exists: the field is private, its accessors are protected final, and the

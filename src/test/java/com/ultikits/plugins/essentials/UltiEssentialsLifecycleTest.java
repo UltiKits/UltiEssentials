@@ -44,4 +44,13 @@ class UltiEssentialsLifecycleTest {
 
         assertThat(lifecycleMethods).containsExactlyInAnyOrder("onReload", "onUnregister");
     }
+
+    @Test
+    @DisplayName("#66: the reload hook it declares is onReload(ReloadReport), so a failed part reaches /ul reload's reply")
+    void declaresTheReportingReloadHook() throws Exception {
+        Method hook = UltiEssentials.class.getDeclaredMethod("onReload",
+                com.ultikits.ultitools.abstracts.ReloadReport.class);
+
+        assertThat(hook.getDeclaringClass()).isEqualTo(UltiEssentials.class);
+    }
 }

@@ -469,15 +469,15 @@ class EntityIdBackfillServiceTest {
         }
 
         @Test
-        @DisplayName("a store that hands out detached copies is reported as repairing nothing, not as succeeding")
-        void aDetachedStoreIsNotReportedAsRepaired() throws Exception {
-            // Skipping the delete on a cache-backed store depends on that store handing out the
-            // instances it holds, so insert's onCreate() writes the key onto the stored record. If
-            // that ever stops being true -- and the framework has an open question about exactly this
-            // (UltiKits/UltiTools-Reborn#522 asks whether reads should be detached) -- the repair
-            // would write nothing. It must then SAY so rather than counting the records as repaired,
-            // which is what the confirmation step exists for. Without it, this reports 4 repaired and
-            // the records still have no key.
+        @DisplayName("#69: a cache-backed store whose insert silently writes nothing rolls the whole type back -- nothing is destroyed, nothing is reported repaired")
+        void anInsertThatWritesNothingRollsBackAndDestroysNothing() throws Exception {
+            // From UltiTools-API 6.3.0 the legacy entry is removed by its identity before the keyed
+            // record is inserted (UltiKits/UltiEssentials#69). An insert that silently reaches nothing
+            // after that delete would lose the record, so each record's key is confirmed inside the
+            // transaction and a missing one fails it: the JSON operator's rollback restores every
+            // entry. Before #69 this store modelled the opposite hazard (reads detached, insert
+            // reaching nothing, no delete) -- on 6.3.0 that is the real JSON operator, and the cases
+            // above run against it.
             for (int i = 0; i < 4; i++) {
                 writeLegacyRecord("homes", home("home" + i));
             }
@@ -719,6 +719,10 @@ class EntityIdBackfillServiceTest {
         @Override public List<T> getLike(String column, String value, LikeType likeType) { return detach(delegate.getLike(column, value, likeType)); }
         @Override public List<T> page(int page, int size, com.ultikits.ultitools.entities.WhereCondition... c) { return detach(delegate.page(page, size, c)); }
         @Override public void insert(T obj) { /* a detached entity reaches nothing the store keeps */ }
+        // The real operator's transaction, so its rollback restores what a failed repair removed.
+        @Override public <R> R transaction(java.util.concurrent.Callable<R> action) throws Exception {
+            return delegate.transaction(action);
+        }
         @Override public void flush() { /* nothing of its own to write */ }
         @Override public void gc() { /* nothing of its own to collect */ }
         @Override public void del(com.ultikits.ultitools.entities.WhereCondition... c) { delegate.del(c); }

@@ -58,6 +58,7 @@ public class SilentlyFailingStore<T extends BaseDataEntity<String>> extends Simp
     private boolean ignoreDeletes;
     private boolean ignoreUpdates;
     private int deleteAttempts;
+    private int conditionDeleteAttempts;
     private int updateAttempts;
 
     public SilentlyFailingStore(String storeLocation, Class<T> type) {
@@ -89,6 +90,14 @@ public class SilentlyFailingStore<T extends BaseDataEntity<String>> extends Simp
     }
 
     /**
+     * @return how many of {@link #deleteAttempts()} were {@code del(WhereCondition...)} -- the
+     *         full-cache pass on this backend -- rather than a delete by id
+     */
+    public int conditionDeleteAttempts() {
+        return conditionDeleteAttempts;
+    }
+
+    /**
      * @return how many times a caller asked this store to update a whole entity
      */
     public int updateAttempts() {
@@ -107,6 +116,7 @@ public class SilentlyFailingStore<T extends BaseDataEntity<String>> extends Simp
     @Override
     public synchronized void del(WhereCondition... whereConditions) {
         deleteAttempts++;
+        conditionDeleteAttempts++;
         if (ignoreDeletes) {
             return;
         }

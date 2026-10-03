@@ -151,21 +151,45 @@ class EntityIdBackfillServiceTest {
         }
 
         @Test
-        @DisplayName("a cache-backed store is not asked to delete, because the key is written in place")
-        void aCacheBackedStoreIsNotAskedToDelete() throws Exception {
-            // A cache-backed operator hands out the instances it holds, so insert's onCreate() writes
-            // the key onto the stored record itself. The delete would remove and re-add the same
-            // entry while costing a full-cache Gson pass, which was the second superlinear term
-            // behind the repair's slowness -- measured 11.64 s for 800 records before, 0.20 s after.
+        @DisplayName("#69: a cache-backed store is asked to delete the legacy entry by its identity, never by condition")
+        void aCacheBackedStoreDeletesByIdentityOnly() throws Exception {
+            // From UltiTools-API 6.3.0 a JSON read is a detached copy and insert caches a copy with
+            // putIfAbsent (UltiKits/UltiTools-Reborn#522), so insert can no longer write the key onto
+            // the cached legacy record in place: the legacy entry has to be removed first. By its
+            // identity, which is its cache key -- one lookup -- and never through del(WhereCondition),
+            // whose full-cache Gson pass was the second superlinear term behind the repair's
+            // slowness (11.64 s for 800 records before, 0.20 s after).
             HomeData legacy = home("farm");
             writeLegacyRecord("homes", legacy);
             SilentlyFailingStore<HomeData> store = countingOperatorOver("homes", HomeData.class);
 
             Outcome outcome = backfill.repair(store, "HomeData");
 
-            assertThat(outcome.repaired()).as("the record is still repaired").isEqualTo(1);
+            assertThat(outcome.repaired()).as("the record is repaired").isEqualTo(1);
+            assertThat(store.getAll()).hasSize(1);
             assertThat(store.getAll().get(0).getPersistedId()).isEqualTo(legacy.getId());
-            assertThat(store.deleteAttempts()).as("no delete was needed").isZero();
+            assertThat(store.deleteAttempts()).as("one delete, by identity").isEqualTo(1);
+            assertThat(store.conditionDeleteAttempts()).as("no full-cache delete by condition").isZero();
+        }
+
+        @Test
+        @DisplayName("#69: a legacy entry stored under a file name other than its identity is not reported repaired while an un-keyed copy remains")
+        void anUnkeyedCopyLeftBehindIsNotReportedAsRepaired() throws Exception {
+            HomeData legacy = home("farm");
+            writeRecordAt("homes", "stored-under-another-name", legacy);
+            SimpleJsonDataOperator<HomeData> operator = operatorOver("homes", HomeData.class);
+            assertThat(operator.getAll()).hasSize(1);
+            assertThat(operator.getAll().get(0).getPersistedId())
+                .as("precondition: the fixture really is a record with no primary key").isNull();
+
+            Outcome outcome = backfill.repair(operator, "HomeData");
+
+            // The delete by identity finds no entry under that name, so the un-keyed record is still
+            // there beside the keyed one; counting it as repaired would be the INFO line claiming a
+            // repair the store does not hold.
+            assertThat(operator.getAll()).filteredOn(r -> r.getPersistedId() == null).hasSize(1);
+            assertThat(outcome.repaired()).isZero();
+            assertThat(outcome.skipped()).isEqualTo(1);
         }
 
         @Test

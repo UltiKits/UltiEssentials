@@ -34,12 +34,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `config/lobby.yml`, `config/motd.yml`, `config/spawn.yml`, `config/tabbar.yml`) now come from the module's
   language files: a server set to `language: en` writes English comments on a fresh install (they were
   Chinese in every language). An existing file's comments on these keys switch to the server's language at
-  the next start; values are untouched, and a comment you wrote by hand above one of these keys is replaced
-  (UltiKits/UltiEssentials#67).
+  the next start; values are untouched. Only a comment this module wrote is switched - its catalogue text in
+  either language, or the shorter comment release v1.0.0 wrote above `features.wild.cooldown`
+  (UltiKits/UltiEssentials#73); a comment you wrote by hand stays byte for byte (UltiTools-API 6.3.0, maintainer
+  decision 2026-10-04) (UltiKits/UltiEssentials#67).
 - 本模块五个配置文件（`config/essentials.yml`、`config/lobby.yml`、`config/motd.yml`、`config/spawn.yml`、`config/tabbar.yml`）
   中 78 个配置项上方的注释现在取自模块的语言文件：`language: en` 的服务器全新安装时写入英文注释（此前所有语言下都是中文）。
-  已有文件中这些配置项的注释会在下次启动时切换为服务器语言；配置值不变，你手写在这些配置项上方的注释会被替换
-  （UltiKits/UltiEssentials#67）。
+  已有文件中这些配置项的注释会在下次启动时切换为服务器语言；配置值不变。只有本模块写入的注释会被切换——任一语言的语言文件文本，或 v1.0.0 在
+  `features.wild.cooldown` 上方写入的较短注释（UltiKits/UltiEssentials#73）；你手写的注释逐字节保留（UltiTools-API 6.3.0，
+  维护者 2026-10-04 决定）（UltiKits/UltiEssentials#67）。
 - On UltiTools-API 6.3.0 with JSON storage (`datasource.type: json`), the start-up repair of records written
   before UltiKits/UltiEssentials#34 gives them their primary key again. 6.3.0 hands out copies of stored
   records, so the repair wrote nothing there, logged an error at every start, and `/delhome`, `/delwarp`,

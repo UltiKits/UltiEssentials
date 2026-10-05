@@ -49,7 +49,11 @@ public class EssentialsConfig extends AbstractConfigEntity {
     // Deliberately no @Range: the binding owns the range (0 to Integer.MAX_VALUE), refusing the
     // module at load and keeping the running value with a WARNING on reload. A module @Range would
     // pre-empt that on reload by aborting the whole reload part-way.
-    @ConfigEntry(path = "features.wild.cooldown", comment = "{essentials.config.essentials.features.wild.cooldown}")
+    // previousComments: the comment release v1.0.0 wrote here, before the catalogue text gained ", 0 for no cooldown".
+    // Registered so an upgraded file's copy counts as the framework's own and follows the server's language; any other
+    // text above this key stays the operator's (maintainer decision 2026-10-04; UltiKits/UltiEssentials#73).
+    @ConfigEntry(path = "features.wild.cooldown", comment = "{essentials.config.essentials.features.wild.cooldown}",
+            previousComments = {"随机传送冷却时间(秒)"})
     private int wildCooldown = 60;
 
     // features.recall.enabled was removed in 6.3.0: there is no /recall command. A copy left in an

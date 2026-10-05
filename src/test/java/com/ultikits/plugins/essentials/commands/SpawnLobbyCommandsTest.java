@@ -135,6 +135,35 @@ class SpawnLobbyCommandsTest {
         }
 
         /** Maintainer decision 2026-10-05: a refused operator change says "not saved" and why, and is rolled back. */
+        /**
+         * A write that fails for any other reason also puts back the six settings the configuration held before
+         * the command, and logs the reason once, so the reply's pointer to the server log holds (gate-1 top-up
+         * IN-01/IN-02 of plan 17-72, UltiKits/UltiEssentials#72).
+         */
+        @Test
+        @DisplayName("A failed write restores the six settings held before the command and logs the reason")
+        void failedWriteRestoresThePreviousSettingsAndLogsTheReason() throws IOException {
+            when(spawnConfig.getWorld()).thenReturn("world_before");
+            when(spawnConfig.getX()).thenReturn(1.5);
+            when(spawnConfig.getY()).thenReturn(70.0);
+            when(spawnConfig.getZ()).thenReturn(-2.5);
+            when(spawnConfig.getYaw()).thenReturn(90.0);
+            when(spawnConfig.getPitch()).thenReturn(10.0);
+            doThrow(new IOException("write error")).when(spawnConfig).saveOperatorChange(any(String[].class));
+
+            command.setSpawn(player);
+
+            org.mockito.InOrder order = org.mockito.Mockito.inOrder(spawnConfig);
+            order.verify(spawnConfig).setSpawnLocation(player.getLocation());
+            order.verify(spawnConfig).setWorld("world_before");
+            verify(spawnConfig).setX(1.5);
+            verify(spawnConfig).setY(70.0);
+            verify(spawnConfig).setZ(-2.5);
+            verify(spawnConfig).setYaw(90.0);
+            verify(spawnConfig).setPitch(10.0);
+            verify(EssentialsTestHelper.getMockLogger()).warn(contains("write error"));
+        }
+
         @Test
         @DisplayName("A write the framework refuses tells the player the spawn was not saved, and why")
         void refusedWriteSaysNotSavedAndWhy() throws IOException {
@@ -147,6 +176,7 @@ class SpawnLobbyCommandsTest {
             verify(player).sendMessage(reply.capture());
             assertThat(reply.getValue()).isEqualTo(String.format(CatalogueText.text("zh", "essentials.spawn.not_saved"),
                     "the file uses YAML anchors, aliases or merge keys"));
+            verify(EssentialsTestHelper.getMockLogger()).warn(contains("the file uses YAML anchors, aliases or merge keys"));
         }
 
         @Test
@@ -260,6 +290,35 @@ class SpawnLobbyCommandsTest {
             verify(player).sendMessage(CatalogueText.text("zh", "essentials.lobby.save_failed"));
         }
 
+        /**
+         * A write that fails for any other reason also puts back the six settings the configuration held before
+         * the command, and logs the reason once, so the reply's pointer to the server log holds (gate-1 top-up
+         * IN-01/IN-02 of plan 17-72, UltiKits/UltiEssentials#72).
+         */
+        @Test
+        @DisplayName("A failed write restores the six settings held before the command and logs the reason")
+        void failedWriteRestoresThePreviousSettingsAndLogsTheReason() throws IOException {
+            when(lobbyConfig.getWorld()).thenReturn("world_before");
+            when(lobbyConfig.getX()).thenReturn(1.5);
+            when(lobbyConfig.getY()).thenReturn(70.0);
+            when(lobbyConfig.getZ()).thenReturn(-2.5);
+            when(lobbyConfig.getYaw()).thenReturn(90.0);
+            when(lobbyConfig.getPitch()).thenReturn(10.0);
+            doThrow(new IOException("write error")).when(lobbyConfig).saveOperatorChange(any(String[].class));
+
+            command.setLobby(player);
+
+            org.mockito.InOrder order = org.mockito.Mockito.inOrder(lobbyConfig);
+            order.verify(lobbyConfig).setLobbyLocation(player.getLocation());
+            order.verify(lobbyConfig).setWorld("world_before");
+            verify(lobbyConfig).setX(1.5);
+            verify(lobbyConfig).setY(70.0);
+            verify(lobbyConfig).setZ(-2.5);
+            verify(lobbyConfig).setYaw(90.0);
+            verify(lobbyConfig).setPitch(10.0);
+            verify(EssentialsTestHelper.getMockLogger()).warn(contains("write error"));
+        }
+
         @Test
         @DisplayName("A write the framework refuses tells the player the lobby was not saved, and why")
         void refusedWriteSaysNotSavedAndWhy() throws IOException {
@@ -272,6 +331,7 @@ class SpawnLobbyCommandsTest {
             verify(player).sendMessage(reply.capture());
             assertThat(reply.getValue()).isEqualTo(String.format(CatalogueText.text("zh", "essentials.lobby.not_saved"),
                     "the file cannot be read or parsed"));
+            verify(EssentialsTestHelper.getMockLogger()).warn(contains("the file cannot be read or parsed"));
         }
 
         @Test

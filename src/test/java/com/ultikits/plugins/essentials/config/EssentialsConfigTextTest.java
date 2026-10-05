@@ -499,6 +499,88 @@ class EssentialsConfigTextTest {
 
     // ================================================================== second enable / reload / change listeners
 
+    /**
+     * Write-gate sweep S5 (plan 17-72; maintainer decision 2026-10-04, "what code may write, by file type"):
+     * after a language switch the materializer's save changes the file only where a setting still held shipped
+     * text, plus the framework's own comments that follow the language. A value the framework could not use (a
+     * typo) and a comment the operator wrote above a framework comment stay byte for byte, as does every other
+     * setting's line.
+     */
+    @Test
+    @DisplayName("a language switch rewrites only the shipped-text settings; a typo value and a hand-written comment elsewhere stay byte for byte")
+    void aLanguageSwitchRewritesOnlyTheShippedTextSettings() throws Exception {
+        language[0] = "en";
+        EssentialsConfig essentials = loadEssentials();
+        TabBarConfig tabBar = loadTabBar();
+        MotdConfig motd = loadMotd();
+        start(essentials, tabBar, motd);
+        String started = new String(bytes(essentialsFile()), StandardCharsets.UTF_8);
+        List<String> lines = new ArrayList<>(Arrays.asList(started.split("\n", -1)));
+        int key = -1;
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines.get(i).trim().startsWith("default-max-homes:")) {
+                key = i;
+            }
+        }
+        assertThat(key).as("control: the key line is in the file").isGreaterThan(1);
+        assertThat(lines.get(key - 1).trim()).as("control: a framework comment sits above it").startsWith("#");
+        String indent = lines.get(key).substring(0, lines.get(key).indexOf('d'));
+        String typo = indent + "default-max-homes: 3O";
+        String handComment = indent + "# VIPs get more homes through permissions";
+        lines.set(key, typo);
+        lines.add(key - 1, handComment);
+        String edited = String.join("\n", lines);
+        Files.write(essentialsFile().toPath(), edited.getBytes(StandardCharsets.UTF_8));
+
+        language[0] = "zh";
+        essentials.init(plugin);
+        tabBar.init(plugin);
+        motd.init(plugin);
+        reload();
+
+        String after = new String(bytes(essentialsFile()), StandardCharsets.UTF_8);
+        // Control: the switch did write the shipped-text settings in the new language.
+        assertThat(onDisk(essentialsFile()).getString("features.scoreboard.title")).isEqualTo(titleText("zh"));
+        assertThat(after).isNotEqualTo(edited);
+        // The operator's comment stays, byte for byte, directly above the framework's comment of its key, and the typo stays.
+        List<String> afterLines = Arrays.asList(after.split("\n", -1));
+        int typoAt = afterLines.indexOf(typo);
+        assertThat(typoAt).as("the typo line, byte for byte").isGreaterThan(1);
+        assertThat(afterLines.get(typoAt - 2)).isEqualTo(handComment);
+        // Every value line outside the four shipped-text settings is unchanged, in order.
+        assertThat(valueLinesOutside(after)).isEqualTo(valueLinesOutside(edited));
+    }
+
+    /** The non-comment lines of {@code text}, leaving out the lines of the four settings the materializer re-renders. */
+    private static List<String> valueLinesOutside(String text) {
+        List<String> materialized = Arrays.asList("features.scoreboard.title", "features.scoreboard.lines",
+                "features.scheduled-commands.commands", "features.deathpunish.command.commands");
+        List<String> kept = new ArrayList<>();
+        List<Integer> indents = new ArrayList<>();
+        List<String> keys = new ArrayList<>();
+        String current = "";
+        for (String line : text.split("\n", -1)) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                continue;
+            }
+            if (!trimmed.startsWith("-") && trimmed.contains(":")) {
+                int indent = line.length() - line.replaceAll("^\\s+", "").length();
+                while (!indents.isEmpty() && indents.get(indents.size() - 1) >= indent) {
+                    indents.remove(indents.size() - 1);
+                    keys.remove(keys.size() - 1);
+                }
+                indents.add(indent);
+                keys.add(trimmed.substring(0, trimmed.indexOf(':')));
+                current = String.join(".", keys);
+            }
+            if (!materialized.contains(current)) {
+                kept.add(line);
+            }
+        }
+        return kept;
+    }
+
     @Test
     @DisplayName("a second enable with the same language writes nothing")
     void secondEnableWritesNothing() throws Exception {

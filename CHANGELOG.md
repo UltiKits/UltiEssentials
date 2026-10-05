@@ -16,13 +16,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   commands saved the whole configuration: a hand-edited location setting was left unwritten while chat said the
   location was set, and a write the framework refused was reported as success. Now a refused write is answered
   `Spawn point not saved: <reason>. …` (or `Lobby not saved: …`), the file is unchanged, and the running
-  location goes back to what the file holds; any other failed write is answered as before and rolled back the
+  location is restored to the values held before the command, with the reason logged once; any other failed write is answered as before and rolled back the
   same way (UltiKits/UltiEssentials#72).
 - `/setspawn` 和 `/setlobby` 现在只写它们设置的六个坐标项（`spawn.location` 或 `lobby.location` 下的 `world`、`x`、`y`、`z`、
   `yaw`、`pitch`），不写其他内容；`config/spawn.yml` 或 `config/lobby.yml` 的其他每一行（包括服务器运行期间的手动修改）都逐字节
   保持不变。手动改过的坐标项会按命令的要求被替换。此前命令保存整个配置：手动改过的坐标项不会被写入，聊天却说已设置；
   框架拒绝的写入也被报告为成功。现在被拒绝的写入会回复「出生点未保存：<原因>。……」（或「主城未保存：……」），文件不变，
-  运行中的坐标恢复为文件中的值；其他写入失败照旧回复，并同样撤回（UltiKits/UltiEssentials#72）。
+  运行中的坐标恢复为命令执行前的值，原因记录在服务器日志中；其他写入失败照旧回复，并同样撤回（UltiKits/UltiEssentials#72）。
 - `/ul reload UltiEssentials` no longer replies that the module reloaded when one of its three background
   services (scheduled commands, scoreboard, name prefixes) did not restart: the reply now says the reload was
   partial and names the service and why, and the framework logs its partial-reload warning instead of its

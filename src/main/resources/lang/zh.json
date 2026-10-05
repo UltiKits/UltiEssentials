@@ -21,6 +21,7 @@
   "essentials.lobby.set": "主城已设置",
   "essentials.lobby.save_failed": "保存主城失败",
   "essentials.lobby.not_saved": "主城未保存：%s。主城保持不变；请修正服务器日志中指出的文件，然后重新执行 /setlobby。",
+  "essentials.log.location_not_saved": "%s 未保存：%s",
 
   "essentials.wild.searching": "正在寻找安全位置...",
   "essentials.wild.misconfigured": "随机传送范围配置无效，请联系管理员",

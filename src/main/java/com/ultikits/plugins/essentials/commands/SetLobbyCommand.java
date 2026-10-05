@@ -33,7 +33,7 @@ public class SetLobbyCommand extends BaseEssentialsCommand {
      * framework's write gate publishes the file only when every other line is byte-identical to it (maintainer
      * decision 2026-10-04, "what code may write, by file type"; UltiKits/UltiEssentials#72). When the gate refuses
      * the write, or publishing fails, the file keeps its bytes, the player is told nothing was saved (and why, for a
-     * refusal), and the six settings in memory go back to what they were, so the running lobby matches the file
+     * refusal), the reason is logged once, and the six settings in memory are restored to the values held before the command
      * (maintainer decision 2026-10-05).
      *
      * @param player the player whose location becomes the lobby
@@ -45,7 +45,7 @@ public class SetLobbyCommand extends BaseEssentialsCommand {
             return;
         }
 
-        // Remembered so that a write that does not happen leaves the running lobby as the file holds it.
+        // Remembered so that a write that does not happen restores the values held before the command.
         String world = lobbyConfig.getWorld();
         double x = lobbyConfig.getX();
         double y = lobbyConfig.getY();
@@ -58,11 +58,22 @@ public class SetLobbyCommand extends BaseEssentialsCommand {
             player.sendMessage(i18n("essentials.lobby.set"));
         } catch (ConfigWriteRefusedException e) {
             restore(world, x, y, z, yaw, pitch);
+            logNotSaved(e);
             player.sendMessage(String.format(i18n("essentials.lobby.not_saved"), e.getReason()));
         } catch (IOException e) {
             restore(world, x, y, z, yaw, pitch);
+            logNotSaved(e);
             player.sendMessage(i18n("essentials.lobby.save_failed"));
         }
+    }
+
+    /**
+     * One WARNING with the write's own message - the file and why, never a value - so the reply's "fix the file the
+     * server log names" holds even for a refusal or failure the framework does not log itself (gate-1 top-up IN-02 of
+     * plan 17-72).
+     */
+    private void logNotSaved(IOException e) {
+        plugin.getLogger().warn(String.format(i18n("essentials.log.location_not_saved"), "/setlobby", e.getMessage()));
     }
 
     private void restore(String world, double x, double y, double z, double yaw, double pitch) {

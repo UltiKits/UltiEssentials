@@ -21,6 +21,7 @@
   "essentials.lobby.set": "Lobby set",
   "essentials.lobby.save_failed": "Failed to save lobby",
   "essentials.lobby.not_saved": "Lobby not saved: %s. The lobby is unchanged; fix the file the server log names, then run /setlobby again.",
+  "essentials.log.location_not_saved": "%s was not saved: %s",
 
   "essentials.wild.searching": "Finding a safe location...",
   "essentials.wild.misconfigured": "Wild range is misconfigured, please contact an administrator",

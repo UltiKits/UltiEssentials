@@ -412,11 +412,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Language keys were renamed to dotted ASCII keys (for example `essentials.home.set`): every key that
   was a Chinese sentence, and `teleport_success`, the one older ASCII key still in use.
-  An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
-  the new keys; until then the renamed messages show the new built-in text. A server whose language
-  files were never edited needs no action.
-- 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。改过本模块 `lang/en.json` 或
-  `lang/zh.json` 的运维需要把改动重新套到新键上；在此之前，这些消息显示新的内置文本。从未改过语言文件的服务器无需任何操作。
+  This module's official language files (`lang/en.json` and `lang/zh.json` under
+  `plugins/UltiTools/pluginConfig/UltiEssentials/`) belong to UltiTools: from UltiTools-API 6.3.0 an edited
+  official file is restored to the shipped text at every start, its edited copy kept as a backup and named in
+  the server log, so edits made there are not kept. To customise messages, copy the official file under a new
+  name that starts with its language code and a hyphen (`en.json` to `en-myserver.json`), edit the copy
+  against the new keys, and set `language: en-myserver` in `plugins/UltiTools/config.yml`. A server whose
+  language files were never edited needs no action.
+- 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。本模块的官方语言文件
+  （`plugins/UltiTools/pluginConfig/UltiEssentials/` 下的 `lang/en.json` 和 `lang/zh.json`）归 UltiTools 所有：自 UltiTools-API 6.3.0 起，
+  被修改过的官方文件会在每次启动时恢复为自带内容，修改过的副本作为备份保留并在服务器日志中注明，因此在其中所做的修改不会保留。
+  要自定义消息，请把官方文件复制为以语言代码加连字符开头的新名称（`zh.json` → `zh-myserver.json`），按新键修改副本，然后在
+  `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`。从未改过语言文件的服务器无需任何操作。
 
 - This module now declares `api-version: 630` in its `plugin.yml`, so it loads only on UltiTools
   6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools

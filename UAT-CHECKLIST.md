@@ -41,8 +41,8 @@ for real-machine verification, not user-facing documentation.
   through its language catalogue; before it, most of them rendered Chinese whatever `language` said.
   For a session that checks text this release introduced or changed, move
   `plugins/UltiTools/pluginConfig/UltiEssentials/lang/` aside before the start so the jar's
-  catalogues are extracted fresh (an upgraded install never refreshes an already-extracted
-  language file, UltiKits/UltiTools-Reborn#459); see `ultiessentials.i18n.language`.
+  catalogues are extracted fresh (UltiTools-API 6.3.0 also restores, at every start, an official
+  language file whose bytes differ from the jar's); see `ultiessentials.i18n.language`.
 - **Two "teleport successful" lines exist for the same logical outcome, depending on path.**
   `TeleportService`'s warmup countdown sends `Teleport successful!` in green when a WARMUP
   completes; `HomeCommand`/`WarpCommand`'s own `switch` statements send `Teleport successful!`
@@ -356,7 +356,7 @@ the two `/ban`/`/unban` broadcast switches are now read and are exercised by
 
 | ID | Preconditions | Steps | Expected | Layer | Covers |
 |---|---|---|---|---|---|
-| ultiessentials.i18n.language | `language: en` in the framework's `plugins/UltiTools/config.yml`, set once for the session before the start; before the start, `plugins/UltiTools/pluginConfig/UltiEssentials/lang/` was moved into the session backup directory so this jar's catalogues are extracted fresh (an upgraded install never refreshes an already-extracted language file, UltiKits/UltiTools-Reborn#459); `features.home.enabled: true` and `features.tpa.enabled: true` (shipped defaults); the tester online with no home named `uat` | The tester runs `/sethome uat`, then `/tpa <own username>`, then `/delhome uat` | Chat shows, in order: `Home set! (uat)`, `Current homes: <n>/<max>`, `You cannot send a teleport request to yourself`, `Home deleted! (uat)`; none of the lines these commands printed contains Chinese text (UltiKits/UltiEssentials#26) | server | |
+| ultiessentials.i18n.language | `language: en` in the framework's `plugins/UltiTools/config.yml`, set once for the session before the start; before the start, `plugins/UltiTools/pluginConfig/UltiEssentials/lang/` was moved into the session backup directory so this jar's catalogues are extracted fresh (UltiTools-API 6.3.0 also restores, at every start, an official language file whose bytes differ from the jar's); `features.home.enabled: true` and `features.tpa.enabled: true` (shipped defaults); the tester online with no home named `uat` | The tester runs `/sethome uat`, then `/tpa <own username>`, then `/delhome uat` | Chat shows, in order: `Home set! (uat)`, `Current homes: <n>/<max>`, `You cannot send a teleport request to yourself`, `Home deleted! (uat)`; none of the lines these commands printed contains Chinese text (UltiKits/UltiEssentials#26) | server | |
 
 ## Config text materializer (maintainer decision 2026-09-25, UltiKits/UltiEssentials#26)
 

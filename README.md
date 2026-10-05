@@ -243,6 +243,8 @@ UltiEssentials 支持多语言，语言文件位于 `lang/` 目录：
 - `lang/zh.json` - 简体中文
 - `lang/en.json` - English
 
+这两个官方语言文件归 UltiTools 管理：直接修改会在下次启动时被恢复（修改过的文件会留下备份）。如需自定义消息，请把官方文件复制为以语言代码加连字符开头的新名称（例如 `zh.json` → `zh-myserver.json`），修改这个副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`。副本中没有的消息使用对应的官方文件。
+
 ## 📄 开源协议
 
 本项目基于 [MIT License](LICENSE) 开源。

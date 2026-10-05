@@ -16,6 +16,10 @@ import org.bukkit.Location;
 @ConfigEntity("config/lobby.yml")
 public class LobbyConfig extends AbstractConfigEntity {
 
+    /** The six location settings, in file order. */
+    private static final String[] LOCATION_PATHS = {"lobby.location.world", "lobby.location.x", "lobby.location.y",
+            "lobby.location.z", "lobby.location.yaw", "lobby.location.pitch"};
+
     @ConfigEntry(path = "lobby.location.world", comment = "{essentials.config.lobby.lobby.location.world}")
     private String world = "world";
 
@@ -33,6 +37,15 @@ public class LobbyConfig extends AbstractConfigEntity {
 
     @ConfigEntry(path = "lobby.location.pitch", comment = "{essentials.config.lobby.lobby.location.pitch}")
     private double pitch = 0.0;
+
+    /**
+     * The six settings {@code /setlobby} writes, and the only ones it writes (UltiKits/UltiEssentials#72).
+     *
+     * @return the {@code @ConfigEntry} paths of the six location settings, a new array each call
+     */
+    public static String[] locationPaths() {
+        return LOCATION_PATHS.clone();
+    }
 
     public LobbyConfig() {
         super("config/lobby.yml");

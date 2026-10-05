@@ -16,6 +16,10 @@ import org.bukkit.Location;
 @ConfigEntity("config/spawn.yml")
 public class SpawnConfig extends AbstractConfigEntity {
 
+    /** The six location settings, in file order. */
+    private static final String[] LOCATION_PATHS = {"spawn.location.world", "spawn.location.x", "spawn.location.y",
+            "spawn.location.z", "spawn.location.yaw", "spawn.location.pitch"};
+
     @ConfigEntry(path = "spawn.location.world", comment = "{essentials.config.spawn.spawn.location.world}")
     private String world = "world";
 
@@ -39,6 +43,15 @@ public class SpawnConfig extends AbstractConfigEntity {
 
     @ConfigEntry(path = "spawn.teleport-on-respawn", comment = "{essentials.config.spawn.spawn.teleport-on-respawn}")
     private boolean teleportOnRespawn = true;
+
+    /**
+     * The six settings {@code /setspawn} writes, and the only ones it writes (UltiKits/UltiEssentials#72).
+     *
+     * @return the {@code @ConfigEntry} paths of the six location settings, a new array each call
+     */
+    public static String[] locationPaths() {
+        return LOCATION_PATHS.clone();
+    }
 
     public SpawnConfig() {
         super("config/spawn.yml");

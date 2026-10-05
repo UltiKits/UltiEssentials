@@ -14,11 +14,13 @@
   "essentials.spawn.success": "已传送到出生点",
   "essentials.spawn.set": "出生点已设置",
   "essentials.spawn.save_failed": "保存出生点失败",
+  "essentials.spawn.not_saved": "出生点未保存：%s。出生点保持不变；请修正服务器日志中指出的文件，然后重新执行 /setspawn。",
 
   "essentials.lobby.world_not_found": "主城世界不存在",
   "essentials.lobby.success": "已传送到主城",
   "essentials.lobby.set": "主城已设置",
   "essentials.lobby.save_failed": "保存主城失败",
+  "essentials.lobby.not_saved": "主城未保存：%s。主城保持不变；请修正服务器日志中指出的文件，然后重新执行 /setlobby。",
 
   "essentials.wild.searching": "正在寻找安全位置...",
   "essentials.wild.misconfigured": "随机传送范围配置无效，请联系管理员",

@@ -202,6 +202,43 @@ class EssentialsConfigCommentsTest {
                 .as("the second start").isEqualTo(afterFirst);
     }
 
+    /** The comment release {@code v1.0.0} wrote above {@code features.wild.cooldown}, before the catalogue text gained "，0 为不冷却". */
+    private static final String V1_WILD_COOLDOWN_COMMENT = "随机传送冷却时间(秒)";
+
+    /**
+     * An upgrade from release {@code v1.0.0}: its comment above {@code features.wild.cooldown} differs from the current
+     * catalogue text, so it is registered as one the module shipped earlier ({@code @ConfigEntry(previousComments)},
+     * maintainer decision 2026-10-04) and is replaced by the server language's comment; a one-character variant is the
+     * operator's and stays (UltiKits/UltiEssentials#73).
+     */
+    @Test
+    @DisplayName("an upgraded file holding release v1.0.0's features.wild.cooldown comment gets the server language's comment; a variant stays (#73)")
+    void releaseOneWildCooldownCommentFollowsTheLanguage() throws Exception {
+        Row row = null;
+        for (Row candidate : rowsFor("config/essentials.yml")) {
+            if (candidate.path.equals("features.wild.cooldown")) {
+                row = candidate;
+            }
+        }
+        assertThat(row).as("control: the fixture has the row").isNotNull();
+        File file = new File(tempDir.toFile(), "config/essentials.yml");
+        for (String language : new String[] {"en", "zh"}) {
+            for (String old : new String[] {V1_WILD_COOLDOWN_COMMENT, V1_WILD_COOLDOWN_COMMENT + "!"}) {
+                Files.deleteIfExists(file.toPath());
+                load(EssentialsConfig::new, "zh");
+                String text = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                assertThat(text).as("control: the current comment is in the file").contains("# " + row.zh + "\n");
+                Files.write(file.toPath(), text.replace("# " + row.zh + "\n", "# " + old + "\n").getBytes(StandardCharsets.UTF_8));
+
+                load(EssentialsConfig::new, language);
+
+                String after = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                String expected = old.equals(V1_WILD_COOLDOWN_COMMENT) ? ("en".equals(language) ? row.en : row.zh) : old;
+                assertThat(commentAbove(after, "features.wild.cooldown")).as(language + " after " + old).isEqualTo(expected);
+            }
+        }
+    }
+
     // ==================== helpers ====================
 
     /** Loads one configuration through the framework's real {@code init}, answering {@code i18n} in {@code language}. */

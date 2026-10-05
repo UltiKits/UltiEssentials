@@ -3,7 +3,9 @@ package com.ultikits.plugins.essentials.commands;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.config.LobbyConfig;
 import com.ultikits.plugins.essentials.config.SpawnConfig;
+import com.ultikits.plugins.essentials.i18n.CatalogueText;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
+import com.ultikits.ultitools.config.ConfigWriteRefusedException;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.*;
 import java.io.IOException;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -104,24 +107,46 @@ class SpawnLobbyCommandsTest {
             EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
         }
 
+        /**
+         * The operator's command names exactly the six location settings, so only they are written
+         * (maintainer decision 2026-10-04, "what code may write, by file type"; UltiKits/UltiEssentials#72).
+         * Before, the command saved the whole entity.
+         */
         @Test
-        @DisplayName("Should set spawn at player location")
+        @DisplayName("Should set spawn at player location, writing exactly the six location settings")
         void shouldSetSpawn() throws IOException {
             command.setSpawn(player);
 
             verify(spawnConfig).setSpawnLocation(player.getLocation());
-            verify(spawnConfig).save();
-            verify(player).sendMessage(anyString());
+            verify(spawnConfig).saveOperatorChange("spawn.location.world", "spawn.location.x", "spawn.location.y",
+                    "spawn.location.z", "spawn.location.yaw", "spawn.location.pitch");
+            verify(spawnConfig, never()).save();
+            verify(player).sendMessage(CatalogueText.text("zh", "essentials.spawn.set"));
         }
 
         @Test
         @DisplayName("Should send error when save fails")
         void shouldSendErrorWhenSaveFails() throws IOException {
-            doThrow(new IOException("write error")).when(spawnConfig).save();
+            doThrow(new IOException("write error")).when(spawnConfig).saveOperatorChange(any(String[].class));
 
             command.setSpawn(player);
 
-            verify(player).sendMessage(anyString());
+            verify(player).sendMessage(CatalogueText.text("zh", "essentials.spawn.save_failed"));
+        }
+
+        /** Maintainer decision 2026-10-05: a refused operator change says "not saved" and why, and is rolled back. */
+        @Test
+        @DisplayName("A write the framework refuses tells the player the spawn was not saved, and why")
+        void refusedWriteSaysNotSavedAndWhy() throws IOException {
+            doThrow(new ConfigWriteRefusedException("config/spawn.yml", "the file uses YAML anchors, aliases or merge keys"))
+                    .when(spawnConfig).saveOperatorChange(any(String[].class));
+
+            command.setSpawn(player);
+
+            org.mockito.ArgumentCaptor<String> reply = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(player).sendMessage(reply.capture());
+            assertThat(reply.getValue()).isEqualTo(String.format(CatalogueText.text("zh", "essentials.spawn.not_saved"),
+                    "the file uses YAML anchors, aliases or merge keys"));
         }
 
         @Test
@@ -212,24 +237,41 @@ class SpawnLobbyCommandsTest {
             EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
         }
 
+        /** As /setspawn: exactly the six location settings the command names (UltiKits/UltiEssentials#72). */
         @Test
-        @DisplayName("Should set lobby at player location")
+        @DisplayName("Should set lobby at player location, writing exactly the six location settings")
         void shouldSetLobby() throws IOException {
             command.setLobby(player);
 
             verify(lobbyConfig).setLobbyLocation(player.getLocation());
-            verify(lobbyConfig).save();
-            verify(player).sendMessage(anyString());
+            verify(lobbyConfig).saveOperatorChange("lobby.location.world", "lobby.location.x", "lobby.location.y",
+                    "lobby.location.z", "lobby.location.yaw", "lobby.location.pitch");
+            verify(lobbyConfig, never()).save();
+            verify(player).sendMessage(CatalogueText.text("zh", "essentials.lobby.set"));
         }
 
         @Test
         @DisplayName("Should send error when save fails")
         void shouldSendErrorWhenSaveFails() throws IOException {
-            doThrow(new IOException("write error")).when(lobbyConfig).save();
+            doThrow(new IOException("write error")).when(lobbyConfig).saveOperatorChange(any(String[].class));
 
             command.setLobby(player);
 
-            verify(player).sendMessage(anyString());
+            verify(player).sendMessage(CatalogueText.text("zh", "essentials.lobby.save_failed"));
+        }
+
+        @Test
+        @DisplayName("A write the framework refuses tells the player the lobby was not saved, and why")
+        void refusedWriteSaysNotSavedAndWhy() throws IOException {
+            doThrow(new ConfigWriteRefusedException("config/lobby.yml", "the file cannot be read or parsed"))
+                    .when(lobbyConfig).saveOperatorChange(any(String[].class));
+
+            command.setLobby(player);
+
+            org.mockito.ArgumentCaptor<String> reply = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(player).sendMessage(reply.capture());
+            assertThat(reply.getValue()).isEqualTo(String.format(CatalogueText.text("zh", "essentials.lobby.not_saved"),
+                    "the file cannot be read or parsed"));
         }
 
         @Test

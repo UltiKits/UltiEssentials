@@ -207,8 +207,11 @@ class EssentialsConfigCommentsTest {
     /** Loads one configuration through the framework's real {@code init}, answering {@code i18n} in {@code language}. */
     private AbstractConfigEntity load(Supplier<AbstractConfigEntity> config, String language) throws IOException {
         final org.mockito.stubbing.Answer<String> text = CatalogueText.answer(language);
-        // getConfigFile is protected final, so it is answered by name rather than stubbed.
-        UltiToolsPlugin plugin = mock(UltiToolsPlugin.class, invocation -> {
+        // getConfigFile is protected final, so it is answered by name rather than stubbed. The module's own
+        // class is mocked so that shippedCatalogueTexts, which the framework (UltiTools-API 6.3.0) uses to tell
+        // its own comments from an operator's, really reads this module's shipped catalogues: an old comment
+        // is replaced only when it equals one of them (maintainer decision 2026-10-04).
+        UltiToolsPlugin plugin = mock(com.ultikits.plugins.essentials.UltiEssentials.class, invocation -> {
             switch (invocation.getMethod().getName()) {
                 case "i18n":
                     return text.answer(invocation);
@@ -216,6 +219,8 @@ class EssentialsConfigCommentsTest {
                     return "UltiEssentials";
                 case "getConfigFile":
                     return new File(tempDir.toFile(), invocation.<String>getArgument(0));
+                case "shippedCatalogueTexts":
+                    return invocation.callRealMethod();
                 default:
                     return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
             }

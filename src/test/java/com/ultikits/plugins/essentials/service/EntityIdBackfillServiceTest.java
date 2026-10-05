@@ -151,21 +151,45 @@ class EntityIdBackfillServiceTest {
         }
 
         @Test
-        @DisplayName("a cache-backed store is not asked to delete, because the key is written in place")
-        void aCacheBackedStoreIsNotAskedToDelete() throws Exception {
-            // A cache-backed operator hands out the instances it holds, so insert's onCreate() writes
-            // the key onto the stored record itself. The delete would remove and re-add the same
-            // entry while costing a full-cache Gson pass, which was the second superlinear term
-            // behind the repair's slowness -- measured 11.64 s for 800 records before, 0.20 s after.
+        @DisplayName("#69: a cache-backed store is asked to delete the legacy entry by its identity, never by condition")
+        void aCacheBackedStoreDeletesByIdentityOnly() throws Exception {
+            // From UltiTools-API 6.3.0 a JSON read is a detached copy and insert caches a copy with
+            // putIfAbsent (UltiKits/UltiTools-Reborn#522), so insert can no longer write the key onto
+            // the cached legacy record in place: the legacy entry has to be removed first. By its
+            // identity, which is its cache key -- one lookup -- and never through del(WhereCondition),
+            // whose full-cache Gson pass was the second superlinear term behind the repair's
+            // slowness (11.64 s for 800 records before, 0.20 s after).
             HomeData legacy = home("farm");
             writeLegacyRecord("homes", legacy);
             SilentlyFailingStore<HomeData> store = countingOperatorOver("homes", HomeData.class);
 
             Outcome outcome = backfill.repair(store, "HomeData");
 
-            assertThat(outcome.repaired()).as("the record is still repaired").isEqualTo(1);
+            assertThat(outcome.repaired()).as("the record is repaired").isEqualTo(1);
+            assertThat(store.getAll()).hasSize(1);
             assertThat(store.getAll().get(0).getPersistedId()).isEqualTo(legacy.getId());
-            assertThat(store.deleteAttempts()).as("no delete was needed").isZero();
+            assertThat(store.deleteAttempts()).as("one delete, by identity").isEqualTo(1);
+            assertThat(store.conditionDeleteAttempts()).as("no full-cache delete by condition").isZero();
+        }
+
+        @Test
+        @DisplayName("#69: a legacy entry stored under a file name other than its identity is not reported repaired while an un-keyed copy remains")
+        void anUnkeyedCopyLeftBehindIsNotReportedAsRepaired() throws Exception {
+            HomeData legacy = home("farm");
+            writeRecordAt("homes", "stored-under-another-name", legacy);
+            SimpleJsonDataOperator<HomeData> operator = operatorOver("homes", HomeData.class);
+            assertThat(operator.getAll()).hasSize(1);
+            assertThat(operator.getAll().get(0).getPersistedId())
+                .as("precondition: the fixture really is a record with no primary key").isNull();
+
+            Outcome outcome = backfill.repair(operator, "HomeData");
+
+            // The delete by identity finds no entry under that name, so the un-keyed record is still
+            // there beside the keyed one; counting it as repaired would be the INFO line claiming a
+            // repair the store does not hold.
+            assertThat(operator.getAll()).filteredOn(r -> r.getPersistedId() == null).hasSize(1);
+            assertThat(outcome.repaired()).isZero();
+            assertThat(outcome.skipped()).isEqualTo(1);
         }
 
         @Test
@@ -445,15 +469,15 @@ class EntityIdBackfillServiceTest {
         }
 
         @Test
-        @DisplayName("a store that hands out detached copies is reported as repairing nothing, not as succeeding")
-        void aDetachedStoreIsNotReportedAsRepaired() throws Exception {
-            // Skipping the delete on a cache-backed store depends on that store handing out the
-            // instances it holds, so insert's onCreate() writes the key onto the stored record. If
-            // that ever stops being true -- and the framework has an open question about exactly this
-            // (UltiKits/UltiTools-Reborn#522 asks whether reads should be detached) -- the repair
-            // would write nothing. It must then SAY so rather than counting the records as repaired,
-            // which is what the confirmation step exists for. Without it, this reports 4 repaired and
-            // the records still have no key.
+        @DisplayName("#69: a cache-backed store whose insert silently writes nothing rolls the whole type back -- nothing is destroyed, nothing is reported repaired")
+        void anInsertThatWritesNothingRollsBackAndDestroysNothing() throws Exception {
+            // From UltiTools-API 6.3.0 the legacy entry is removed by its identity before the keyed
+            // record is inserted (UltiKits/UltiEssentials#69). An insert that silently reaches nothing
+            // after that delete would lose the record, so each record's key is confirmed inside the
+            // transaction and a missing one fails it: the JSON operator's rollback restores every
+            // entry. Before #69 this store modelled the opposite hazard (reads detached, insert
+            // reaching nothing, no delete) -- on 6.3.0 that is the real JSON operator, and the cases
+            // above run against it.
             for (int i = 0; i < 4; i++) {
                 writeLegacyRecord("homes", home("home" + i));
             }
@@ -695,6 +719,10 @@ class EntityIdBackfillServiceTest {
         @Override public List<T> getLike(String column, String value, LikeType likeType) { return detach(delegate.getLike(column, value, likeType)); }
         @Override public List<T> page(int page, int size, com.ultikits.ultitools.entities.WhereCondition... c) { return detach(delegate.page(page, size, c)); }
         @Override public void insert(T obj) { /* a detached entity reaches nothing the store keeps */ }
+        // The real operator's transaction, so its rollback restores what a failed repair removed.
+        @Override public <R> R transaction(java.util.concurrent.Callable<R> action) throws Exception {
+            return delegate.transaction(action);
+        }
         @Override public void flush() { /* nothing of its own to write */ }
         @Override public void gc() { /* nothing of its own to collect */ }
         @Override public void del(com.ultikits.ultitools.entities.WhereCondition... c) { delegate.del(c); }

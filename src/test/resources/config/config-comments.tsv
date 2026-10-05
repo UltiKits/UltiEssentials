@@ -1,0 +1,81 @@
+# The 78 @ConfigEntry comments as master 0875d16 wrote them, and the catalogue key and English translation each
+# became (UltiKits/UltiEssentials#67). Columns: config file, key path, catalogue key, comment at master (the zh
+# catalogue text, verbatim), English translation (the en catalogue text). Read by EssentialsConfigCommentsTest.
+config/essentials.yml	features.back.enabled	essentials.config.essentials.features.back.enabled	启用 /back 返回命令	Enable the /back command
+config/essentials.yml	features.spawn.enabled	essentials.config.essentials.features.spawn.enabled	启用 /spawn 出生点命令	Enable the /spawn command
+config/essentials.yml	features.lobby.enabled	essentials.config.essentials.features.lobby.enabled	启用 /lobby 主城命令	Enable the /lobby command
+config/essentials.yml	features.wild.enabled	essentials.config.essentials.features.wild.enabled	启用 /wild 随机传送	Enable /wild random teleport
+config/essentials.yml	features.wild.max-range	essentials.config.essentials.features.wild.max-range	随机传送最大范围	Maximum random teleport range
+config/essentials.yml	features.wild.min-range	essentials.config.essentials.features.wild.min-range	随机传送最小范围	Minimum random teleport range
+config/essentials.yml	features.wild.cooldown	essentials.config.essentials.features.wild.cooldown	随机传送冷却时间(秒)，0 为不冷却	Random teleport cooldown (seconds); 0 for no cooldown
+config/essentials.yml	features.fly.enabled	essentials.config.essentials.features.fly.enabled	启用 /fly 飞行命令	Enable the /fly command
+config/essentials.yml	features.heal.enabled	essentials.config.essentials.features.heal.enabled	启用 /heal 治疗命令	Enable the /heal command
+config/essentials.yml	features.speed.enabled	essentials.config.essentials.features.speed.enabled	启用 /speed 速度命令	Enable the /speed command
+config/essentials.yml	features.speed.max-speed	essentials.config.essentials.features.speed.max-speed	最大速度倍数	Maximum speed multiplier
+config/essentials.yml	features.gamemode.enabled	essentials.config.essentials.features.gamemode.enabled	启用 /gm 游戏模式命令	Enable the /gm game mode command
+config/essentials.yml	features.hide.enabled	essentials.config.essentials.features.hide.enabled	启用 /hide 隐身命令	Enable the /hide vanish command
+config/essentials.yml	features.invsee.enabled	essentials.config.essentials.features.invsee.enabled	启用 /invsee 查看背包命令	Enable the /invsee inventory view command
+config/essentials.yml	features.whitelist.enabled	essentials.config.essentials.features.whitelist.enabled	启用 /wl 白名单命令	Enable the /wl whitelist command
+config/essentials.yml	features.motd.enabled	essentials.config.essentials.features.motd.enabled	启用 MOTD 自定义	Enable the custom MOTD
+config/essentials.yml	features.tab-bar.enabled	essentials.config.essentials.features.tab-bar.enabled	启用 Tab 栏自定义	Enable the custom tab list
+config/essentials.yml	features.home.enabled	essentials.config.essentials.features.home.enabled	启用 /home 家系统	Enable the /home system
+config/essentials.yml	features.home.default-max-homes	essentials.config.essentials.features.home.default-max-homes	默认最大家数量	Default maximum number of homes
+config/essentials.yml	features.home.teleport-warmup	essentials.config.essentials.features.home.teleport-warmup	传送预热时间(秒)，0为立即传送	Teleport warmup (seconds); 0 to teleport immediately
+config/essentials.yml	features.home.cancel-on-move	essentials.config.essentials.features.home.cancel-on-move	移动时取消传送	Cancel the teleport when the player moves
+config/essentials.yml	features.tpa.enabled	essentials.config.essentials.features.tpa.enabled	启用 /tpa 传送请求	Enable /tpa teleport requests
+config/essentials.yml	features.tpa.timeout	essentials.config.essentials.features.tpa.timeout	传送请求超时时间(秒)	Teleport request timeout (seconds)
+config/essentials.yml	features.tpa.cooldown	essentials.config.essentials.features.tpa.cooldown	发送请求冷却时间(秒)	Cooldown between sent requests (seconds)
+config/essentials.yml	features.tpa.allow-cross-world	essentials.config.essentials.features.tpa.allow-cross-world	允许跨世界传送	Allow teleporting across worlds
+config/essentials.yml	features.warp.enabled	essentials.config.essentials.features.warp.enabled	启用 /warp 地标系统	Enable the /warp system
+config/essentials.yml	features.warp.teleport-warmup	essentials.config.essentials.features.warp.teleport-warmup	地标传送预热时间(秒)	Warp teleport warmup (seconds)
+config/essentials.yml	features.ban.enabled	essentials.config.essentials.features.ban.enabled	启用封禁系统	Enable the ban system
+config/essentials.yml	features.ban.broadcast-ban	essentials.config.essentials.features.ban.broadcast-ban	广播封禁消息	Broadcast ban messages
+config/essentials.yml	features.ban.broadcast-unban	essentials.config.essentials.features.ban.broadcast-unban	广播解禁消息	Broadcast unban messages
+config/essentials.yml	features.scoreboard.enabled	essentials.config.essentials.features.scoreboard.enabled	启用计分板功能	Enable the scoreboard
+config/essentials.yml	features.scoreboard.auto-enable	essentials.config.essentials.features.scoreboard.auto-enable	玩家进入时自动启用计分板	Turn the scoreboard on automatically when a player joins
+config/essentials.yml	features.scoreboard.update-interval	essentials.config.essentials.features.scoreboard.update-interval	计分板更新间隔(秒)	Scoreboard update interval (seconds)
+config/essentials.yml	features.scoreboard.title	essentials.config.essentials.features.scoreboard.title	计分板标题 (支持PlaceholderAPI)	Scoreboard title (supports PlaceholderAPI)
+config/essentials.yml	features.scoreboard.lines	essentials.config.essentials.features.scoreboard.lines	计分板内容行 (支持PlaceholderAPI)	Scoreboard lines (supports PlaceholderAPI)
+config/essentials.yml	features.scheduled-commands.enabled	essentials.config.essentials.features.scheduled-commands.enabled	Enable scheduled command execution / 启用定时命令执行	Enable scheduled command execution
+config/essentials.yml	features.scheduled-commands.commands	essentials.config.essentials.features.scheduled-commands.commands	Scheduled commands, format: interval_seconds:command / 定时命令列表，格式: 间隔秒数:命令	Scheduled commands, format: interval_seconds:command
+config/essentials.yml	features.chestlock.enabled	essentials.config.essentials.features.chestlock.enabled	启用箱子锁功能	Enable chest locks
+config/essentials.yml	features.chestlock.admin-bypass	essentials.config.essentials.features.chestlock.admin-bypass	管理员可以绕过锁定	Administrators can bypass locks
+config/essentials.yml	features.deathpunish.enabled	essentials.config.essentials.features.deathpunish.enabled	启用死亡惩罚	Enable death punishment
+config/essentials.yml	features.deathpunish.money.enabled	essentials.config.essentials.features.deathpunish.money.enabled	启用金币惩罚	Enable the money penalty
+config/essentials.yml	features.deathpunish.money.percent	essentials.config.essentials.features.deathpunish.money.percent	掉落金币百分比	Percentage of money dropped
+config/essentials.yml	features.deathpunish.money.max	essentials.config.essentials.features.deathpunish.money.max	最大掉落金币 (0为无限制)	Maximum money dropped (0 for no limit)
+config/essentials.yml	features.deathpunish.item.enabled	essentials.config.essentials.features.deathpunish.item.enabled	启用物品掉落惩罚	Enable the item drop penalty
+config/essentials.yml	features.deathpunish.item.drop-chance	essentials.config.essentials.features.deathpunish.item.drop-chance	物品掉落概率(%)	Item drop chance (%)
+config/essentials.yml	features.deathpunish.item.keep-other	essentials.config.essentials.features.deathpunish.item.keep-other	保留未掉落的物品	Keep the items that are not dropped
+config/essentials.yml	features.deathpunish.item.whitelist	essentials.config.essentials.features.deathpunish.item.whitelist	物品白名单(不会掉落)	Item whitelist (never dropped)
+config/essentials.yml	features.deathpunish.exp.enabled	essentials.config.essentials.features.deathpunish.exp.enabled	启用经验惩罚	Enable the experience penalty
+config/essentials.yml	features.deathpunish.exp.percent	essentials.config.essentials.features.deathpunish.exp.percent	额外经验损失百分比	Percentage of additional experience lost
+config/essentials.yml	features.deathpunish.command.enabled	essentials.config.essentials.features.deathpunish.command.enabled	启用命令惩罚	Enable the command penalty
+config/essentials.yml	features.deathpunish.command.commands	essentials.config.essentials.features.deathpunish.command.commands	死亡执行的命令 ({PLAYER}为玩家名)	Commands run on death ({PLAYER} is the player name)
+config/essentials.yml	features.deathpunish.world-whitelist	essentials.config.essentials.features.deathpunish.world-whitelist	不进行惩罚的世界	Worlds where no penalty applies
+config/essentials.yml	features.nameprefix.enabled	essentials.config.essentials.features.nameprefix.enabled	启用头顶称号	Enable name prefixes above heads
+config/essentials.yml	features.nameprefix.prefix-format	essentials.config.essentials.features.nameprefix.prefix-format	前缀格式 (支持PlaceholderAPI)	Prefix format (supports PlaceholderAPI)
+config/essentials.yml	features.nameprefix.suffix-format	essentials.config.essentials.features.nameprefix.suffix-format	后缀格式 (支持PlaceholderAPI)	Suffix format (supports PlaceholderAPI)
+config/essentials.yml	features.nameprefix.update-interval	essentials.config.essentials.features.nameprefix.update-interval	更新间隔(秒)	Update interval (seconds)
+config/essentials.yml	features.commandalias.enabled	essentials.config.essentials.features.commandalias.enabled	启用命令别名	Enable command aliases
+config/essentials.yml	features.commandalias.aliases	essentials.config.essentials.features.commandalias.aliases	命令别名映射 (别名: 原命令)	Command alias map (alias: original command)
+config/essentials.yml	features.data-repair.enabled	essentials.config.essentials.features.data-repair.enabled	启动时修复缺少主键的旧记录（家、地标点、封禁、容器锁）；关闭后这些记录无法删除或更新	At start-up, repair old records saved without a primary key (homes, warps, bans, container locks); when off, those records cannot be deleted or updated
+config/lobby.yml	lobby.location.world	essentials.config.lobby.lobby.location.world	主城世界名称	Lobby world name
+config/lobby.yml	lobby.location.x	essentials.config.lobby.lobby.location.x	X 坐标	X coordinate
+config/lobby.yml	lobby.location.y	essentials.config.lobby.lobby.location.y	Y 坐标	Y coordinate
+config/lobby.yml	lobby.location.z	essentials.config.lobby.lobby.location.z	Z 坐标	Z coordinate
+config/lobby.yml	lobby.location.yaw	essentials.config.lobby.lobby.location.yaw	水平朝向	Horizontal facing (yaw)
+config/lobby.yml	lobby.location.pitch	essentials.config.lobby.lobby.location.pitch	垂直朝向	Vertical facing (pitch)
+config/motd.yml	motd.line1	essentials.config.motd.motd.line1	MOTD 第一行	MOTD first line
+config/motd.yml	motd.line2	essentials.config.motd.motd.line2	MOTD 第二行	MOTD second line
+config/motd.yml	motd.max-players	essentials.config.motd.motd.max-players	显示的最大玩家数 (-1 使用服务器默认)	Maximum player count shown (-1 uses the server's default)
+config/spawn.yml	spawn.location.world	essentials.config.spawn.spawn.location.world	出生点世界名称	Spawn world name
+config/spawn.yml	spawn.location.x	essentials.config.spawn.spawn.location.x	X 坐标	X coordinate
+config/spawn.yml	spawn.location.y	essentials.config.spawn.spawn.location.y	Y 坐标	Y coordinate
+config/spawn.yml	spawn.location.z	essentials.config.spawn.spawn.location.z	Z 坐标	Z coordinate
+config/spawn.yml	spawn.location.yaw	essentials.config.spawn.spawn.location.yaw	水平朝向	Horizontal facing (yaw)
+config/spawn.yml	spawn.location.pitch	essentials.config.spawn.spawn.location.pitch	垂直朝向	Vertical facing (pitch)
+config/spawn.yml	spawn.teleport-on-first-join	essentials.config.spawn.spawn.teleport-on-first-join	首次加入时传送到出生点	Teleport to the spawn on first join
+config/spawn.yml	spawn.teleport-on-respawn	essentials.config.spawn.spawn.teleport-on-respawn	重生时传送到出生点	Teleport to the spawn on respawn
+config/tabbar.yml	tabbar.header	essentials.config.tabbar.tabbar.header	Tab 栏头部	Tab list header
+config/tabbar.yml	tabbar.footer	essentials.config.tabbar.tabbar.footer	Tab 栏底部，支持 %online% %max% 变量	Tab list footer; supports the %online% and %max% variables

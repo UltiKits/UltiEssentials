@@ -14,6 +14,7 @@ import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.service.TeleportService;
 import com.ultikits.plugins.essentials.service.TpaService;
 import com.ultikits.ultitools.abstracts.AbstractConfigEntity;
+import com.ultikits.ultitools.abstracts.ReloadReport;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.UltiToolsModule;
 
@@ -33,9 +34,10 @@ import java.util.function.Consumer;
  * Reload and unload are performed by the framework's final {@code reloadSelf()} and
  * {@code unregisterSelf()}. {@code /ul reload UltiEssentials} re-reads this module's configuration
  * files (for example {@code config/essentials.yml}) into the running configuration beans, then
- * {@link #onReload()} restarts the scheduled-command, scoreboard and name-prefix services against
- * the re-read values, so their enable flags, intervals and command list apply without a restart
- * (UltiKits/UltiEssentials#28). Start-up and every reload also warn about any setting this module
+ * {@link #onReload(ReloadReport)} restarts the scheduled-command, scoreboard and name-prefix services
+ * against the re-read values, so their enable flags, intervals and command list apply without a
+ * restart (UltiKits/UltiEssentials#28); a service that does not restart is reported to the sender as
+ * a partial reload (UltiKits/UltiEssentials#66). Start-up and every reload also warn about any setting this module
  * has removed that is still in the operator's file (UltiKits/UltiEssentials#27). Unloading it, for
  * example with {@code /upm uninstall UltiEssentials}, runs {@link #onUnregister()} first, which
  * stops every repeating task this module started (UltiKits/UltiEssentials#43) and every pending
@@ -58,7 +60,7 @@ public class UltiEssentials extends UltiToolsPlugin {
         if (writeConfigTextInServerLanguage()) {
             // The container's @PostConstruct pass scheduled the commands before this point, each task
             // holding the text it was scheduled with; restart them so they send the text just written.
-            reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
+            reloadService(ScheduledCommandService.class, ScheduledCommandService::reload, null);
         }
         getLogger().info(i18n("essentials.log.enabled"));
         return true;
@@ -154,18 +156,23 @@ public class UltiEssentials extends UltiToolsPlugin {
      * command list all take effect (UltiKits/UltiEssentials#28).
      * <p>
      * Each service is reloaded on its own: a service whose {@code reload()} throws is logged at
-     * SEVERE with its name and the other services are still reloaded. The framework's
-     * {@code reloadSelf()} does not isolate this hook (UltiKits/UltiTools-Reborn#509).
+     * SEVERE with its name, a service the container cannot resolve is logged at WARNING, and either
+     * is recorded in {@code report} naming the service, so {@code /ul reload UltiEssentials} tells the
+     * sender the reload was partial and which service did not restart instead of an unconditional
+     * success (UltiKits/UltiEssentials#66, UltiKits/UltiTools-Reborn#529). The other services are
+     * still reloaded either way.
      * <p>
-     * 按重新读取的配置重启定时命令、计分板与头顶称号服务；任一服务重载失败只记录日志，不影响其他服务。
+     * 按重新读取的配置重启定时命令、计分板与头顶称号服务；任一服务未能重启时记录日志并作为「部分重载」上报给执行者，不影响其他服务。
+     *
+     * @param report the framework's report for this reload
      */
     @Override
-    protected void onReload() {
+    protected void onReload(ReloadReport report) {
         warnAboutRemovedSettings();
         writeConfigTextInServerLanguage();
-        reloadService(ScheduledCommandService.class, ScheduledCommandService::reload);
-        reloadService(ScoreboardService.class, ScoreboardService::reload);
-        reloadService(NamePrefixService.class, NamePrefixService::reload);
+        reloadService(ScheduledCommandService.class, ScheduledCommandService::reload, report);
+        reloadService(ScoreboardService.class, ScoreboardService::reload, report);
+        reloadService(NamePrefixService.class, NamePrefixService::reload, report);
     }
 
     /**
@@ -330,15 +337,14 @@ public class UltiEssentials extends UltiToolsPlugin {
      * <p>
      * A service the container cannot resolve is reported as a warning rather than skipped in
      * silence -- the same defect class {@link #shutdownService} was corrected for, found by
-     * sweeping this repository for it. It is reported rather than thrown because {@code
-     * reloadSelf()} does not isolate {@link #onReload()} (UltiKits/UltiTools-Reborn#509), so
-     * throwing here would stop the services after it from reloading at all -- and, because {@code
-     * PluginManager#reload()} loops the modules with no per-module guard either, it would stop every
-     * module <em>after</em> this one from reloading too. A warning that names the service is what
-     * this hook can give without that cost, and it matches {@link #repairStoredPrimaryKeys()}'s
-     * precedent in this same class. Note that {@code /ul reload <name>} replies success
-     * unconditionally, so this warning reaches the console and not the sender
-     * (UltiKits/UltiTools-Reborn#529).
+     * sweeping this repository for it. It is reported rather than thrown because throwing would
+     * stop the services after it from reloading at all, and the framework would then report the
+     * whole module's reload as failed although the other services reloaded. Both that case and a
+     * service whose own {@code reload()} throws are recorded in {@code report}, naming the service,
+     * which is how the framework's {@code ReloadReport} asks a module to say that part of a reload
+     * did not happen: {@code /ul reload <name>} then tells the sender the reload was partial, and the
+     * framework logs its partial line instead of its success line (UltiKits/UltiEssentials#66,
+     * UltiKits/UltiTools-Reborn#529).
      * <p>
      * No {@code getContext() == null} guard here, unlike {@link #shutdownService}, and the asymmetry
      * is deliberate: {@code pluginList.add} has one call site, inside
@@ -355,17 +361,26 @@ public class UltiEssentials extends UltiToolsPlugin {
      *
      * @param type   the service's bean type
      * @param reload the service's own reload
+     * @param report the report of the reload this is part of, or {@code null} at start-up, where
+     *               there is no reload to report on and the log line is the whole report
      */
-    private <T> void reloadService(Class<T> type, Consumer<T> reload) {
+    private <T> void reloadService(Class<T> type, Consumer<T> reload, ReloadReport report) {
         T service = getContext().getBean(type);
         if (service == null) {
             getLogger().warn(String.format(i18n("essentials.log.reload_unreachable"), type.getSimpleName()));
+            if (report != null) {
+                report.partial(String.format(i18n("essentials.reload.partial_unreachable"), type.getSimpleName()));
+            }
             return;
         }
         try {
             reload.accept(service);
         } catch (RuntimeException e) {
             getLogger().error(e, String.format(i18n("essentials.log.reload_failed"), type.getSimpleName()));
+            if (report != null) {
+                String cause = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                report.partial(String.format(i18n("essentials.reload.partial_failed"), type.getSimpleName(), cause));
+            }
         }
     }
 }

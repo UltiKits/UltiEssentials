@@ -1,7 +1,6 @@
 package com.ultikits.plugins.essentials.config;
 
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,7 +31,7 @@ public final class RemovedConfigKeys {
     /** The module name each warning names, matching this module's runtime name. */
     private static final String MODULE = "UltiEssentials";
 
-    /** The file every key below lived in; used when the configuration cannot be read at all. */
+    /** The file every key below lived in; used when the configuration bean is missing altogether. */
     private static final String FILE = "config/essentials.yml";
 
     /**
@@ -67,28 +66,34 @@ public final class RemovedConfigKeys {
      * Returns one warning per removed key that is still present in the operator's file, in the
      * order the keys are listed above; an empty list when there is none.
      * <p>
-     * Reads {@link EssentialsConfig#getConfig()}, the parsed file as it is on disk -- including keys
-     * the entity no longer declares, which is exactly what a residual key is. A fresh install has
-     * none of them, so a clean server gets an empty list.
+     * Asks the framework whether each removed key is in the file through
+     * {@code AbstractConfigEntity#isPresentInFile(String)}, which answers from the file as it was last
+     * loaded -- including keys the entity no longer declares, which is exactly what a residual key is,
+     * and a key holding an explicit null. A fresh install has none of them, so a clean server gets an
+     * empty list. UltiTools-API 6.3.0 removed the parsed-file accessor this method used to read
+     * (UltiKits/UltiEssentials#68).
      * <p>
-     * A configuration that cannot be read yields a warning saying so rather than an empty list: a
-     * check that silently does nothing and a server with no residual key would otherwise look the
-     * same in the log.
+     * A file the framework could not read or parse reports no key present: the framework has already
+     * logged at SEVERE that it could not load the file and will not overwrite it, and repeating a
+     * removed-key warning for a file nobody could read would be a guess.
+     * <p>
+     * A configuration bean that is missing altogether yields a warning saying the file was not checked
+     * rather than an empty list: a check that silently does nothing and a server with no residual key
+     * would otherwise look the same in the log.
      *
      * @param config the module's configuration after the framework has loaded it; may be null
      * @param plugin the module, whose language catalogue gives the warnings their text
      * @return the warnings to log, never null
      */
     public static List<String> warningsFor(EssentialsConfig config, UltiToolsPlugin plugin) {
-        YamlConfiguration onDisk = config == null ? null : config.getConfig();
-        if (onDisk == null) {
+        if (config == null) {
             return Collections.singletonList(String.format(plugin.i18n("essentials.warn.removed_unreadable"),
                     MODULE, FILE));
         }
         String file = config.getConfigFilePath();
         List<String> warnings = new ArrayList<>();
         for (String removed : REMOVED) {
-            if (onDisk.contains(removed)) {
+            if (config.isPresentInFile(removed)) {
                 warnings.add(String.format(plugin.i18n("essentials.warn.removed_key"), MODULE, removed, file,
                         reason(removed, plugin)));
             }

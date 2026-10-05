@@ -73,6 +73,11 @@ public final class EssentialsTestHelper {
         // Set up Bukkit.server via reflection
         mockServer = mock(Server.class);
         lenient().when(mockServer.getLogger()).thenReturn(Logger.getLogger("MockServer"));
+        // The test thread stands for the server thread. From UltiTools-API 6.3.0 the framework's
+        // ConfigManager refuses to register, load or reload a configuration off the server thread
+        // (ConfigManager#permitsConfigThread, UltiKits/UltiTools-Reborn#538), as a real server does
+        // for a module that tried; an unstubbed mock answers false and every config load is refused.
+        lenient().when(mockServer.isPrimaryThread()).thenReturn(true);
 
         // Mock common server methods
         BukkitScheduler scheduler = mock(BukkitScheduler.class);

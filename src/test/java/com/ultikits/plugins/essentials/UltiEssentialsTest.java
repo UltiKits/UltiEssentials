@@ -11,6 +11,7 @@ import com.ultikits.plugins.essentials.utils.MockBukkitHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.UltiTools;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
+import com.ultikits.ultitools.abstracts.ReloadReport;
 import com.ultikits.ultitools.context.SimpleContainer;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.AfterEach;
@@ -81,6 +82,13 @@ class UltiEssentialsTest {
     }
 
     private void invokeHook(String name) throws Exception {
+        if ("onReload".equals(name)) {
+            // The framework calls the reload hook with a fresh report (UltiKits/UltiEssentials#66).
+            Method hook = UltiToolsPlugin.class.getDeclaredMethod(name, ReloadReport.class);
+            hook.setAccessible(true); // NOPMD - the hooks are protected; the framework calls them the same way
+            hook.invoke(plugin, new ReloadReport());
+            return;
+        }
         Method hook = UltiToolsPlugin.class.getDeclaredMethod(name);
         hook.setAccessible(true); // NOPMD - the hooks are protected; the framework calls them the same way
         hook.invoke(plugin);

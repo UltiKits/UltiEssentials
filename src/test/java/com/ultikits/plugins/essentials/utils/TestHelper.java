@@ -30,6 +30,10 @@ public class TestHelper {
             // Mock isEnabled()
             Mockito.lenient().when(mock.isEnabled()).thenReturn(true);
 
+            // A real logger, as the running plugin always has one: since UltiTools-API 6.3.0 a module
+            // save that leaves a change unwritten logs a WARNING through it (AbstractConfigEntity#warnNotWritten).
+            Mockito.lenient().when(mock.getLogger()).thenReturn(java.util.logging.Logger.getLogger("UltiTools"));
+
             // Mock getPluginLoader()
             org.bukkit.plugin.PluginLoader pluginLoader = Mockito.mock(org.bukkit.plugin.PluginLoader.class);
             Mockito.lenient().when(mock.getPluginLoader()).thenReturn(pluginLoader);

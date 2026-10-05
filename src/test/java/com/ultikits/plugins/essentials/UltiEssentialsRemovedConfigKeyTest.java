@@ -10,6 +10,7 @@ import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
 import com.ultikits.plugins.essentials.utils.TestHelper;
 import com.ultikits.ultitools.UltiTools;
+import com.ultikits.ultitools.abstracts.ReloadReport;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.annotations.ConfigEntry;
 import com.ultikits.ultitools.context.SimpleContainer;
@@ -194,6 +195,57 @@ class UltiEssentialsRemovedConfigKeyTest {
                 .contains("UltiEssentials")
                 .contains(CONFIG_FILE)
                 .contains("could not read");
+    }
+
+    // ==================== presence read through the framework (UltiKits/UltiEssentials#68) ====================
+
+    @Test
+    @DisplayName("#68: a removed key present with an explicit null value is still present in the file, and is reported")
+    void startUpReportsARemovedKeyHoldingAnExplicitNull() throws Exception {
+        boot("features:\n  recall:\n    enabled:\n");
+
+        assertOneWarningNaming(startUpWarnings(), RECALL_ENABLED, "UltiEssentials#53");
+    }
+
+    @Test
+    @DisplayName("#68: a file the framework could not parse reports no removed key -- the framework already logs that it could not load the file")
+    void anUnparseableFileReportsNoRemovedKey() throws Exception {
+        boot("features:\n  recall:\n    enabled: [unclosed\n");
+
+        assertThat(startUpWarnings()).filteredOn(line -> line.contains(RECALL_ENABLED)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("#68: a file the server cannot read reports no removed key")
+    void anUnreadableFileReportsNoRemovedKey() throws Exception {
+        write("features:\n  recall:\n    enabled: false\n");
+        org.junit.jupiter.api.Assumptions.assumeTrue(configFile.setReadable(false, false) && !configFile.canRead(),
+                "the file system lets this user make the file unreadable");
+        try {
+            bootWithoutWriting("en");
+
+            assertThat(startUpWarnings()).filteredOn(line -> line.contains(RECALL_ENABLED)).isEmpty();
+        } finally {
+            assertThat(configFile.setReadable(true, false)).isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("#68: a removed key put back between two reloads is reported on the second, and not once it is removed again")
+    void aRemovedKeyRestoredBetweenTwoReloadsIsReportedOnTheSecond() throws Exception {
+        boot("");
+        assertThat(startUpWarnings()).isEmpty();
+
+        configManager.reloadConfigs(plugin);
+        assertThat(warningsDuring(() -> invokeOnReload(plugin))).as("first reload, clean file").isEmpty();
+
+        write("features:\n  recall:\n    enabled: true\n");
+        configManager.reloadConfigs(plugin);
+        assertOneWarningNaming(warningsDuring(() -> invokeOnReload(plugin)), RECALL_ENABLED, "UltiEssentials#53");
+
+        write("features:\n  wild:\n    enabled: true\n");
+        configManager.reloadConfigs(plugin);
+        assertThat(warningsDuring(() -> invokeOnReload(plugin))).as("third reload, key removed again").isEmpty();
     }
 
     // ==================== controls ====================
@@ -381,6 +433,11 @@ class UltiEssentialsRemovedConfigKeyTest {
      */
     private void boot(String yaml, String language) throws Exception {
         write(yaml);
+        bootWithoutWriting(language);
+    }
+
+    /** {@link #boot(String, String)} over whatever {@code config/essentials.yml} already holds. */
+    private void bootWithoutWriting(String language) throws Exception {
         plugin = mock(UltiEssentials.class, CALLS_REAL_METHODS);
         setResourceFolderPath(plugin, moduleFolder.toString());
         logger = mock(PluginLogger.class);
@@ -438,13 +495,14 @@ class UltiEssentialsRemovedConfigKeyTest {
         void run() throws Exception;
     }
 
-    // onReload() is protected in the framework's package; reloadSelf() calls it virtually, and so
-    // does this reflective call, so it reaches whatever this module declares.
+    // onReload(ReloadReport) is protected in the framework's package; reloadSelf() calls it virtually
+    // with a fresh report, and so does this reflective call, so it reaches whatever this module
+    // declares (UltiKits/UltiEssentials#66).
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration") // invokes the protected framework hook as reloadSelf() does
     private static void invokeOnReload(UltiToolsPlugin plugin) throws Exception {
-        Method hook = UltiToolsPlugin.class.getDeclaredMethod("onReload");
+        Method hook = UltiToolsPlugin.class.getDeclaredMethod("onReload", ReloadReport.class);
         hook.setAccessible(true);
-        hook.invoke(plugin);
+        hook.invoke(plugin, new ReloadReport());
     }
 
     // No supported setter exists: the field is private, its accessors are protected final, and the

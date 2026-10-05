@@ -6,10 +6,12 @@ import com.ultikits.plugins.essentials.service.NamePrefixService;
 import com.ultikits.plugins.essentials.service.ScheduledCommandService;
 import com.ultikits.plugins.essentials.service.ScoreboardService;
 import com.ultikits.plugins.essentials.utils.EssentialsTestHelper;
+import com.ultikits.ultitools.abstracts.ReloadReport;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.context.SimpleContainer;
 import com.ultikits.ultitools.interfaces.impl.logger.PluginLogger;
 import com.ultikits.ultitools.manager.ConfigManager;
+import com.ultikits.ultitools.manager.PluginManager;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitScheduler;
@@ -41,6 +43,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -393,10 +398,12 @@ class UltiEssentialsServiceReloadTest {
         PluginLogger logger = mock(PluginLogger.class);
         doReturn(logger).when(plugin).getLogger();
 
-        assertThatCode(() -> rewriteAndReload(yaml(true, 5, true, 1, false, Collections.<String>emptyList())))
-                .doesNotThrowAnyException();
+        ReloadReport report = rewriteAndReload(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
 
         verify(logger).error(same(boom), contains("ScheduledCommandService"));
+        // #66: the failure reaches the framework's report, so /ul reload says the reload was partial.
+        assertThat(report.getPartialReasons()).singleElement().asString()
+                .contains("ScheduledCommandService").contains("boom");
         assertThat(periods()).containsExactly(20L, 100L);
         assertThat(scoreboardService.isEnabled(player)).isTrue();
         assertThatCode(() -> namePrefixService.updatePlayer(player)).doesNotThrowAnyException();
@@ -414,11 +421,13 @@ class UltiEssentialsServiceReloadTest {
         PluginLogger logger = mock(PluginLogger.class);
         doReturn(logger).when(plugin).getLogger();
 
-        rewriteAndReload(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
+        ReloadReport report = rewriteAndReload(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
 
         // Named, so an operator can see which feature did not follow the edited configuration; the
         // services around it still reloaded, which is why this is a warning and not a throw.
         verify(logger).warn(contains("ScoreboardService"));
+        // #66: and named in the framework's report, so the sender is told too, not only the console.
+        assertThat(report.getPartialReasons()).singleElement().asString().contains("ScoreboardService");
         assertThat(periods()).containsExactly(100L);
     }
 
@@ -458,13 +467,60 @@ class UltiEssentialsServiceReloadTest {
         PluginLogger logger = mock(PluginLogger.class);
         doReturn(logger).when(plugin).getLogger();
 
-        assertThatCode(() -> rewriteAndReload(yaml(true, 5, false, 1, true, Collections.singletonList("60:say after"))))
-                .doesNotThrowAnyException();
+        ReloadReport report = rewriteAndReload(yaml(true, 5, false, 1, true, Collections.singletonList("60:say after")));
 
         verify(logger).error(same(boom), contains("ScoreboardService"));
+        assertThat(report.getPartialReasons()).singleElement().asString()
+                .contains("ScoreboardService").contains("boom");
         assertThat(periods()).containsExactly(1200L, 100L);
         assertThatCode(() -> namePrefixService.updatePlayer(player)).doesNotThrowAnyException();
         assertThat(teamEntries).containsExactly("Steve");
+    }
+
+    @Test
+    @DisplayName("#66: a reload in which every service restarts reports no partial reason")
+    void aCleanReloadReportsNothingPartial() throws Exception {
+        boot(yaml(false, 5, false, 1, false, Collections.<String>emptyList()));
+
+        ReloadReport report = rewriteAndReload(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
+
+        assertThat(report.isPartial()).isFalse();
+        assertThat(periods()).containsExactly(20L, 100L);
+    }
+
+    @Test
+    @DisplayName("#66: through the framework's own reload, a service that fails makes the reload partial, naming it -- not the plain success line")
+    void theFrameworkReloadReportsTheFailedServiceAsPartial() throws Exception {
+        boot(yaml(false, 5, false, 1, false, Collections.<String>emptyList()));
+        when(com.ultikits.ultitools.UltiTools.getInstance().getConfigManager()).thenReturn(configManager);
+        when(com.ultikits.ultitools.UltiTools.getInstance().getPluginManager()).thenReturn(new PluginManager());
+        ScheduledCommandService throwing = spy(scheduledCommandService);
+        doThrow(new IllegalStateException("boom")).when(throwing).reload();
+        registerServices(throwing, scoreboardService, namePrefixService);
+        doReturn(mock(PluginLogger.class)).when(plugin).getLogger();
+        write(yaml(true, 5, true, 1, false, Collections.<String>emptyList()));
+        List<LogRecord> reloadLines = new ArrayList<>();
+        Handler capture = new Handler() {
+            @Override public void publish(LogRecord record) { reloadLines.add(record); }
+            @Override public void flush() { }
+            @Override public void close() { }
+        };
+        Logger frameworkLog = Logger.getLogger(UltiToolsPlugin.class.getName());
+        frameworkLog.addHandler(capture);
+        try {
+            ReloadReport report = plugin.reloadWithReport();
+
+            assertThat(report.isPartial()).isTrue();
+            assertThat(report.getPartialReasons()).singleElement().asString().contains("ScheduledCommandService");
+        } finally {
+            frameworkLog.removeHandler(capture);
+        }
+        // The framework's per-module line is its partial WARNING, never the plain "reloaded." line.
+        assertThat(reloadLines).extracting(LogRecord::getMessage)
+                .anyMatch(line -> line.contains("reloaded partially") && line.contains("ScheduledCommandService"))
+                .noneMatch(line -> line.endsWith("' reloaded."));
+        // The services around the failed one still reloaded.
+        assertThat(scoreboardService.isEnabled(player)).isTrue();
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -537,19 +593,22 @@ class UltiEssentialsServiceReloadTest {
         return last;
     }
 
-    private void rewriteAndReload(String yaml) throws Exception {
+    private ReloadReport rewriteAndReload(String yaml) throws Exception {
         write(yaml);
         configManager.reloadConfigs(plugin);
-        invokeOnReload(plugin);
+        return invokeOnReload(plugin);
     }
 
-    // onReload() is protected in the framework's package; reloadSelf() calls it virtually, and so
-    // does this reflective call, so it reaches whatever this module declares.
+    // onReload(ReloadReport) is protected in the framework's package; reloadSelf() calls it
+    // virtually with a fresh report, and so does this reflective call, so it reaches whatever this
+    // module declares (UltiKits/UltiEssentials#66).
     @SuppressWarnings("PMD.AvoidAccessibilityAlteration") // invokes the protected framework hook as reloadSelf() does
-    private static void invokeOnReload(UltiToolsPlugin plugin) throws Exception {
-        Method hook = UltiToolsPlugin.class.getDeclaredMethod("onReload");
+    private static ReloadReport invokeOnReload(UltiToolsPlugin plugin) throws Exception {
+        Method hook = UltiToolsPlugin.class.getDeclaredMethod("onReload", ReloadReport.class);
         hook.setAccessible(true);
-        hook.invoke(plugin);
+        ReloadReport report = new ReloadReport();
+        hook.invoke(plugin, report);
+        return report;
     }
 
     private ScheduledTimer onlyTimer(long period) {

@@ -207,8 +207,18 @@ class WildCooldownBindingTest {
         useWild(player);
         assertThat(remaining(player)).isBetween(5L, 6L);
         assertThat(config().getWildMaxRange()).isEqualTo(20000);
-        // The module's own reload hook ran: nothing aborted reloadSelf() part-way.
-        verify(plugin).onReload();
+        // The module's own reload hook ran: nothing aborted reloadSelf() part-way. The hook the
+        // framework calls is onReload(ReloadReport) (UltiKits/UltiEssentials#66), protected in the
+        // framework's package, so the verification reaches it reflectively.
+        verifyReloadHookRan();
+    }
+
+    @SuppressWarnings("PMD.AvoidAccessibilityAlteration") // verifies the protected framework hook
+    private void verifyReloadHookRan() throws Exception {
+        Method hook = com.ultikits.ultitools.abstracts.UltiToolsPlugin.class
+                .getDeclaredMethod("onReload", com.ultikits.ultitools.abstracts.ReloadReport.class);
+        hook.setAccessible(true);
+        hook.invoke(verify(plugin), org.mockito.ArgumentMatchers.any(com.ultikits.ultitools.abstracts.ReloadReport.class));
     }
 
     // ==================== the declaration ====================

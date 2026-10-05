@@ -9,6 +9,58 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `/setspawn` and `/setlobby` now write exactly the six location settings they set (`world`, `x`, `y`, `z`,
+  `yaw`, `pitch` under `spawn.location` or `lobby.location`) and nothing else; every other line of
+  `config/spawn.yml` or `config/lobby.yml`, a hand edit made while the server runs included, stays byte for
+  byte. A location setting edited by hand is replaced by the command's value, as the command asks. Before, the
+  commands saved the whole configuration: a hand-edited location setting was left unwritten while chat said the
+  location was set, and a write the framework refused was reported as success. Now a refused write is answered
+  `Spawn point not saved: <reason>. …` (or `Lobby not saved: …`), the file is unchanged, and the running
+  location is restored to the values held before the command, with the reason logged once; any other failed write is answered as before and rolled back the
+  same way (UltiKits/UltiEssentials#72).
+- `/setspawn` 和 `/setlobby` 现在只写它们设置的六个坐标项（`spawn.location` 或 `lobby.location` 下的 `world`、`x`、`y`、`z`、
+  `yaw`、`pitch`），不写其他内容；`config/spawn.yml` 或 `config/lobby.yml` 的其他每一行（包括服务器运行期间的手动修改）都逐字节
+  保持不变。手动改过的坐标项会按命令的要求被替换。此前命令保存整个配置：手动改过的坐标项不会被写入，聊天却说已设置；
+  框架拒绝的写入也被报告为成功。现在被拒绝的写入会回复「出生点未保存：<原因>。……」（或「主城未保存：……」），文件不变，
+  运行中的坐标恢复为命令执行前的值，原因记录在服务器日志中；其他写入失败照旧回复，并同样撤回（UltiKits/UltiEssentials#72）。
+- `/ul reload UltiEssentials` no longer replies that the module reloaded when one of its three background
+  services (scheduled commands, scoreboard, name prefixes) did not restart: the reply now says the reload was
+  partial and names the service and why, and the framework logs its partial-reload warning instead of its
+  success line. The other services still restart (UltiKits/UltiEssentials#66).
+- `/ul reload UltiEssentials` 在三个后台服务（定时命令、计分板、头顶称号）中有服务未能重启时，不再回复模块已重载：回复会说明
+  这是一次部分重载，并指出是哪个服务、原因是什么；框架记录的也是部分重载警告而不是成功日志。其他服务仍会重启
+  （UltiKits/UltiEssentials#66）。
+- The comments above the 78 keys of this module's five configuration files (`config/essentials.yml`,
+  `config/lobby.yml`, `config/motd.yml`, `config/spawn.yml`, `config/tabbar.yml`) now come from the module's
+  language files: a server set to `language: en` writes English comments on a fresh install (they were
+  Chinese in every language). An existing file's comments on these keys switch to the server's language at
+  the next start; values are untouched. Only a comment this module wrote is switched - its catalogue text in
+  either language, or the shorter comment release v1.0.0 wrote above `features.wild.cooldown`
+  (UltiKits/UltiEssentials#73); a comment you wrote by hand stays byte for byte (UltiTools-API 6.3.0, maintainer
+  decision 2026-10-04) (UltiKits/UltiEssentials#67).
+- 本模块五个配置文件（`config/essentials.yml`、`config/lobby.yml`、`config/motd.yml`、`config/spawn.yml`、`config/tabbar.yml`）
+  中 78 个配置项上方的注释现在取自模块的语言文件：`language: en` 的服务器全新安装时写入英文注释（此前所有语言下都是中文）。
+  已有文件中这些配置项的注释会在下次启动时切换为服务器语言；配置值不变。只有本模块写入的注释会被切换——任一语言的语言文件文本，或 v1.0.0 在
+  `features.wild.cooldown` 上方写入的较短注释（UltiKits/UltiEssentials#73）；你手写的注释逐字节保留（UltiTools-API 6.3.0，
+  维护者 2026-10-04 决定）（UltiKits/UltiEssentials#67）。
+- On UltiTools-API 6.3.0 with JSON storage (`datasource.type: json`), the start-up repair of records written
+  before UltiKits/UltiEssentials#34 gives them their primary key again. 6.3.0 hands out copies of stored
+  records, so the repair wrote nothing there, logged an error at every start, and `/delhome`, `/delwarp`,
+  `/unban` and an owner's lock removal kept failing on those records. If writing a record's key fails, every
+  record of that type is left exactly as it was and the next start tries again (UltiKits/UltiEssentials#69).
+- 在 UltiTools-API 6.3.0 上使用 JSON 存储（`datasource.type: json`）时，启动修复重新能为 #34 修复之前写入的记录补上主键。
+  6.3.0 读取记录时返回副本，修复因此什么都没写入、每次启动都记录一条错误，`/delhome`、`/delwarp`、`/unban` 以及主人拆除上锁
+  容器对这些记录仍然无效。若某条记录的主键写入失败，该类型的所有记录保持原样，下次启动重试（UltiKits/UltiEssentials#69）。
+- The module loads on UltiTools-API 6.3.0. 6.3.0 removes the configuration object the removed-settings
+  warning read, so this module was refused at load; the warning now asks the framework whether a removed key
+  is in `config/essentials.yml`, and warns exactly as before at start-up and on every `/ul reload` for a file
+  holding one (a key left with an empty value included) and not at all otherwise. A file the framework could
+  not read or parse produces the framework's own `Cannot load` line and no removed-setting warning
+  (UltiKits/UltiEssentials#68).
+- 本模块可在 UltiTools-API 6.3.0 上加载。6.3.0 删除了「已删除配置项」警告所读取的配置对象，本模块因此无法加载；现在改为
+  向框架询问 `config/essentials.yml` 中是否仍有某个已删除的键，启动时和每次 `/ul reload` 时的警告与之前完全一致（值为空的
+  键同样会报告），文件中没有时不报。框架无法读取或解析的文件只会出现框架自己的 `Cannot load` 日志，不再报已删除配置项
+  （UltiKits/UltiEssentials#68）。
 - `/back` now returns only from teleports this module's own commands started (`/home`, `/warp`,
   `/spawn`, `/lobby`, `/wild`, an accepted `/tpa` or `/tpahere`, and `/back` itself). Another plugin's
   teleport or a vanilla `/tp` no longer gives `/back` a place to return to, so a teleport by something
@@ -363,11 +415,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Language keys were renamed to dotted ASCII keys (for example `essentials.home.set`): every key that
   was a Chinese sentence, and `teleport_success`, the one older ASCII key still in use.
-  An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
-  the new keys; until then the renamed messages show the new built-in text. A server whose language
-  files were never edited needs no action.
-- 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。改过本模块 `lang/en.json` 或
-  `lang/zh.json` 的运维需要把改动重新套到新键上；在此之前，这些消息显示新的内置文本。从未改过语言文件的服务器无需任何操作。
+  This module's official language files (`lang/en.json` and `lang/zh.json` under
+  `plugins/UltiTools/pluginConfig/UltiEssentials/`) belong to UltiTools: from UltiTools-API 6.3.0 an edited
+  official file is restored to the shipped text at every start, its edited copy kept as a backup and named in
+  the server log, so edits made there are not kept. To customise messages, copy the official file under a new
+  name that starts with its language code and a hyphen and holds only ASCII letters, digits, `_` and `-`
+  (`en.json` to `en-myserver.json`), edit the copy against the new keys, and set `language: en-myserver` in
+  `plugins/UltiTools/config.yml` (one setting for the framework and every module). Messages the copy lacks come
+  from the official file its name starts with (`en` here), and a module with no file under that name uses its
+  official `en`. A server whose
+  language files were never edited needs no action.
+- 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。本模块的官方语言文件
+  （`plugins/UltiTools/pluginConfig/UltiEssentials/` 下的 `lang/en.json` 和 `lang/zh.json`）归 UltiTools 所有：自 UltiTools-API 6.3.0 起，
+  被修改过的官方文件会在每次启动时恢复为自带内容，修改过的副本作为备份保留并在服务器日志中注明，因此在其中所做的修改不会保留。
+  要自定义消息，请把官方文件复制为以语言代码加连字符开头、只含 ASCII 字母、数字、`_` 和 `-` 的新名称
+  （`zh.json` → `zh-myserver.json`），按新键修改副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`
+  （框架和所有模块共用这一个设置）。副本中没有的消息取自名称开头对应的官方文件（此处为 `zh`），没有该名称文件的模块使用其官方 `zh`。从未改过语言文件的服务器无需任何操作。
 
 - This module now declares `api-version: 630` in its `plugin.yml`, so it loads only on UltiTools
   6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools

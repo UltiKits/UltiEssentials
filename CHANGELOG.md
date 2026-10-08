@@ -7,6 +7,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `plugin.yml` now declares `identify-string: ultiessentials`, the key of this module's entry in the
+  UltiCloud catalogue. The framework's update check and `/upm update` skip a module that does not
+  declare it, so this module now takes part in both: a later published version carrying the same key
+  is reported at startup and can be installed with `/upm update` (UltiKits/UltiTools-Reborn#474).
+  The README's UltiTools-API badge and install step now say UltiTools 6.3.0 or later, matching the
+  `api-version: 630` the module already declares (an older framework refuses it with a warning that the
+  UltiTools version is outdated).
+- `plugin.yml` 现在声明 `identify-string: ultiessentials`，即本模块在 UltiCloud 模块目录中的条目键。框架的更新检查和
+  `/upm update` 会跳过未声明该键的模块，因此本模块现在会参与两者：带有同一键的更高发布版本会在启动时提示，
+  并可用 `/upm update` 安装（UltiKits/UltiTools-Reborn#474）。README 中的 UltiTools-API 徽章和安装步骤现在写明
+  UltiTools 6.3.0 或更高版本，与本模块已声明的 `api-version: 630` 一致（更早的框架会拒绝加载并给出 UltiTools 版本过旧的警告）。
+
+- The README now states Paper 1.21+ and Java 21+, the versions the UltiTools 6.3.0 framework supports;
+  it previously said Paper 1.19+ and Java 8+ (UltiKits/UltiTools-Reborn#544).
+- README 现写明 Paper 1.21+、Java 21+，即 UltiTools 6.3.0 框架支持的版本；此前写的是 Paper 1.19+、Java 8+
+  （UltiKits/UltiTools-Reborn#544）。
+
 ### Fixed
 
 - `/setspawn` and `/setlobby` now write exactly the six location settings they set (`world`, `x`, `y`, `z`,

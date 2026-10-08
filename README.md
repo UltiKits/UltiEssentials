@@ -1,6 +1,6 @@
 # UltiEssentials
 
-[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.2.1-blue)](https://github.com/UltiKits/UltiTools-Reborn)
+[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.3.0%2B-blue)](https://github.com/UltiKits/UltiTools-Reborn)
 [![Paper](https://img.shields.io/badge/Paper-1.19--1.21-green)](https://papermc.io/)
 [![Java](https://img.shields.io/badge/Java-8+-orange)](https://www.java.com/)
 
@@ -80,9 +80,9 @@ The sidebar is drawn on a private scoreboard this module assigns to each player 
 
 ## 📦 安装
 
-1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.2.1+
+1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.3.0 或更高版本。本模块声明 `api-version: 630`，更早的框架会拒绝加载它
 2. 将 `UltiEssentials-1.0.0.jar` 放入 `plugins/UltiTools/plugins/` 目录
-3. 重启服务器或使用 `/ul reload` 重载插件
+3. 重启服务器（`/ul reload` 只重载配置，不会加载新的模块 jar）
 
 **或通过 UPM 安装:**
 ```

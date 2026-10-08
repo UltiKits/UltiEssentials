@@ -21,6 +21,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   并可用 `/upm update` 安装（UltiKits/UltiTools-Reborn#474）。README 中的 UltiTools-API 徽章和安装步骤现在写明
   UltiTools 6.3.0 或更高版本，与本模块已声明的 `api-version: 630` 一致（更早的框架会拒绝加载并给出 UltiTools 版本过旧的警告）。
 
+- The README now states Paper 1.21+ and Java 21+, the versions the UltiTools 6.3.0 framework supports;
+  it previously said Paper 1.19+ and Java 8+ (UltiKits/UltiTools-Reborn#544).
+- README 现写明 Paper 1.21+、Java 21+，即 UltiTools 6.3.0 框架支持的版本；此前写的是 Paper 1.19+、Java 8+
+  （UltiKits/UltiTools-Reborn#544）。
+
 ### Fixed
 
 - `/setspawn` and `/setlobby` now write exactly the six location settings they set (`world`, `x`, `y`, `z`,

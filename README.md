@@ -1,12 +1,12 @@
 # UltiEssentials
 
 [![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.3.0%2B-blue)](https://github.com/UltiKits/UltiTools-Reborn)
-[![Paper](https://img.shields.io/badge/Paper-1.19--1.21-green)](https://papermc.io/)
-[![Java](https://img.shields.io/badge/Java-8+-orange)](https://www.java.com/)
+[![Paper](https://img.shields.io/badge/Paper-1.21%2B-green)](https://papermc.io/)
+[![Java](https://img.shields.io/badge/Java-21%2B-orange)](https://adoptium.net/)
 
-Runs on **Paper 1.19 or newer** only, like the UltiTools framework it is built on (the framework declares Bukkit `api-version: 1.19` and uses Paper's Adventure API throughout). Spigot and servers older than 1.19 are not supported.
+Runs on **Paper 1.21 or newer with Java 21 or newer**, the versions the UltiTools 6.3.0 framework supports. Spigot is not supported.
 
-仅支持 **Paper 1.19 及以上**，与其所依赖的 UltiTools 框架一致（框架声明 Bukkit `api-version: 1.19`，并全面使用 Paper 的 Adventure API）。不支持 Spigot，也不支持 1.19 以前的服务端。
+需要 **Paper 1.21 及以上、Java 21 及以上**，即 UltiTools 6.3.0 框架支持的版本。不支持 Spigot。
 
 UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插件模块，提供了常用的传送、玩家状态、管理员工具和服务器自定义功能。
 

@@ -48,6 +48,12 @@ for real-machine verification, not user-facing documentation.
   completes; `HomeCommand`/`WarpCommand`'s own `switch` statements send `Teleport successful!`
   without the colour code for an INSTANT (no-warmup) teleport. Both variants are asserted below
   where relevant.
+- **Console lines carry the module-logger prefix.** Every line this module logs reaches the console as
+  `[UltiTools] [UltiEssentials] <text>`: Paper adds `[UltiTools] `, and the framework's module logger (`PluginLogger`)
+  adds `[UltiEssentials] ` (this module's `plugin.yml` `name`). A console line quoted below is the `<text>` after both
+  prefixes, character for character, unless the row quotes a prefix itself; a row that counts or excludes this
+  module's console lines means lines carrying `[UltiEssentials]`. A line the framework logs is quoted after Paper's
+  prefix, with its own `[UltiTools-API] ` where the row shows it.
 
 ## Teleportation & World Presence
 

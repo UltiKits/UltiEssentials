@@ -245,23 +245,23 @@ public class EssentialsConfig extends AbstractConfigEntity {
     private boolean commandAliasEnabled = true;
 
     /**
-     * The alias map a new install writes. It has no {@code gmc}, {@code gms} or {@code gmsp} entry: those names are this
-     * module's own shortcut commands ({@code GmCreativeCommand}, {@code GmSurvivalCommand}, {@code GmSpectatorCommand},
+     * The alias map a new install writes: {@code day} and {@code night} only. It has no {@code gmc}, {@code gms},
+     * {@code gma} or {@code gmsp} entry: those names are this module's own shortcut commands
+     * ({@code GmCreativeCommand}, {@code GmSurvivalCommand}, {@code GmAdventureCommand}, {@code GmSpectatorCommand},
      * permission {@code ultiessentials.gamemode.self}), and an alias of the same name rewrote them to vanilla
-     * {@code /gamemode}, with its own permission, before the shortcut could run (maintainer decision 2026-10-14).
-     * {@code gma} stays: the module has no {@code /gma} command, so that alias shadows nothing and is the only way
-     * {@code /gma} works.
+     * {@code /gamemode}, with its own permission, before the shortcut could run (maintainer decisions 2026-10-14:
+     * remove all four, and give {@code /gma} a module command so every shortcut still has one). No shipped alias
+     * may have a module command's name; {@code ShippedAliasesShadowNoCommandTest} checks every command class.
      *
      * <p>This is a default only. It cannot overwrite an operator's configuration: the framework uses it when
      * {@code features.commandalias.aliases} is absent from {@code config/essentials.yml}, and a file that already
-     * lists the three entries (every install made by an earlier build) keeps them in memory and on disk, byte for
+     * lists the four entries (every install made by an earlier build) keeps them in memory and on disk, byte for
      * byte (framework rule: operator-written configuration is never rewritten). Such an install keeps sending those
-     * three commands to vanilla {@code /gamemode} until the operator deletes the entries; README "Known
-     * limitations" says so. Tested by {@code EssentialsConfigTextTest.ShippedCommandAliases}.</p>
+     * four commands to vanilla {@code /gamemode} until the operator deletes the entries; README says so. Tested by
+     * {@code EssentialsConfigTextTest.ShippedCommandAliases}.</p>
      */
     @ConfigEntry(path = "features.commandalias.aliases", comment = "{essentials.config.essentials.features.commandalias.aliases}")
     private java.util.Map<String, String> commandAliases = new java.util.HashMap<String, String>() {{
-        put("gma", "gamemode adventure");
         put("day", "time set day");
         put("night", "time set night");
     }};

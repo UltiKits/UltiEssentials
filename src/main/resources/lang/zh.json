@@ -55,6 +55,7 @@
   "essentials.gamemode.changed_survival": "游戏模式已切换为 生存模式",
   "essentials.gamemode.changed_creative": "游戏模式已切换为 创造模式",
   "essentials.gamemode.changed_spectator": "游戏模式已切换为 旁观模式",
+  "essentials.gamemode.changed_adventure": "游戏模式已切换为 冒险模式",
 
   "essentials.hide.enabled": "隐身模式已开启",
   "essentials.hide.disabled": "隐身模式已关闭",
@@ -147,6 +148,8 @@
   "essentials.help.gmsp": "使用 /gmsp 切换到旁观模式",
   "essentials.command.gms.description": "切换到生存模式",
   "essentials.help.gms": "使用 /gms 切换到生存模式",
+  "essentials.command.gma.description": "切换到冒险模式",
+  "essentials.help.gma": "使用 /gma 切换到冒险模式",
   "essentials.command.heal.description": "恢复生命值",
   "essentials.help.heal": "使用 /heal 恢复生命值",
   "essentials.command.hide.description": "切换隐身模式",

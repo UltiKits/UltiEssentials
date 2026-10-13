@@ -55,6 +55,7 @@
   "essentials.gamemode.changed_survival": "Game mode changed to SURVIVAL",
   "essentials.gamemode.changed_creative": "Game mode changed to CREATIVE",
   "essentials.gamemode.changed_spectator": "Game mode changed to SPECTATOR",
+  "essentials.gamemode.changed_adventure": "Game mode changed to ADVENTURE",
 
   "essentials.hide.enabled": "Vanish mode enabled",
   "essentials.hide.disabled": "Vanish mode disabled",
@@ -147,6 +148,8 @@
   "essentials.help.gmsp": "Use /gmsp to switch to spectator mode",
   "essentials.command.gms.description": "Switch to survival mode",
   "essentials.help.gms": "Use /gms to switch to survival mode",
+  "essentials.command.gma.description": "Switch to adventure mode",
+  "essentials.help.gma": "Use /gma to switch to adventure mode",
   "essentials.command.heal.description": "Restore health",
   "essentials.help.heal": "Use /heal to restore health",
   "essentials.command.hide.description": "Toggle vanish mode",

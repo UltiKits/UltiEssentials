@@ -199,8 +199,9 @@ class EssentialsConfigExtendedTest {
         void shouldHaveDefaultAliases() {
             assertThat(config.getCommandAliases()).isNotNull();
             assertThat(config.getCommandAliases()).isNotEmpty();
-            assertThat(config.getCommandAliases()).containsKey("gmc");
-            assertThat(config.getCommandAliases()).containsKey("gms");
+            assertThat(config.getCommandAliases()).containsKeys("gma", "day", "night");
+            // gmc, gms and gmsp are the module's own shortcuts; a same-named alias would shadow them
+            assertThat(config.getCommandAliases()).doesNotContainKeys("gmc", "gms", "gmsp");
         }
 
         @Test

@@ -63,6 +63,12 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 
 `/ban`、`/banlist`、`/scoreboard` 有意接管了同名的原版命令：`/ban` 与 `/banlist` 操作本模块自己的封禁记录，而不是服务器的封禁名单；`/scoreboard` 用于开关本模块的侧边栏。原版命令仍可通过 `minecraft:ban`、`minecraft:banlist`、`minecraft:scoreboard` 调用。
 
+### Command aliases and the `/gmc` shortcuts / 命令别名与 `/gmc` 等快捷命令
+
+`features.commandalias.aliases` in `config/essentials.yml` rewrites a typed command before the server dispatches it. A new install's map is `gma`, `day` and `night`. Earlier builds also shipped `gmc`, `gms` and `gmsp`, which have the same names as this module's own shortcuts: while those entries are in the map, `/gmc`, `/gms` and `/gmsp` go to vanilla `/gamemode` and its permission, and `ultiessentials.gamemode.self` has no effect on them. **Known limitation of an upgraded install:** the module never rewrites a configuration file an operator already has, so a server that ran an earlier build keeps those three entries. To have `ultiessentials.gamemode.self` apply, delete the `gmc`, `gms` and `gmsp` lines from `features.commandalias.aliases` and run `/ul reload UltiEssentials`. (`gma` stays: the module has no `/gma` command of its own.)
+
+`config/essentials.yml` 中的 `features.commandalias.aliases` 会在服务器分发命令之前改写玩家输入的命令。新安装的默认表为 `gma`、`day`、`night`。旧版本还预置了 `gmc`、`gms`、`gmsp`，它们与本模块自带的快捷命令同名：这三条在表中时，`/gmc`、`/gms`、`/gmsp` 会被转给原版 `/gamemode` 及其权限，`ultiessentials.gamemode.self` 对它们不起作用。**已升级服务器的已知限制：**本模块从不改写服主已有的配置文件，所以运行过旧版本的服务器会保留这三条。若想让 `ultiessentials.gamemode.self` 生效，请从 `features.commandalias.aliases` 中删除 `gmc`、`gms`、`gmsp` 三行，然后执行 `/ul reload UltiEssentials`。（`gma` 保留：本模块没有自己的 `/gma` 命令。）
+
 ### The sidebar's scoreboard / 侧边栏计分板
 
 The sidebar is drawn on a private scoreboard this module assigns to each player who has it on. That scoreboard belongs to this module alone: another plugin must not write onto it (register its own objective named `ultiessentials`, or put a player into its own team on it). Such writes are not supported and may be overwritten. The module copies the main scoreboard's teams onto it, so name prefixes stay visible, and restores its own objective, sidebar slot and lines if another plugin changes them. If another plugin's scoreboard is already on screen, this sidebar waits until the player is back on the main scoreboard.

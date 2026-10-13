@@ -93,7 +93,7 @@ class EssentialsConfigTextTest {
 
     /** The scheduled commands every earlier version shipped; the Java default and the en catalogue text, byte for byte. */
     private static final List<String> SHIPPED_SCHEDULED_EN = Arrays.asList(
-            "300:say Server is online!", "600:broadcast &cReminder: follow server rules!");
+            "300:say Server is online!", "600:say Reminder: follow server rules!");
 
     /** The death-punishment command every earlier version shipped; the Java default and the zh catalogue text, byte for byte. */
     private static final List<String> SHIPPED_DEATHPUNISH_ZH = java.util.Collections.singletonList("say {PLAYER} 死亡了!");
@@ -1131,6 +1131,65 @@ class EssentialsConfigTextTest {
                 } else {
                     break;
                 }
+            }
+            return block.toString();
+        }
+    }
+
+    // ================================================================== shipped scheduled-command example
+
+    /**
+     * The shipped scheduled-command example uses {@code say} only: {@code broadcast}, which earlier builds shipped,
+     * is not a command on a plain Paper server (Essentials provides it), so that entry failed with an unknown
+     * command every ten minutes (maintainer decision 2026-10-14). A new install writes the {@code say} example; a
+     * file that still holds the earlier example is operator content now and is never rewritten, not even into the
+     * server's language (framework foundational rule, 2026-10-04).
+     */
+    @Nested
+    @DisplayName("shipped scheduled-command example")
+    class ShippedScheduledExample {
+
+        private final List<String> earlierExample = Arrays.asList(
+                "300:say Server is online!", "600:broadcast &cReminder: follow server rules!");
+
+        @Test
+        @DisplayName("a new install's example runs say only")
+        void aNewInstallShipsSayOnly() throws Exception {
+            language[0] = "en";
+            EssentialsConfig essentials = loadEssentials();
+            assertThat(essentials.getScheduledCommands()).isNotEmpty()
+                    .allSatisfy(entry -> assertThat(entry.substring(entry.indexOf(':') + 1)).startsWith("say "));
+            for (String code : new String[]{"en", "zh"}) {
+                assertThat(scheduledText(code)).as(code).noneMatch(entry -> entry.contains("broadcast"));
+            }
+        }
+
+        @Test
+        @DisplayName("an existing file with the earlier broadcast example keeps it, byte for byte, even under another language")
+        void anExistingFileKeepsTheEarlierExample() throws Exception {
+            writeEssentials(SHIPPED_TITLE_ZH, SHIPPED_LINES_ZH, earlierExample, SHIPPED_DEATHPUNISH_ZH);
+            byte[] before = bytes(essentialsFile());
+            String beforeBlock = scheduledBlock(new String(before, StandardCharsets.UTF_8));
+            language[0] = "zh";
+
+            start(loadEssentials(), loadTabBar(), loadMotd());
+
+            assertThat(onDisk(essentialsFile()).getStringList("features.scheduled-commands.commands"))
+                    .isEqualTo(earlierExample);
+            assertThat(scheduledBlock(new String(bytes(essentialsFile()), StandardCharsets.UTF_8)))
+                    .isEqualTo(beforeBlock);
+        }
+
+        /** The {@code commands:} list under {@code scheduled-commands}, as written. */
+        private String scheduledBlock(String file) {
+            int at = file.indexOf("scheduled-commands:");
+            int commands = file.indexOf("commands:", at + 1);
+            StringBuilder block = new StringBuilder();
+            for (String line : file.substring(commands).split("\n", -1)) {
+                if (block.length() > 0 && !line.trim().startsWith("-")) {
+                    break;
+                }
+                block.append(line).append('\n');
             }
             return block.toString();
         }

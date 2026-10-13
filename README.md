@@ -145,6 +145,10 @@ features:
     enabled: true          # 启用自动回复
 ```
 
+**`features.data-repair.enabled`** (default `true`): repairs records an earlier build saved without a primary key (homes, warps, bans, container locks) so they can be deleted and updated. It governs the **JSON** store only: in **SQLite** the framework repairs such records itself when it opens their tables at start-up, whatever this key says (UltiTools-API 6.3.0); MySQL never holds them. The shipped `features.scheduled-commands.commands` example uses `say` only; a file written by an earlier build keeps its `broadcast` entry, which plain Paper cannot run (Essentials provides `/broadcast`), until you change it.
+
+**`features.data-repair.enabled`**（默认 `true`）：修复旧版本保存时缺少主键的记录（家、地标点、封禁、容器锁），使其可以删除和更新。它只作用于 **JSON** 存储；使用 **SQLite** 时，框架会在启动打开数据表时自行修复这类记录，与此设置无关（UltiTools-API 6.3.0）；MySQL 不会存在这类记录。`features.scheduled-commands.commands` 的出厂示例只使用 `say`；旧版本写入的文件会保留其中的 `broadcast` 条目，原版 Paper 无法执行它（`/broadcast` 由 Essentials 提供），需要自行修改。
+
 ### 出生点配置 (`config/spawn.yml`)
 
 ```yaml

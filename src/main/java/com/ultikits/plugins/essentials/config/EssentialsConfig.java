@@ -312,15 +312,20 @@ public class EssentialsConfig extends AbstractConfigEntity {
     ));
 
     /**
-     * The scheduled commands every earlier version shipped; the Java default of {@link #scheduledCommands},
-     * and one of the values {@link #materializeText} recognises as built-in text, compared byte for byte.
-     * Only the words after {@code say}/{@code broadcast} are translated: the interval prefix, the command
-     * verb and the colour code are the same in every language (maintainer decision 2026-09-25, "纳入，和其他
-     * 文字同样处理").
+     * The scheduled-command example this build ships; the Java default of {@link #scheduledCommands}, and one of
+     * the values {@link #materializeText} recognises as built-in text, compared byte for byte. Only the words
+     * after {@code say} are translated: the interval prefix and the command verb are the same in every language
+     * (maintainer decision 2026-09-25, "纳入，和其他文字同样处理").
+     * <p>
+     * Both entries use {@code say}. Earlier builds shipped {@code 600:broadcast &cReminder: follow server rules!},
+     * but {@code broadcast} is not a command on a plain Paper server (Essentials provides it), so that entry failed
+     * with an unknown command every ten minutes (maintainer decision 2026-10-14). The earlier list is deliberately
+     * no longer recognised as built-in text: a file that still holds it is operator content and is never rewritten,
+     * not even into the server's language (framework rule: operator-written configuration is never rewritten).
      */
     private static final java.util.List<String> SHIPPED_SCHEDULED_COMMANDS = java.util.Collections.unmodifiableList(java.util.Arrays.asList(
         "300:say Server is online!",
-        "600:broadcast &cReminder: follow server rules!"
+        "600:say Reminder: follow server rules!"
     ));
 
     /**

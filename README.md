@@ -1,12 +1,10 @@
 # UltiEssentials
 
 [![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.3.0%2B-blue)](https://github.com/UltiKits/UltiTools-Reborn)
-[![Paper](https://img.shields.io/badge/Paper-1.21%2B-green)](https://papermc.io/)
-[![Java](https://img.shields.io/badge/Java-21%2B-orange)](https://adoptium.net/)
 
-Runs on **Paper 1.21 or newer with Java 21 or newer**, the versions the UltiTools 6.3.0 framework supports. Spigot is not supported.
+Requires **UltiTools-API 6.3.0 or later**; an older framework refuses to load this module (it declares `api-version: 630`).
 
-需要 **Paper 1.21 及以上、Java 21 及以上**，即 UltiTools 6.3.0 框架支持的版本。不支持 Spigot。
+需要 **UltiTools-API 6.3.0 或更高版本**；更早的框架会拒绝加载本模块（本模块声明 `api-version: 630`）。
 
 UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插件模块，提供了常用的传送、玩家状态、管理员工具和服务器自定义功能。
 

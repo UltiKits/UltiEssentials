@@ -59,7 +59,7 @@ config/essentials.yml	features.nameprefix.suffix-format	essentials.config.essent
 config/essentials.yml	features.nameprefix.update-interval	essentials.config.essentials.features.nameprefix.update-interval	更新间隔(秒)	Update interval (seconds)
 config/essentials.yml	features.commandalias.enabled	essentials.config.essentials.features.commandalias.enabled	启用命令别名	Enable command aliases
 config/essentials.yml	features.commandalias.aliases	essentials.config.essentials.features.commandalias.aliases	命令别名映射 (别名: 原命令)	Command alias map (alias: original command)
-config/essentials.yml	features.data-repair.enabled	essentials.config.essentials.features.data-repair.enabled	启动时修复缺少主键的旧记录（家、地标点、封禁、容器锁）；关闭后这些记录无法删除或更新	At start-up, repair old records saved without a primary key (homes, warps, bans, container locks); when off, those records cannot be deleted or updated
+config/essentials.yml	features.data-repair.enabled	essentials.config.essentials.features.data-repair.enabled	启动时修复 JSON 存储中缺少主键的旧记录（家、地标点、封禁、容器锁）；关闭后这些记录无法删除或更新。SQLite 中框架会在启动时修复它们，与此设置无关	At start-up, repair old records saved without a primary key (homes, warps, bans, container locks) in the JSON store; when off, those records cannot be deleted or updated. In SQLite the framework repairs them at start-up whatever this setting says
 config/lobby.yml	lobby.location.world	essentials.config.lobby.lobby.location.world	主城世界名称	Lobby world name
 config/lobby.yml	lobby.location.x	essentials.config.lobby.lobby.location.x	X 坐标	X coordinate
 config/lobby.yml	lobby.location.y	essentials.config.lobby.lobby.location.y	Y 坐标	Y coordinate

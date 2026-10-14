@@ -136,4 +136,40 @@ class GmShortcutCommandsTest {
             verify(player).sendMessage(anyString());
         }
     }
+
+    @Nested
+    @DisplayName("GmAdventureCommand")
+    class GmAdventureTests {
+
+        private GmAdventureCommand command;
+
+        @BeforeEach
+        void setUp() throws Exception {
+            command = new GmAdventureCommand(config);
+            EssentialsTestHelper.setField(command, "plugin", EssentialsTestHelper.getMockPlugin());
+        }
+
+        @Test
+        @DisplayName("Should set adventure mode")
+        void shouldSetAdventureMode() {
+            command.adventure(player);
+            verify(player).setGameMode(GameMode.ADVENTURE);
+            verify(player).sendMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should send disabled message when feature is off")
+        void shouldSendDisabledMessage() {
+            config.setGamemodeEnabled(false);
+            command.adventure(player);
+            verify(player, never()).setGameMode(any(GameMode.class));
+        }
+
+        @Test
+        @DisplayName("handleHelp should send usage message")
+        void handleHelpShouldSendUsage() {
+            command.handleHelp(player);
+            verify(player).sendMessage(anyString());
+        }
+    }
 }

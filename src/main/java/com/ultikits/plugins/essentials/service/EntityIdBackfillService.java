@@ -109,6 +109,11 @@ public class EntityIdBackfillService {
      * mid-migration or without a backup has a real reason to wait. There is no dry-run mode on
      * purpose: it would double the paths and the interesting one would be the one nobody runs, while
      * the WARNING per skipped record and the INFO per repaired type already say what happened.
+     * <p>
+     * In SQLite this repair finds nothing: UltiTools-API 6.3.0 gives every row without an id its id when it opens
+     * the table at start-up ({@code AbstractRelationalDataOperator#backfillNullIds}, UltiKits/UltiTools-Reborn#546),
+     * whatever {@code features.data-repair.enabled} says, and it logs that itself. MySQL cannot hold such rows. So
+     * the key governs the JSON store only, and the skipped-repair line says both (maintainer decision 2026-10-14).
      *
      * @return the outcome, for logging and for tests; all zeroes when the key is off
      */

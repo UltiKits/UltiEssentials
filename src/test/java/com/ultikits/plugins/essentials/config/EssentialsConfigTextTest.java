@@ -93,7 +93,7 @@ class EssentialsConfigTextTest {
 
     /** The scheduled commands every earlier version shipped; the Java default and the en catalogue text, byte for byte. */
     private static final List<String> SHIPPED_SCHEDULED_EN = Arrays.asList(
-            "300:say Server is online!", "600:broadcast &cReminder: follow server rules!");
+            "300:say Server is online!", "600:say Reminder: follow server rules!");
 
     /** The death-punishment command every earlier version shipped; the Java default and the zh catalogue text, byte for byte. */
     private static final List<String> SHIPPED_DEATHPUNISH_ZH = java.util.Collections.singletonList("say {PLAYER} 死亡了!");
@@ -1038,6 +1038,160 @@ class EssentialsConfigTextTest {
 
                 bukkit.verify(() -> Bukkit.dispatchCommand(eq(console), eq("say Steve 死亡了!")));
             }
+        }
+    }
+
+    // ================================================================== shipped command aliases
+
+    /**
+     * The shipped {@code features.commandalias.aliases} map no longer rewrites {@code /gmc}, {@code /gms},
+     * {@code /gma} or {@code /gmsp}: those names belong to this module's own shortcut commands, and an alias with
+     * the same name sent them to vanilla {@code /gamemode} (and its permission) before the shortcut could run
+     * (maintainer decisions 2026-10-14; {@code /gma} got its own command the same day). The default applies to a new install only: a file an operator already has keeps every
+     * alias it lists, because operator-written configuration is never rewritten (framework foundational rule,
+     * 2026-10-04).
+     */
+    @Nested
+    @DisplayName("shipped command aliases")
+    class ShippedCommandAliases {
+
+        @Test
+        @DisplayName("a new install's alias map leaves /gmc, /gms, /gma and /gmsp to the module's own shortcuts")
+        void aNewInstallDoesNotShadowTheShortcuts() throws Exception {
+            language[0] = "en";
+            EssentialsConfig essentials = loadEssentials();
+
+            assertThat(essentials.getCommandAliases())
+                    .doesNotContainKeys("gmc", "gms", "gma", "gmsp")
+                    .containsEntry("day", "time set day")
+                    .containsEntry("night", "time set night");
+            YamlConfiguration written = YamlConfiguration.loadConfiguration(essentialsFile());
+            assertThat(written.getConfigurationSection("features.commandalias.aliases").getKeys(false))
+                    .as("the file a new install writes")
+                    .containsExactlyInAnyOrder("day", "night");
+        }
+
+        @Test
+        @DisplayName("an existing file that still lists /gmc, /gms, /gma and /gmsp keeps them, byte for byte")
+        void anExistingFileKeepsItsAliases() throws Exception {
+            language[0] = "en";
+            loadEssentials();
+            List<String> lines = new ArrayList<>(Arrays.asList(
+                    new String(bytes(essentialsFile()), StandardCharsets.UTF_8).split("\n", -1)));
+            // The file as a server that ran an earlier build has it: the three entries listed, each once.
+            lines.removeIf(line -> line.trim().startsWith("gmc:") || line.trim().startsWith("gms:")
+                    || line.trim().startsWith("gma:") || line.trim().startsWith("gmsp:"));
+            int day = -1;
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines.get(i).trim().startsWith("day:")) {
+                    day = i;
+                }
+            }
+            assertThat(day).as("control: the shipped day entry is in the file").isGreaterThan(0);
+            String indent = lines.get(day).substring(0, lines.get(day).indexOf('d'));
+            lines.add(day, indent + "gmsp: gamemode spectator");
+            lines.add(day, indent + "gma: gamemode adventure");
+            lines.add(day, indent + "gms: gamemode survival");
+            lines.add(day, indent + "gmc: gamemode creative");
+            byte[] operatorFile = String.join("\n", lines).getBytes(StandardCharsets.UTF_8);
+            Files.write(essentialsFile().toPath(), operatorFile);
+
+            EssentialsConfig essentials = loadEssentials();
+            start(essentials, loadTabBar(), loadMotd());
+
+            assertThat(essentials.getCommandAliases())
+                    .containsEntry("gmc", "gamemode creative")
+                    .containsEntry("gms", "gamemode survival")
+                    .containsEntry("gmsp", "gamemode spectator")
+                    .containsEntry("gma", "gamemode adventure")
+                    .containsEntry("day", "time set day");
+            // Other shipped-text settings of this file are re-rendered by the config text materializer
+            // (UltiKits/UltiEssentials#26); the alias block is operator content and stays byte for byte.
+            assertThat(aliasBlock(new String(bytes(essentialsFile()), StandardCharsets.UTF_8)))
+                    .as("the operator's alias block is not rewritten")
+                    .isEqualTo(aliasBlock(new String(operatorFile, StandardCharsets.UTF_8)))
+                    .contains("gmc: gamemode creative", "gms: gamemode survival", "gma: gamemode adventure",
+                            "gmsp: gamemode spectator");
+        }
+
+        /** The {@code aliases:} line and every deeper-indented line under it. */
+        private String aliasBlock(String file) {
+            List<String> lines = Arrays.asList(file.split("\n", -1));
+            StringBuilder block = new StringBuilder();
+            int indent = -1;
+            for (String line : lines) {
+                int here = line.length() - line.replaceAll("^ +", "").length();
+                if (indent < 0) {
+                    if (line.trim().equals("aliases:")) {
+                        indent = here;
+                        block.append(line).append('\n');
+                    }
+                } else if (line.trim().isEmpty() || here > indent) {
+                    block.append(line).append('\n');
+                } else {
+                    break;
+                }
+            }
+            return block.toString();
+        }
+    }
+
+    // ================================================================== shipped scheduled-command example
+
+    /**
+     * The shipped scheduled-command example uses {@code say} only: {@code broadcast}, which earlier builds shipped,
+     * is not a command on a plain Paper server (Essentials provides it), so that entry failed with an unknown
+     * command every ten minutes (maintainer decision 2026-10-14). A new install writes the {@code say} example; a
+     * file that still holds the earlier example is operator content now and is never rewritten, not even into the
+     * server's language (framework foundational rule, 2026-10-04).
+     */
+    @Nested
+    @DisplayName("shipped scheduled-command example")
+    class ShippedScheduledExample {
+
+        private final List<String> earlierExample = Arrays.asList(
+                "300:say Server is online!", "600:broadcast &cReminder: follow server rules!");
+
+        @Test
+        @DisplayName("a new install's example runs say only")
+        void aNewInstallShipsSayOnly() throws Exception {
+            language[0] = "en";
+            EssentialsConfig essentials = loadEssentials();
+            assertThat(essentials.getScheduledCommands()).isNotEmpty()
+                    .allSatisfy(entry -> assertThat(entry.substring(entry.indexOf(':') + 1)).startsWith("say "));
+            for (String code : new String[]{"en", "zh"}) {
+                assertThat(scheduledText(code)).as(code).noneMatch(entry -> entry.contains("broadcast"));
+            }
+        }
+
+        @Test
+        @DisplayName("an existing file with the earlier broadcast example keeps it, byte for byte, even under another language")
+        void anExistingFileKeepsTheEarlierExample() throws Exception {
+            writeEssentials(SHIPPED_TITLE_ZH, SHIPPED_LINES_ZH, earlierExample, SHIPPED_DEATHPUNISH_ZH);
+            byte[] before = bytes(essentialsFile());
+            String beforeBlock = scheduledBlock(new String(before, StandardCharsets.UTF_8));
+            language[0] = "zh";
+
+            start(loadEssentials(), loadTabBar(), loadMotd());
+
+            assertThat(onDisk(essentialsFile()).getStringList("features.scheduled-commands.commands"))
+                    .isEqualTo(earlierExample);
+            assertThat(scheduledBlock(new String(bytes(essentialsFile()), StandardCharsets.UTF_8)))
+                    .isEqualTo(beforeBlock);
+        }
+
+        /** The {@code commands:} list under {@code scheduled-commands}, as written. */
+        private String scheduledBlock(String file) {
+            int at = file.indexOf("scheduled-commands:");
+            int commands = file.indexOf("commands:", at + 1);
+            StringBuilder block = new StringBuilder();
+            for (String line : file.substring(commands).split("\n", -1)) {
+                if (block.length() > 0 && !line.trim().startsWith("-")) {
+                    break;
+                }
+                block.append(line).append('\n');
+            }
+            return block.toString();
         }
     }
 

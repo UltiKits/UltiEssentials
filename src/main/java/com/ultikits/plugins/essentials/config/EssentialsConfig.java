@@ -244,12 +244,24 @@ public class EssentialsConfig extends AbstractConfigEntity {
     @ConfigEntry(path = "features.commandalias.enabled", comment = "{essentials.config.essentials.features.commandalias.enabled}")
     private boolean commandAliasEnabled = true;
 
+    /**
+     * The alias map a new install writes: {@code day} and {@code night} only. It has no {@code gmc}, {@code gms},
+     * {@code gma} or {@code gmsp} entry: those names are this module's own shortcut commands
+     * ({@code GmCreativeCommand}, {@code GmSurvivalCommand}, {@code GmAdventureCommand}, {@code GmSpectatorCommand},
+     * permission {@code ultiessentials.gamemode.self}), and an alias of the same name rewrote them to vanilla
+     * {@code /gamemode}, with its own permission, before the shortcut could run (maintainer decisions 2026-10-14:
+     * remove all four, and give {@code /gma} a module command so every shortcut still has one). No shipped alias
+     * may have a module command's name; {@code ShippedAliasesShadowNoCommandTest} checks every command class.
+     *
+     * <p>This is a default only. It cannot overwrite an operator's configuration: the framework uses it when
+     * {@code features.commandalias.aliases} is absent from {@code config/essentials.yml}, and a file that already
+     * lists the four entries (every install made by an earlier build) keeps them in memory and on disk, byte for
+     * byte (framework rule: operator-written configuration is never rewritten). Such an install keeps sending those
+     * four commands to vanilla {@code /gamemode} until the operator deletes the entries; README says so. Tested by
+     * {@code EssentialsConfigTextTest.ShippedCommandAliases}.</p>
+     */
     @ConfigEntry(path = "features.commandalias.aliases", comment = "{essentials.config.essentials.features.commandalias.aliases}")
     private java.util.Map<String, String> commandAliases = new java.util.HashMap<String, String>() {{
-        put("gmc", "gamemode creative");
-        put("gms", "gamemode survival");
-        put("gma", "gamemode adventure");
-        put("gmsp", "gamemode spectator");
         put("day", "time set day");
         put("night", "time set night");
     }};
@@ -300,15 +312,20 @@ public class EssentialsConfig extends AbstractConfigEntity {
     ));
 
     /**
-     * The scheduled commands every earlier version shipped; the Java default of {@link #scheduledCommands},
-     * and one of the values {@link #materializeText} recognises as built-in text, compared byte for byte.
-     * Only the words after {@code say}/{@code broadcast} are translated: the interval prefix, the command
-     * verb and the colour code are the same in every language (maintainer decision 2026-09-25, "纳入，和其他
-     * 文字同样处理").
+     * The scheduled-command example this build ships; the Java default of {@link #scheduledCommands}, and one of
+     * the values {@link #materializeText} recognises as built-in text, compared byte for byte. Only the words
+     * after {@code say} are translated: the interval prefix and the command verb are the same in every language
+     * (maintainer decision 2026-09-25, "纳入，和其他文字同样处理").
+     * <p>
+     * Both entries use {@code say}. Earlier builds shipped {@code 600:broadcast &cReminder: follow server rules!},
+     * but {@code broadcast} is not a command on a plain Paper server (Essentials provides it), so that entry failed
+     * with an unknown command every ten minutes (maintainer decision 2026-10-14). The earlier list is deliberately
+     * no longer recognised as built-in text: a file that still holds it is operator content and is never rewritten,
+     * not even into the server's language (framework rule: operator-written configuration is never rewritten).
      */
     private static final java.util.List<String> SHIPPED_SCHEDULED_COMMANDS = java.util.Collections.unmodifiableList(java.util.Arrays.asList(
         "300:say Server is online!",
-        "600:broadcast &cReminder: follow server rules!"
+        "600:say Reminder: follow server rules!"
     ));
 
     /**

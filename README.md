@@ -79,9 +79,9 @@ The sidebar is drawn on a private scoreboard this module assigns to each player 
 | 功能 | 描述 | 配置文件 |
 |------|------|----------|
 | MOTD 自定义 | 自定义服务器列表显示信息 | `config/motd.yml` |
-| 入服欢迎 | 玩家加入时显示欢迎消息 | `config/welcome.yml` |
+| 入服欢迎 | 已移至 UltiChat 模块 | UltiChat 的 `config/chat.yml` |
 | Tab 栏自定义 | 自定义 Tab 列表头尾 | `config/tabbar.yml` |
-| 自动回复 | 关键词触发自动回复 | `config/autoreply.yml` |
+| 自动回复 | 本模块不提供，请使用 UltiChat 模块 | UltiChat 的 `config/autoreply.yml` |
 
 ## 📦 安装
 
@@ -135,12 +135,8 @@ features:
   # ===== 服务器自定义 =====
   motd:
     enabled: true          # 启用 MOTD 自定义
-  join-welcome:
-    enabled: true          # 启用入服欢迎消息
   tab-bar:
     enabled: true          # 启用 Tab 栏自定义
-  auto-reply:
-    enabled: true          # 启用自动回复
 ```
 
 **`features.data-repair.enabled`** (default `true`): repairs records an earlier build saved without a primary key (homes, warps, bans, container locks) so they can be deleted and updated. It governs the **JSON** store only: in **SQLite** the framework repairs such records itself when it opens their tables at start-up, whatever this key says (UltiTools-API 6.3.0); MySQL never holds them. The shipped `features.scheduled-commands.commands` example uses `say` only; a file written by an earlier build keeps its `broadcast` entry, which plain Paper cannot run (Essentials provides `/broadcast`), until you change it.
@@ -151,24 +147,28 @@ features:
 
 ```yaml
 spawn:
-  world: world             # 出生点世界名
-  x: 0.0
-  y: 64.0
-  z: 0.0
-  yaw: 0.0
-  pitch: 0.0
+  location:
+    world: world           # 出生点世界名
+    x: 0.0
+    y: 64.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
+  teleport-on-first-join: true   # 玩家首次加入时传送到出生点
+  teleport-on-respawn: true      # 玩家重生时传送到出生点
 ```
 
 ### 主城配置 (`config/lobby.yml`)
 
 ```yaml
 lobby:
-  world: world             # 主城世界名
-  x: 0.0
-  y: 64.0
-  z: 0.0
-  yaw: 0.0
-  pitch: 0.0
+  location:
+    world: world           # 主城世界名
+    x: 0.0
+    y: 64.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
 ```
 
 ### MOTD 配置 (`config/motd.yml`)
@@ -176,42 +176,27 @@ lobby:
 ```yaml
 motd:
   line1: "&6欢迎来到服务器"
-  line2: "&7在线人数: &a%online%&7/&c%max%"
-  # 支持 %online% 和 %max% 变量
+  line2: "&7由 UltiTools 驱动"
+  max-players: -1          # 服务器列表中显示的最大人数，-1 表示不改动
+  # 只支持 & 颜色代码，不替换 %online%、%max% 等变量
 ```
 
-### 欢迎消息配置 (`config/welcome.yml`)
+### 欢迎消息
 
-```yaml
-welcome:
-  enabled: true
-  first-join-message: "&6欢迎 &e%player% &6第一次加入服务器！"
-  join-message: "&a%player% 加入了服务器"
-  quit-message: "&c%player% 离开了服务器"
-  # 支持 %player% 变量
-```
+UltiEssentials 不再读取 `config/welcome.yml`。入服欢迎、进出服消息和首次加入广播已移至 UltiChat 模块，配置在 UltiChat 的 `config/chat.yml` 的 `join-quit.*` 下。
 
 ### Tab 栏配置 (`config/tabbar.yml`)
 
 ```yaml
 tabbar:
   header: "&6=== 欢迎来到服务器 ==="
-  footer: "&7在线: &a%online%&7 | &7TPS: &a%tps%"
-  update-interval: 20      # 更新间隔 (tick)
-  # 支持 PlaceholderAPI 变量
+  footer: "&7在线: &e%online%&7/&e%max%"
+  # 玩家加入时设置；只替换 %online% 和 %max%，不支持其他变量
 ```
 
-### 自动回复配置 (`config/autoreply.yml`)
+### 自动回复
 
-```yaml
-auto-reply:
-  enabled: true
-  replies:
-    - trigger: "怎么赚钱"
-      response: "&a可以通过挖矿、钓鱼、种地等方式赚取金币"
-    - trigger: "怎么回城"
-      response: "&a使用 /spawn 回到出生点，或 /lobby 回到主城"
-```
+UltiEssentials 不提供自动回复，也不读取 `config/autoreply.yml`。关键词自动回复由 UltiChat 模块提供，配置在 UltiChat 的 `config/autoreply.yml`。
 
 ## 🔐 权限节点
 

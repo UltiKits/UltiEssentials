@@ -5,7 +5,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 本文件记录本项目的所有重要更改，格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
-## [Unreleased]
+## [2.0.0] - 2026-10-21
 
 ### Changed
 
@@ -20,11 +20,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `/upm update` 会跳过未声明该键的模块，因此本模块现在会参与两者：带有同一键的更高发布版本会在启动时提示，
   并可用 `/upm update` 安装（UltiKits/UltiTools-Reborn#474）。README 中的 UltiTools-API 徽章和安装步骤现在写明
   UltiTools 6.3.0 或更高版本，与本模块已声明的 `api-version: 630` 一致（更早的框架会拒绝加载并给出 UltiTools 版本过旧的警告）。
-
-- The README now states Paper 1.21+ and Java 21+, the versions the UltiTools 6.3.0 framework supports;
-  it previously said Paper 1.19+ and Java 8+ (UltiKits/UltiTools-Reborn#544).
-- README 现写明 Paper 1.21+、Java 21+，即 UltiTools 6.3.0 框架支持的版本；此前写的是 Paper 1.19+、Java 8+
-  （UltiKits/UltiTools-Reborn#544）。
 
 ### Fixed
 
@@ -170,7 +165,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   封禁玩家看到的踢出界面、封禁与临时封禁时长、封禁/临时封禁/解封广播、默认封禁原因与控制台操作者名称、
   `/warps` 中的权限标记、两种箱子锁拒绝提示以及死亡惩罚汇总。原先写死为英文的控制台日志现在也跟随 `language`：
   启动修复、重载与已删除设置的警告，定时命令、箱子锁、家、地标点、封禁、名称前缀与侧边栏的诊断信息。
-  现有英文措辞不变。死亡惩罚汇总现在只在确有惩罚时发送（此前只要文本超过十个字符就发送）。传送预热提示为
+  现有英文措辞保持不变，原先向英文玩家显示的中文句子除外。死亡惩罚汇总现在只在确有惩罚时发送（此前只要文本超过十个字符就发送）。传送预热提示为
   「<n> 秒后传送，请不要移动...」；此前显示原始键 `teleport_warmup`，取消时显示 `teleport_cancelled_moved`。
 
 - Reloading this module (`/ul reload UltiEssentials`) now re-reads its configuration files and
@@ -213,12 +208,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   registered on the main scoreboard and can be removed with the vanilla `team remove` command.
   Previously all of these kept running against the uninstalled module until the server was
   restarted, while the uninstall reported success. A player whose warmup is cancelled stays where
-  they are and is not told: telling them would need a new language key, and this module's keys are
-  being reworked under UltiKits/UltiEssentials#26. This covers the tasks that run on a timer, and
-  not tasks scheduled to run once — a pending `/tpa` request still expires and still messages both
-  players up to `features.tpa.timeout` seconds (30 by default) after the uninstall, and a player who
-  joins in the second before it can still be given a sidebar or a name prefix; that residue is
-  UltiKits/UltiEssentials#51. If one of these services fails to stop, or cannot be reached at all,
+  they are and is not told. Pending teleport-request expiry is cancelled, and delayed sidebar and
+  name-prefix join tasks do nothing after unload (UltiKits/UltiEssentials#51).
+  If one of these services fails to stop, or cannot be reached at all,
   the others are still stopped and the uninstall reports that failure rather than a clean removal
   (UltiKits/UltiEssentials#43).
 - `/ul reload UltiEssentials` now names, as a warning in the console, any of those services it could
@@ -253,10 +245,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   deleting or updating it keeps failing, and the warning names it so it can be re-created by hand
   (UltiKits/UltiEssentials#34).
 - New configuration key `features.data-repair.enabled` in `config/essentials.yml`, default `true`:
-  whether the start-up repair described above runs. Set it to `false` to leave records written before
-  the fix exactly as they are — useful if you are part-way through a migration or have not taken a
-  backup yet. One log line then names the key, no records are written, and deleting or updating those
-  records keeps failing until you turn it back on. There is no dry-run setting
+  whether the module's start-up repair described above runs on JSON storage. Set it to `false` to
+  leave those JSON records unchanged — useful during a migration or before taking a backup. One log
+  line names the key; deleting or updating those unrepaired JSON records keeps failing until you turn
+  it back on. On SQLite, UltiTools-API 6.3.0 repairs missing primary keys when it opens the tables,
+  regardless of this setting; MySQL cannot hold such records. There is no dry-run setting
   (UltiKits/UltiEssentials#34).
 - A deletion, unban or unlock that could not change what is stored now says so, instead of saying the
   record does not exist. `/delhome`, `/delwarp` and `/unban` previously reported a surviving record
@@ -339,10 +332,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   任务都会停止，正在倒计时的预热传送会被取消而不是继续执行。拥有侧边栏的玩家会回到服务器的主计分板，本模块
   的头顶称号队伍会被清空成员，卸载后不会残留侧边栏或称号；已清空的 `up_` 队伍本身仍注册在主计分板上，可用
   原版 `team remove` 命令删除。此前这些任务都会继续对已卸载的模块运行，直到服务器重启，而卸载却报告成功。
-  预热传送被取消的玩家会留在原地且不会收到提示：发送提示需要新增语言键，而本模块的语言键正在
-  UltiKits/UltiEssentials#26 中统一重命名。本次改动覆盖的是按固定间隔重复的任务，不包括只执行一次的延时
-  任务——待处理的 `/tpa` 请求仍会在卸载后最多 `features.tpa.timeout` 秒（默认 30 秒）超时并向双方发送消息，
-  卸载前一秒内加入的玩家仍可能被加上侧边栏或头顶称号，这部分残留记录在 UltiKits/UltiEssentials#51。若其中
+  预热传送被取消的玩家会留在原地且不会收到提示。待处理传送请求的过期任务会被取消；入服时延迟添加侧边栏和
+  头顶称号的任务在卸载后不再执行任何操作（UltiKits/UltiEssentials#51）。若其中
   某个服务停止失败或根本无法找到，其余服务仍会停止，并且卸载会如实报告该失败，而不是报告卸载干净
   （UltiKits/UltiEssentials#43）。
 - `/ul reload UltiEssentials` 现在会在控制台以警告形式指出重载时找不到的服务——此前它只重载能找到的服务
@@ -364,9 +355,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   修复只进行一次：已修复的记录在之后的启动中不会再被处理。无法安全修复的记录会原样保留，并以警告形式报告——
   出现在记录自身没有标识、两条记录共用同一标识，或记录已带有与其标识不一致的主键时。此类记录仍可正常读取，
   但删除或更新仍会失败，警告中会指出该记录，便于手动重建（UltiKits/UltiEssentials#34）。
-- `config/essentials.yml` 新增配置项 `features.data-repair.enabled`，默认 `true`：控制上述启动修复是否执行。
-  设为 `false` 会让修复前写入的记录保持原样——在数据迁移进行中或尚未备份时很有用。此时日志会输出一行指明该配置项，
-  不写入任何记录，这些记录的删除与更新在重新开启前仍会失败。本项没有“试运行”模式（UltiKits/UltiEssentials#34）。
+- `config/essentials.yml` 新增配置项 `features.data-repair.enabled`，默认 `true`：控制本模块是否对 JSON 存储执行上述启动修复。
+  设为 `false` 会让这些 JSON 记录保持原样——在数据迁移进行中或尚未备份时很有用。日志会指明该配置项，
+  这些未修复 JSON 记录的删除与更新在重新开启前仍会失败。使用 SQLite 时，UltiTools-API 6.3.0 会在打开数据表时
+  修复缺失的主键，与此设置无关；MySQL 不会存在这类记录。本项没有“试运行”模式（UltiKits/UltiEssentials#34）。
 - 删除、解禁或解锁未能改变已保存的数据时，现在会明确说明，而不再报告该记录不存在。`/delhome`、`/delwarp`、
   `/unban` 此前会把"记录仍然存在"与"记录从未存在"报告为同一种结果，导致管理员在 `/homes` 或 `/banlist`
   仍列出该记录时就不再排查。现在三者各有专门的提示，与 `/unlock` 原有的做法一致。对已存在的家再次执行
@@ -451,11 +443,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   （`zh.json` → `zh-myserver.json`），按新键修改副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`
   （框架和所有模块共用这一个设置）。副本中没有的消息取自名称开头对应的官方文件（此处为 `zh`），没有该名称文件的模块使用其官方 `zh`。从未改过语言文件的服务器无需任何操作。
 
-- This module now declares `api-version: 630` in its `plugin.yml`, so it loads only on UltiTools
-  6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools
+- This module raises `api-version` in `plugin.yml` from `620` in the released v1.0.0 to `630`,
+  so it loads only on UltiTools 6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools
   it would load with no cooldown at all, silently, so it now refuses to load there instead
   (UltiKits/UltiEssentials#27, UltiKits/UltiTools-Reborn#531).
-- 本模块的 `plugin.yml` 现在声明 `api-version: 630`，因此只能在 UltiTools 6.3.0 及以上版本加载。其 `/wild` 冷却使用了
+- 本模块 `plugin.yml` 的 `api-version` 从已发布 v1.0.0 的 `620` 升至 `630`，因此只能在 UltiTools 6.3.0 及以上版本加载。其 `/wild` 冷却使用了
   6.3.0 新增的框架功能；在旧版 UltiTools 上它会在没有任何冷却的情况下静默加载，因此现在改为直接拒绝加载
   （UltiKits/UltiEssentials#27、UltiKits/UltiTools-Reborn#531）。
 
@@ -481,13 +473,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   UltiKits/UltiEssentials#63 (UltiKits/UltiEssentials#47).
 - 删除两个没有任何命令调用的解封方法（按玩家 UUID 解封、按 IP 解封），以及 `/unban` 说明中指向不存在命令的
   `/unbanip` 一行。`/unban <玩家>` 不变；IP 解封命令作为功能需求在 UltiKits/UltiEssentials#63 跟踪（UltiKits/UltiEssentials#47）。
-- Seven language entries no code has displayed since an earlier change in this release removed the
-  helpers that used them
-  (`feature_disabled` and six `teleport_*` messages) were removed from both language files. Nothing
-  an operator or player sees changes.
-- 从两份语言文件中删除了七条自本版本早先的改动删除其调用方以来就不再显示的条目（`feature_disabled` 与六条 `teleport_*`
-  消息）。运维和玩家看到的内容没有任何变化。
-
 - The module's own "disabled" console line on unload (`UltiEssentials disabled!` under
   `language: en`) and its "configuration reloaded" console line on `/ul reload UltiEssentials`
   (`UltiEssentials config reloaded!`), together with the two language keys, present in both

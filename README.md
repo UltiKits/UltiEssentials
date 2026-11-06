@@ -239,6 +239,18 @@ UltiEssentials 支持多语言，语言文件位于 `lang/` 目录：
 
 这两个官方语言文件归 UltiTools 管理：直接修改会在下次启动时被恢复（修改过的文件会留下备份）。如需自定义消息，请把官方文件复制为以语言代码加连字符开头、只含 ASCII 字母、数字、`_` 和 `-` 的新名称（例如 `zh.json` → `zh-myserver.json`），修改这个副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`（框架和所有模块共用这一个设置）。副本中没有的消息取自名称开头对应的官方文件（此处为 `zh`）；没有该名称文件的模块使用其官方 `zh`。
 
+## Known limitations / 已知限制
+
+### Legacy JSON data filenames / 旧 JSON 数据文件名
+
+Do not rename or hand-edit the framework-owned JSON data files. The start-up primary-key repair expects a legacy record's filename to be `<uuid>.json`, where `uuid` is the identity stored in that record. If a file was manually renamed before the repair runs, the repair can leave the un-keyed original alongside a new keyed copy. It reports zero repaired for that identity; later starts warn that records share an identity, and homes or warps may be listed twice (UltiKits/UltiEssentials#71). This is not a supported way to rename a home or warp.
+
+Take a backup before upgrading or repairing legacy data, and leave data filenames unchanged. If files have already been renamed, stop the server, back up the affected store, and restore a known-good backup with its original filenames before restarting. Setting `features.data-repair.enabled: false` in `config/essentials.yml` before the next start holds off the JSON repair while you investigate; it does not remove duplicates or make un-keyed records updateable or deletable.
+
+不要重命名或手动编辑框架管理的 JSON 数据文件。启动主键修复要求旧记录的文件名为 `<uuid>.json`，其中 `uuid` 是记录内部保存的标识。若修复前手动改过文件名，修复可能留下原来的无主键记录，同时写入一份带主键的副本。该标识的修复计数为零；之后启动会警告多条记录共用标识，家或地标点可能重复列出（UltiKits/UltiEssentials#71）。这不是受支持的家或地标点改名方式。
+
+升级或修复旧数据前先备份，不要改动数据文件名。若已经改名，先停服并备份受影响的数据存储，再从保留原始文件名的可靠备份恢复，然后重启。排查期间可在下次启动前将 `config/essentials.yml` 的 `features.data-repair.enabled` 设为 `false`，暂缓 JSON 修复；该设置不会删除重复记录，也不会让缺少主键的记录变得可以更新或删除。
+
 ## 📄 开源协议
 
 本项目基于 [MIT License](LICENSE) 开源。

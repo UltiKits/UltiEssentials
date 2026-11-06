@@ -117,7 +117,7 @@ class EssentialsConfigCommentsTest {
     // ==================== the declarations ====================
 
     @Test
-    @DisplayName("every @ConfigEntry comment of the five files is one {key} token, the key the fixture names; 78 in all")
+    @DisplayName("every @ConfigEntry comment of the five files is one {key} token, the key the fixture names; 79 in all")
     void everyCommentIsOneCatalogueToken() throws Exception {
         Map<String, String> declared = new LinkedHashMap<>();
         for (Supplier<AbstractConfigEntity> config : CONFIGS) {
@@ -133,8 +133,8 @@ class EssentialsConfigCommentsTest {
         for (Row row : rows()) {
             expected.put(row.file + " " + row.path, "{" + row.key + "}");
         }
-        // Control: the reflection reads the real declarations, all 78 of them.
-        assertThat(declared).hasSize(78);
+        // Control: the reflection reads the real declarations, all 79 of them.
+        assertThat(declared).hasSize(79);
         assertThat(declared).containsExactlyInAnyOrderEntriesOf(expected);
     }
 

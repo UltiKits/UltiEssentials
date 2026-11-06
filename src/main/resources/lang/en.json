@@ -7,6 +7,14 @@
 
   "essentials.teleport.success_warmup": "§aTeleport successful!",
 
+  "essentials.command.recall.description": "Bring an online player to your location",
+  "essentials.help.recall": "Usage: /recall <player> - bring an online player to you",
+  "essentials.recall.self": "You cannot recall yourself",
+  "essentials.recall.failed": "Recall failed; the player was not teleported",
+  "essentials.recall.success": "Recalled %s to your location",
+  "essentials.recall.target": "%s recalled you to their location",
+  "essentials.config.essentials.features.recall.enabled": "Enable /recall to bring an online player to you (requires ultiessentials.recall.other)",
+
   "essentials.back.no_location": "No location to return to",
   "essentials.back.success": "Teleported to previous location",
 
@@ -271,9 +279,7 @@
   "essentials.command.whitelist.description": "Manage the whitelist",
   "essentials.command.wild.description": "Random teleport",
   "essentials.help.wild": "Use /wild to teleport to a random place in the wild",
-  "essentials.warn.removed.recall": "this module has no /recall command, so the setting never switched anything; the command is recorded as a feature request in UltiKits/UltiEssentials#53 (UltiKits/UltiEssentials#27)",
   "essentials.warn.removed_unreadable": "%s: could not read %s, so it was not checked for settings this module has removed (UltiKits/UltiEssentials#27)",
-  "essentials.warn.removed_key": "%s: '%s' in %s has no effect and can be deleted from the file -- %s.",
   "essentials.lock.refusal_open": "§cThis container is locked by §f%s",
   "essentials.lock.refusal_break": "§cThis container is locked by §f%s§c and cannot be broken",
   "essentials.deathpunish.prefix": "Death penalty:",

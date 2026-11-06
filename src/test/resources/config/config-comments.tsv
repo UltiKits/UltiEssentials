@@ -1,6 +1,7 @@
-# The 78 @ConfigEntry comments as master 0875d16 wrote them, and the catalogue key and English translation each
+# The original 78 @ConfigEntry comments from master 0875d16, plus the restored recall switch (#53), and their translations
 # became (UltiKits/UltiEssentials#67). Columns: config file, key path, catalogue key, comment at master (the zh
 # catalogue text, verbatim), English translation (the en catalogue text). Read by EssentialsConfigCommentsTest.
+config/essentials.yml	features.recall.enabled	essentials.config.essentials.features.recall.enabled	启用 /recall 将在线玩家召回到你身边（需要 ultiessentials.recall.other 权限）	Enable /recall to bring an online player to you (requires ultiessentials.recall.other)
 config/essentials.yml	features.back.enabled	essentials.config.essentials.features.back.enabled	启用 /back 返回命令	Enable the /back command
 config/essentials.yml	features.spawn.enabled	essentials.config.essentials.features.spawn.enabled	启用 /spawn 出生点命令	Enable the /spawn command
 config/essentials.yml	features.lobby.enabled	essentials.config.essentials.features.lobby.enabled	启用 /lobby 主城命令	Enable the /lobby command

@@ -25,12 +25,12 @@ for UAT execution and issue reconciliation — the public description of these f
   `PlaceholderAPI#setPlaceholders`, they do not register their own expansion) and no `gate` rows
   (0 `@ConditionalOnConfig` sites) — all three Kinds stay in the vocabulary for cross-repository
   consistency even though none appears below. This module's one `scheduled` row is NOT backed by
-  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The six rows under
+  the framework's `@Scheduled` annotation (0 sites) — see that row's own note. The lifecycle rows under
   `## Lifecycle` are `event` rows with no `@EventHandler` site behind them,
   `ultiessentials.lock.protect-whole-container` is an `event` row whose behaviour runs inside every
   `ChestLockListener` handler rather than in one of its own, and `ultiessentials.tpa.clear-on-quit`
   runs in the same `PlayerQuitListener` handler as `ultiessentials.cleanup.on-quit`, so the 22
-  `@EventHandler` sites in the positive control below match the other 22 `event` rows, not all 30: `/ul reload`, an unload and
+  `@EventHandler` sites in the positive control below count handler methods, not all 32 `event` rows: `/ul reload`, an unload and
   start-up are framework-invoked lifecycle steps, not commands this repository maps or config reads,
   so `event` is the closest-fitting Kind.
 - **Tier**, exactly three: `player`, `admin`, `internal`. Judged from what the feature is for, not
@@ -48,7 +48,7 @@ for UAT execution and issue reconciliation — the public description of these f
   Kind (`config`, `event`, `gate`, `gui`, `persistence`, `scheduled`, `placeholder`) — the concept
   of "who this targets" does not apply to a config key or a background task the way it applies to
   a command. No class in this repository declares `@CmdTarget(CONSOLE)`; every command row below
-  is `player` (33 classes) or `both` (5 classes: `BanCommand`, `UnbanCommand`, `BanListCommand`,
+  is `player` (35 classes) or `both` (5 classes: `BanCommand`, `UnbanCommand`, `BanListCommand`,
   `TempBanCommand`, `WhitelistCommand` — all moderation commands, deliberately console-runnable).
 - **Permission:** the literal node string, `none`, or `n/a`, each optionally suffixed with the
   literal text `(requireOp=true)` (preceded by one space) when the row's class-level
@@ -57,7 +57,7 @@ for UAT execution and issue reconciliation — the public description of these f
   `commands/` package (0 occurrences), so no row below carries the suffix. `n/a` is for every Kind
   that is not `command`.
 - **Source:** `ClassName#member` — the class and member that actually reads or applies the
-  feature — for every Kind, `config` included: all 78 `config` rows below cite the reading member,
+  feature — for every Kind, `config` included: all 79 `config` rows below cite the reading member,
   not merely the field declaration on the `@ConfigEntity` class (which only binds the key).
 - **Row order:** by section, then by ID ascending within the section.
 - **No manual prose:** no troubleshooting column, no explanatory paragraphs, no draft page text. A
@@ -94,20 +94,20 @@ rather than an error:
    (naive 1) and `@ConditionalOnConfig` (naive 2), whose only occurrences are javadoc mentions in
    `UltiEssentials.java` — exactly the case the anchor exists to exclude.
 
-**Positive control:** the line-start form returns `@CmdExecutor` = 38 (classes), `@CmdMapping` =
-57 (formats), `@EventListener` = 12 (classes — 11 in `listener/`, 1 in `commands/BackCommand.java`
+**Positive control:** the line-start form returns `@CmdExecutor` = 40 (classes), `@CmdMapping` =
+59 (formats), `@EventListener` = 12 (classes — 11 in `listener/`, 1 in `commands/BackCommand.java`
 which is simultaneously a command executor and an event listener), `@EventHandler` = 22 (handler
 methods across those 12 classes; `JoinQuitListener#hideVanishedPlayers` became the 22nd with
 UltiKits/UltiEssentials#32), `@Scheduled` = 0, `@ConditionalOnConfig` = 0, `@ConfigEntity` = 5
-(classes), `@ConfigEntry` = 78, `@Table` = 4 (`HomeData`, `WarpData`, `BanData`, `ChestLockData`) —
+(classes), `@ConfigEntry` = 79, `@Table` = 4 (`HomeData`, `WarpData`, `BanData`, `ChestLockData`) —
 confirmed by reading `WhitelistCommand.java` directly (6 `@CmdMapping` sites: `add <player>`,
 `remove <player>`, `list`, `on`, `off`, `status` — the largest single-class mapping count in this
 module) and `ChestLockListener.java` (7 `@EventHandler` sites: `onPlayerInteract`, `onBlockBreak`,
 `onEntityExplode`, `onBlockExplode`, `onPistonExtend`, `onPistonRetract`, `onInventoryMove` — the
 largest single-class handler count). `ultiessentials.whitelist.add` (`WhitelistCommand#add`) is
-this module's standing positive control for the command-row count: 57 `@CmdMapping` sites, each the
+this module's standing positive control for the command-row count: 59 `@CmdMapping` sites, each the
 Source of exactly one `command`-Kind row below, checked by identity, not merely by count — a table that
-reports 38 (classes) instead of 57 (formats) is wrong. There are 58 `command` rows: the 58th,
+reports 40 (classes) instead of 59 (formats) is wrong. There are 60 `command` rows: the additional,
 `ultiessentials.home.set-named.outcome-verified`,
 is a second row on `/sethome <name>` whose Source is `HomeService#setHome`, not a mapping (re-measured
 when the `@EventHandler` count above was updated; the earlier figure of 57 rows predates that row).
@@ -138,8 +138,9 @@ behaviours.
 | ultiessentials.spawn.setlobby-writes-location-only | `/setlobby` (alias `/sethub`) writes exactly the six `lobby.location.*` settings of `config/lobby.yml` (`world`, `x`, `y`, `z`, `yaw`, `pitch`) through the framework's `saveOperatorChange` and nothing else: a comment or any other line made while the server runs stays byte for byte, while a location setting edited by hand is replaced by the command's value. When the framework refuses the write the file is unchanged, chat shows `Lobby not saved: <reason>. The lobby is unchanged; fix the file the server log names, then run /setlobby again.`, and the running lobby is restored to the values held before the command; any other failed write answers `Failed to save lobby` with the same rollback. Before UltiKits/UltiEssentials#72 the command saved the whole configuration, so a hand-edited location setting was left unwritten while chat said `Lobby set` | persistence | `/setlobby` (alias `/sethub`) | ultiessentials.lobby.set | player | admin | brief | SetLobbyCommand#setLobby, LobbyConfig#locationPaths |
 | ultiessentials.wild.teleport | Randomly teleport the sender within the configured min/max range of their current position, trying up to 10 candidate points and rejecting any that land on a solid ceiling/floor mismatch or on lava/water; each candidate's chunk is loaded (and, if new, generated) asynchronously, and the height lookup, the safety check and the teleport run in a main-thread task once it has loaded, so `/wild` does not stall the server tick; a player who logs out while a chunk loads is not teleported, and a search still waiting for a chunk or its main-thread check when the module unloads does nothing (UltiKits/UltiEssentials#24, fixed; earlier versions loaded every candidate chunk synchronously on the main thread); the success message names the landing block position, feet height included (UltiKits/UltiEssentials#33, fixed; earlier versions reported the floor block's height, one lower); refuses outright if `wild.min-range` >= `wild.max-range`; a second use within `features.wild.cooldown` seconds is refused by the framework's cooldown validator | command | `/wild` (alias `/rtp`) | ultiessentials.wild | player | player | brief | WildCommand#wildTeleport |
 | ultiessentials.back.teleport | Teleport the sender to the location recorded before their most recent teleport by one of this module's own commands (see `ultiessentials.back.track`); refuses if no location is recorded for them yet. `/back` is itself one of those teleports, so a second `/back` returns to where the first one started | command | `/back` | ultiessentials.back | player | player | brief | BackCommand#back |
-| ultiessentials.back.track | Record the sender's pre-teleport location on a `PlayerTeleportEvent` (MONITOR priority, `ignoreCancelled = true`) only when one of this module's own commands started that teleport — `/home`, `/warp`, `/spawn`, `/lobby`, `/wild`, an accepted `/tpa` or `/tpahere`, and `/back` itself — marked around the teleport call by `OwnTeleports`; any other teleport is not tracked: another plugin's, a vanilla `/tp`, a portal, an ender pearl, or this module's join-time spawn teleport (UltiKits/UltiEssentials#39, fixed; earlier versions recorded every `COMMAND`- or `PLUGIN`-caused teleport, so a teleport by something else after a rejoin re-armed `/back`) | event | run `/home`, `/warp`, `/spawn`, `/lobby`, `/wild`, `/back`, or have a `/tpa`/`/tpahere` accepted | n/a | n/a | player | brief | BackCommand#onPlayerTeleport, OwnTeleports#teleport |
+| ultiessentials.back.track | Record the teleported player's pre-teleport location on a `PlayerTeleportEvent` (MONITOR priority, `ignoreCancelled = true`) only when one of this module's own commands started that teleport — `/home`, `/warp`, `/spawn`, `/lobby`, `/wild`, an accepted `/tpa` or `/tpahere`, `/recall`, and `/back` itself — marked around the teleport call by `OwnTeleports`; any other teleport is not tracked: another plugin's, a vanilla `/tp`, a portal, an ender pearl, or this module's join-time spawn teleport (UltiKits/UltiEssentials#39, fixed; earlier versions recorded every `COMMAND`- or `PLUGIN`-caused teleport, so a teleport by something else after a rejoin re-armed `/back`) | event | run `/home`, `/warp`, `/spawn`, `/lobby`, `/wild`, `/back`, be recalled with `/recall`, or have a `/tpa`/`/tpahere` accepted | n/a | n/a | player | brief | BackCommand#onPlayerTeleport, OwnTeleports#teleport |
 | ultiessentials.back.cleanup-on-quit | Remove the quitting player's recorded back-location from the in-memory map on quit; `PlayerQuitListener#onPlayerQuit` (see `## Player Status & Utility`) performs the identical removal via `BackCommand.removePlayer(uuid)` on the SAME event, so this specific cleanup runs twice per quit — redundant but harmless, since removing an already-absent map key is a no-op | event | quit the server as any player who has a recorded back-location | n/a | n/a | internal | none | BackCommand#onPlayerQuit |
+| ultiessentials.recall.summon | Immediately summon the exact-name (case-insensitive) online target to the player sender's current location and facing, across worlds, without cooldown or warmup; the sender stays still. Refuse self, disabled feature, offline/missing/vanished target (unless the sender holds `ultiessentials.hide.see`). Only a successful Bukkit teleport notifies both parties; cancellation or a false return reports failure only to the sender. The target's origin is tracked for separately permitted `/back`; completion excludes self and unseen vanished targets | command | `/recall <player>` | ultiessentials.recall.other | player | admin | brief | RecallCommand#recall, RecallCommand#suggest |
 
 ## Homes
 
@@ -365,8 +366,7 @@ rather than renamed, and it prints no reload or unload line of its own. It decla
 refresh, `@ConditionalOnConfig` drift report — this module has 0 sites — and the framework's
 per-module `Module 'UltiEssentials' reloaded.` INFO line), then `onReload(ReloadReport)`, which calls
 `reload()` on `ScheduledCommandService`, `ScoreboardService` and `NamePrefixService` in that order
-(see `## Configuration` for what each restart does) after first repeating the start-up check for
-removed settings left in `config/essentials.yml` (`ultiessentials.lifecycle.removed-key-warning`),
+(see `## Configuration` for what each restart does) after checking configuration availability,
 warning by name for any it cannot resolve
 rather than skipping it silently. That warning, and the unload's matching failure, cannot be
 produced on a stock install and are not checklist material: all four services are unconditional
@@ -403,18 +403,14 @@ until someone runs the vanilla `team remove` on it. The changelog says so in bot
 `ConfigManager#reloadConfigs` re-initialises, in place, the same `EssentialsConfig` instance the
 container injected into `SpeedCommand`, which reads `features.speed.max-speed` at call time — the
 observable the first row below uses. The second row turns name prefixes on through a reload, the
-third turns the scoreboard off through a reload, the fourth reads the warnings a removed setting left
-in the file produces, the fifth unloads the module and reads whether
-its repeating tasks stopped, the sixth unloads it while a player is vanished and reads that the
-vanish is lifted for everyone, and the seventh states that a service which does not restart makes
-the reload partial.
+third turns the scoreboard off through a reload. The remaining lifecycle rows observe stopped tasks,
+vanish lifted on unload, and partial reporting when a service does not restart.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.lifecycle.reload | `/ul reload UltiEssentials` re-reads this module's configuration files into the running module, so an edited value such as `features.speed.max-speed` applies to the next `/speed` without a restart; the module prints no reload line of its own. On UltiTools 6.2.5 the module's reload override replaced the framework's reload and only logged, so an edit took effect only after a restart | event | `/ul reload UltiEssentials` (framework calls `reloadSelf()`, which reloads configuration, refreshes language, reports `@ConditionalOnConfig` drift and logs its own per-module line) | n/a | n/a | admin | brief | SpeedCommand#setSpeed |
 | ultiessentials.lifecycle.reload-nameprefix | After `features.nameprefix.enabled` is changed from `false` to `true`, `/ul reload UltiEssentials` restarts `NamePrefixService` with the main scoreboard, so the restarted update task applies the configured prefix to every online player about 1 second after the reload and a player who joins afterwards gets it 0.5 seconds after joining, with no exception from `NamePrefixService#updatePlayer` (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.nameprefix.enabled` to `true` in `config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#onReload, NamePrefixService#reload |
 | ultiessentials.lifecycle.reload-scoreboard-off | After `features.scoreboard.enabled` is changed from `true` to `false`, `/ul reload UltiEssentials` cancels the sidebar update task and returns every player who had a sidebar to the server's main scoreboard, so the sidebar disappears and name prefixes (and any other team on the main scoreboard) become visible to those players without rejoining (UltiKits/UltiEssentials#28) | event | `/ul reload UltiEssentials` after editing `features.scoreboard.enabled` to `false` in `config/essentials.yml` | n/a | n/a | admin | brief | ScoreboardService#reload, ScoreboardService#shutdown |
-| ultiessentials.lifecycle.removed-key-warning | At start-up and on every `/ul reload UltiEssentials`, log one WARN line for each setting this module has removed that is still in the operator's `config/essentials.yml` — `features.recall.enabled` (UltiKits/UltiEssentials#27) — naming the module, the file and the key and saying where the setting's job went (`UltiKits/UltiEssentials#53`, the `/recall` feature request); `features.wild.cooldown` is a live key and is never reported; a key holding an empty (null) value counts as present; a file without the removed key produces no such line; presence is read through the framework's `isPresentInFile` (UltiTools-API 6.3.0 removed the parsed-file accessor, UltiKits/UltiEssentials#68), so a file the framework could not read or parse produces no removed-key line — only the framework's own SEVERE `Cannot load config/essentials.yml` line — and a missing configuration bean produces one line saying the file was not checked rather than none | event | start the server, or run `/ul reload UltiEssentials`, with a removed key left in `plugins/UltiTools/pluginConfig/UltiEssentials/config/essentials.yml` | n/a | n/a | admin | brief | UltiEssentials#warnAboutRemovedSettings, RemovedConfigKeys#warningsFor |
 | ultiessentials.lifecycle.unload-tasks | `/upm uninstall UltiEssentials` stops every repeating task this module started: configured entries of `features.scheduled-commands.commands` stop being dispatched to the console, the sidebar and name-prefix update tasks stop, and a teleport warmup still counting down is cancelled rather than completed. Players who had a sidebar are returned to the server's main scoreboard and this module's name-prefix team entries are removed, although the now-empty teams stay registered. Before UltiKits/UltiEssentials#43 the module declared no `onUnregister()` hook, so all of these kept running against the uninstalled module until the server was restarted while the uninstall reported success. The one-shot delayed tasks are covered too (UltiKits/UltiEssentials#51, fixed): a pending `/tpa`/`/tpahere` request's expiry is cancelled, so neither player gets an expiry message from the uninstalled module, and a player who joined in the second before the uninstall is not put on a sidebar or into a name-prefix team afterwards, because the delayed join callbacks do nothing once their service is shut down | event | `/upm uninstall UltiEssentials` from the server console (framework calls `unregisterSelf()`, which runs `onUnregister()` and then unregisters this module's commands and listeners) | n/a | n/a | admin | brief | UltiEssentials#onUnregister, ScheduledCommandService#shutdown, ScoreboardService#shutdown, NamePrefixService#shutdown, TeleportService#shutdown, TpaService#shutdown |
 | ultiessentials.lifecycle.unload-reveals-vanished | `/upm uninstall UltiEssentials` first shows every player vanished with `/hide` to every other online player, using the same `UltiTools` plugin reference `/hide` used to hide them, and forgets all vanish state (including players who already left), so a reinstall starts consistent with what players see. Before the fix for UltiKits/UltiEssentials#32 the hides outlived the module, because they are recorded against the `UltiTools` Bukkit plugin, which stays enabled: a vanished player stayed hidden from the players online when they vanished, became visible to later joiners, and could not un-vanish until they relogged. The vanished player is not messaged | event | `/upm uninstall UltiEssentials` from the server console while a player is vanished | n/a | n/a | admin | brief | UltiEssentials#onUnregister, HideCommand#revealAllVanished |
 | ultiessentials.lifecycle.reload-partial | When one of the three services `/ul reload UltiEssentials` restarts (`ScheduledCommandService`, `ScoreboardService`, `NamePrefixService`) cannot be resolved or its `reload()` throws, the module still restarts the others, logs the failure naming the service (WARNING or SEVERE, as before), and records it in the framework's `ReloadReport` as `<Service> could not be reached and was not restarted; …` or `<Service> did not restart: <cause>`, so the sender's reply is `Module UltiEssentials reloaded partially; not reloaded: <reasons>` and the framework logs `Module 'UltiEssentials' reloaded partially; not reloaded: <reasons>` instead of the plain success line; a reload in which all three restart is reported as a plain success. Before this, `/ul reload UltiEssentials` replied success unconditionally (UltiKits/UltiEssentials#66, UltiKits/UltiTools-Reborn#529) | event | `/ul reload UltiEssentials` | n/a | n/a | admin | brief | UltiEssentials#onReload, UltiEssentials#reloadService |
@@ -454,17 +450,17 @@ missing key or on Chinese text outside a catalogue. Exception messages thrown to
 
 ## Configuration
 
-Every `@ConfigEntry`-annotated field across this module's five `@ConfigEntity` classes (78 keys
-total: `EssentialsConfig` 59, `SpawnConfig` 8, `LobbyConfig` 6, `MotdConfig` 3, `TabBarConfig` 2 —
-matching the reconciliation table's own `@ConfigEntry` count of 78 exactly; `EssentialsConfig` gained
+Every `@ConfigEntry`-annotated field across this module's five `@ConfigEntity` classes (79 keys
+total: `EssentialsConfig` 60, `SpawnConfig` 8, `LobbyConfig` 6, `MotdConfig` 3, `TabBarConfig` 2 —
+matching the reconciliation table's own `@ConfigEntry` count of 79 exactly; `EssentialsConfig` gained
 `features.data-repair.enabled` with UltiKits/UltiEssentials#34 and lost `features.recall.enabled`
-with UltiKits/UltiEssentials#27). Several of these keys
+with UltiKits/UltiEssentials#27; #53 restores it with a real command). Several of these keys
 already have a behavioural row above (the various `features.*.enabled` toggles, home/warp/tpa
 warmups, deathpunish sub-toggles) — that row documents the *feature* the key drives, this row
 documents the *key* itself, at file-and-key granularity, so the reconciliation table can prove
 every key is accounted for without also making every behavioural row carry a `config` Kind.
 The last row of the table below, `ultiessentials.config.comments`, describes a behaviour of all five
-files rather than a key, and is not counted among the 78.
+files rather than a key, and is not counted among the 79.
 
 **Four keys were declared and shipped with a comment describing their effect, but were never read
 by any production code outside `EssentialsConfig` itself** (UltiKits/UltiEssentials#27). In 6.3.0
@@ -472,10 +468,7 @@ three are wired and one is removed. `features.ban.broadcast-ban` and `features.b
 now decide whether a ban and an unban are announced to the whole server; both default to `true`,
 which is what the commands always did. `features.wild.cooldown` is now `/wild`'s cooldown, bound
 through the framework's config-bound `@CmdCD` (UltiKits/UltiTools-Reborn#531); its default, 60, is
-what the command always enforced. `features.recall.enabled` (there is no `/recall` command) was
-**removed**: a copy left in an operator's file is reported by
-`ultiessentials.lifecycle.removed-key-warning`, and `/recall` is recorded as a feature request,
-UltiKits/UltiEssentials#53.
+what the command always enforced. `features.recall.enabled` was removed in 6.3.0 while no command existed. Issue #53 restores it (default true) with the implemented staff summon. It is read at call time, applies on reload, preserves a legacy false, and is no longer reported as removed.
 
 **`/ul reload UltiEssentials` re-reads configuration values and restarts this module's
 scheduled-command, scoreboard and name-prefix background tasks.** Since
@@ -522,6 +515,7 @@ affects only itself.
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
 | ultiessentials.config.essentials.features.back.enabled | Enable `/back` | config | `config/essentials.yml: features.back.enabled (default: true)` | n/a | n/a | admin | brief | BackCommand#back |
+| ultiessentials.config.essentials.features.recall.enabled | Enable the staff-only `/recall <player>` summon; default true, existing false preserved; re-read on `/ul reload UltiEssentials` and consulted on every invocation, with no removed-key warning | config | `config/essentials.yml: features.recall.enabled (default: true)` | n/a | n/a | admin | brief | RecallCommand#recall |
 | ultiessentials.config.essentials.features.spawn.enabled | Enable `/spawn`, `/setspawn`, and the respawn/first-join auto-teleport listeners | config | `config/essentials.yml: features.spawn.enabled (default: true)` | n/a | n/a | admin | brief | SpawnCommand#teleportToSpawn |
 | ultiessentials.config.essentials.features.lobby.enabled | Enable `/lobby` and `/setlobby` | config | `config/essentials.yml: features.lobby.enabled (default: true)` | n/a | n/a | admin | brief | LobbyCommand#teleportToLobby |
 | ultiessentials.config.essentials.features.wild.enabled | Enable `/wild` | config | `config/essentials.yml: features.wild.enabled (default: true)` | n/a | n/a | admin | brief | WildCommand#wildTeleport |
@@ -599,7 +593,7 @@ affects only itself.
 | ultiessentials.config.tabbar.tabbar.header | Tab-list header template, `&`-color-coded, with `%online%`/`%max%` substitution; the Java default is the header every earlier version shipped, written in the server's language at module enable and reload (`ultiessentials.lifecycle.config-text-materializer`); neither `tabbar.header` nor `tabbar.footer` carries `@NotEmpty`, and a blank value is the operator's way to show nothing and is never materialized | config | `config/tabbar.yml: tabbar.header (default: the shipped header, in the server's language)` | n/a | n/a | admin | brief | TabBarListener#updateTabBar |
 | ultiessentials.config.essentials.features.data-repair.enabled | Run this module's start-up repair that gives records written before UltiKits/UltiEssentials#34 was fixed the primary key they were saved without, in the JSON store; set to `false` to leave those JSON records as they are, in which case deleting or updating them keeps failing and one log line names this key. In SQLite the framework gives such records their key when it opens their tables, whatever this key says (UltiTools-API 6.3.0, UltiKits/UltiTools-Reborn#546); MySQL cannot hold them | config | `config/essentials.yml: features.data-repair.enabled (default: true)` | n/a | n/a | admin | brief | EntityIdBackfillService#run |
 | ultiessentials.config.tabbar.tabbar.footer | Tab-list footer template, `&`-color-coded, with `%online%`/`%max%` substitution; the Java default is the footer every earlier version shipped, written in the server's language at module enable and reload (`ultiessentials.lifecycle.config-text-materializer`); see `ultiessentials.config.tabbar.tabbar.header` for the blank semantics | config | `config/tabbar.yml: tabbar.footer (default: the shipped footer, in the server's language)` | n/a | n/a | admin | brief | TabBarListener#updateTabBar |
-| ultiessentials.config.comments | The comment written above each of the 78 keys of the five configuration files comes from the module's language files and follows the server's `language`: each `@ConfigEntry(comment = "{key}")` is a single catalogue-key token `essentials.config.<file stem>.<key path>` (for example `essentials.config.essentials.features.back.enabled`), whose `lang/en.json` entry is the English comment (`Enable the /back command`) and whose `lang/zh.json` entry is the Chinese one the module always wrote. A fresh install under `language: en` therefore writes English comments (earlier versions wrote Chinese-only comments in every language), and the framework rewrites the comment lines of these keys in the server's current language whenever it loads or writes a file, an upgraded server's first start included; values are untouched. Only a comment the module wrote is rewritten - its catalogue text in either language, or a text an earlier release shipped and the entry registers in `@ConfigEntry(previousComments)` (release v1.0.0's shorter comment above `features.wild.cooldown`, UltiKits/UltiEssentials#73); a comment an operator wrote by hand stays byte for byte (UltiTools-API 6.3.0, maintainer decision 2026-10-04). A new Chinese-only `@ConfigEntry` comment fails the module's language guard 2 (UltiKits/UltiEssentials#67) | config | `config/essentials.yml`, `config/lobby.yml`, `config/motd.yml`, `config/spawn.yml`, `config/tabbar.yml` — the comment above each key | n/a | n/a | admin | none | EssentialsConfig, LobbyConfig, MotdConfig, SpawnConfig, TabBarConfig |
+| ultiessentials.config.comments | The comment written above each of the 79 keys of the five configuration files comes from the module's language files and follows the server's `language`: each `@ConfigEntry(comment = "{key}")` is a single catalogue-key token `essentials.config.<file stem>.<key path>` (for example `essentials.config.essentials.features.back.enabled`), whose `lang/en.json` entry is the English comment (`Enable the /back command`) and whose `lang/zh.json` entry is the Chinese one the module always wrote. A fresh install under `language: en` therefore writes English comments (earlier versions wrote Chinese-only comments in every language), and the framework rewrites the comment lines of these keys in the server's current language whenever it loads or writes a file, an upgraded server's first start included; values are untouched. Only a comment the module wrote is rewritten - its catalogue text in either language, or a text an earlier release shipped and the entry registers in `@ConfigEntry(previousComments)` (release v1.0.0's shorter comment above `features.wild.cooldown`, UltiKits/UltiEssentials#73); a comment an operator wrote by hand stays byte for byte (UltiTools-API 6.3.0, maintainer decision 2026-10-04). A new Chinese-only `@ConfigEntry` comment fails the module's language guard 2 (UltiKits/UltiEssentials#67) | config | `config/essentials.yml`, `config/lobby.yml`, `config/motd.yml`, `config/spawn.yml`, `config/tabbar.yml` — the comment above each key | n/a | n/a | admin | none | EssentialsConfig, LobbyConfig, MotdConfig, SpawnConfig, TabBarConfig |
 
 ## Compatibility with other scoreboards
 

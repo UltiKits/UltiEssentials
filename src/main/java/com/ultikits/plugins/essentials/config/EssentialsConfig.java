@@ -56,8 +56,9 @@ public class EssentialsConfig extends AbstractConfigEntity {
             previousComments = {"随机传送冷却时间(秒)"})
     private int wildCooldown = 60;
 
-    // features.recall.enabled was removed in 6.3.0: there is no /recall command. A copy left in an
-    // operator's file is reported by RemovedConfigKeys (UltiKits/UltiEssentials#27).
+    // Restored with the implemented staff summon (#53); an operator's existing false is preserved.
+    @ConfigEntry(path = "features.recall.enabled", comment = "{essentials.config.essentials.features.recall.enabled}")
+    private boolean recallEnabled = true;
 
     // ============ 玩家状态功能 ============
     @ConfigEntry(path = "features.fly.enabled", comment = "{essentials.config.essentials.features.fly.enabled}")

@@ -46,31 +46,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /**
- * {@code features.recall.enabled} in {@code config/essentials.yml} never took effect -- there is no
- * {@code /recall} command to switch -- and is removed in 6.3.0 (UltiKits/UltiEssentials#27; the
- * command is feature request UltiKits/UltiEssentials#53).
- * <p>
- * {@code features.wild.cooldown}, the other key #27 found unread, is <em>not</em> removed: it is
- * bound to {@code /wild}'s cooldown through the framework's config-bound {@code @CmdCD}
- * (UltiKits/UltiTools-Reborn#531), so it is a live key and must never be reported as removed. Its
- * behaviour is pinned by {@code WildCooldownBindingTest}.
- * <p>
- * Removing a key from the code does not remove it from an operator's file: the framework writes a
- * missing key's declared default into the file on first load and never deletes a key it no longer
- * declares, so every server that has run this module still carries the recall switch. These cases
- * pin the warning that tells that operator, at start-up and again on {@code /ul reload}, and they
- * pin that a fresh install no longer gets it written into its file.
- *
- * <h2>Controls</h2>
- * A check that never fires and a server with nothing left over look identical in the log, so the
- * positive cases sit beside two controls: a file with no removed key produces no warning at all, and
- * a file holding {@code features.wild.enabled} -- a key this module still reads, in the same section
- * as the removed cooldown -- produces none either, so the check tells "this key is in your file"
- * apart from "this key is in your file and is dead".
- * <p>
- * 两个从未生效的配置项在 6.3.0 删除；运维文件里残留的旧键在启动和重载时各报一条警告。
+ * Recall's former removed-key warning must disappear when #53 makes the switch live again.
+ * Exercises real framework file loading and module start/reload, preserving legacy values.
  */
-@DisplayName("Removed configuration keys (UltiKits/UltiEssentials#27)")
+@DisplayName("Live recall configuration and former removed-key warnings (#53)")
 class UltiEssentialsRemovedConfigKeyTest {
 
     private static final String CONFIG_FILE = "config/essentials.yml";
@@ -110,8 +89,8 @@ class UltiEssentialsRemovedConfigKeyTest {
     // ==================== the declaration ====================
 
     @Test
-    @DisplayName("EssentialsConfig declares the live wild cooldown and not the removed recall switch")
-    void configDeclaresWildCooldownButNotRecall() {
+    @DisplayName("EssentialsConfig declares both the live wild cooldown and restored recall switch")
+    void configDeclaresWildCooldownAndRecall() {
         List<String> declared = new ArrayList<>();
         for (Field field : EssentialsConfig.class.getDeclaredFields()) {
             ConfigEntry entry = field.getAnnotation(ConfigEntry.class);
@@ -122,19 +101,20 @@ class UltiEssentialsRemovedConfigKeyTest {
         // Control: the reflection reads the real declarations -- a key that stays is found.
         assertThat(declared).contains("features.wild.enabled", "features.ban.broadcast-ban");
         assertThat(declared).contains(WILD_COOLDOWN);
-        assertThat(declared).doesNotContain(RECALL_ENABLED);
+        assertThat(declared).contains(RECALL_ENABLED);
     }
 
     @Test
-    @DisplayName("A fresh install's file gets the wild cooldown but not the removed recall switch")
-    void freshInstallFileCarriesWildCooldownButNotRecall() throws Exception {
+    @DisplayName("A fresh install gets both live keys and recall defaults to true")
+    void freshInstallFileCarriesWildCooldownAndRecall() throws Exception {
         boot("");
 
         YamlConfiguration written = YamlConfiguration.loadConfiguration(configFile);
         // Control: the framework did write the declared defaults into the empty file.
         assertThat(written.contains("features.wild.enabled")).isTrue();
         assertThat(written.contains(WILD_COOLDOWN)).isTrue();
-        assertThat(written.contains(RECALL_ENABLED)).isFalse();
+        assertThat(written.contains(RECALL_ENABLED)).isTrue();
+        assertThat(written.getBoolean(RECALL_ENABLED)).isTrue();
     }
 
     // ==================== the residual-key warning at start-up ====================
@@ -148,30 +128,29 @@ class UltiEssentialsRemovedConfigKeyTest {
     }
 
     @Test
-    @DisplayName("Start-up names features.recall.enabled when it is still in the operator's file")
-    void startUpWarnsAboutResidualRecallSwitch() throws Exception {
+    @DisplayName("Start-up preserves legacy false without a removed-key warning")
+    void startUpPreservesLegacyRecallFalse() throws Exception {
         boot("features:\n  recall:\n    enabled: false\n");
 
-        assertOneWarningNaming(startUpWarnings(), RECALL_ENABLED, "UltiEssentials#53");
+        assertThat(startUpWarnings()).isEmpty();
+        assertThat(config.isRecallEnabled()).isFalse();
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getBoolean(RECALL_ENABLED)).isFalse();
     }
 
     @Test
-    @DisplayName("With the recall switch and the wild cooldown both in the file, only the recall switch is reported, once")
-    void startUpReportsOnlyTheRemovedKey() throws Exception {
+    @DisplayName("Both live switches in the file produce no removed-key warning")
+    void startUpReportsNeitherLiveKey() throws Exception {
         boot("features:\n  wild:\n    cooldown: 5\n  recall:\n    enabled: true\n");
 
-        List<String> warnings = startUpWarnings();
-
-        assertThat(warnings).hasSize(1);
-        assertThat(warnings).filteredOn(line -> line.contains(RECALL_ENABLED)).hasSize(1);
-        assertThat(warnings).filteredOn(line -> line.contains(WILD_COOLDOWN)).isEmpty();
+        assertThat(startUpWarnings()).isEmpty();
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getBoolean(RECALL_ENABLED)).isTrue();
     }
 
     // ==================== the residual-key warning on /ul reload ====================
 
     @Test
-    @DisplayName("/ul reload names a removed key an operator put back into the file")
-    void reloadWarnsAboutAResidualKeyAddedSinceStartUp() throws Exception {
+    @DisplayName("/ul reload reads restored recall false without a removed-key warning")
+    void reloadReadsLiveRecallSwitch() throws Exception {
         boot("");
         assertThat(startUpWarnings()).isEmpty();
 
@@ -179,7 +158,37 @@ class UltiEssentialsRemovedConfigKeyTest {
         configManager.reloadConfigs(plugin);
         List<String> warnings = warningsDuring(() -> invokeOnReload(plugin));
 
-        assertOneWarningNaming(warnings, RECALL_ENABLED, "UltiEssentials#53");
+        assertThat(warnings).isEmpty();
+        assertThat(YamlConfiguration.loadConfiguration(configFile).getBoolean(RECALL_ENABLED)).isFalse();
+        assertThat(config.isRecallEnabled()).isFalse();
+    }
+
+    @Test
+    void reloadChangesTheAlreadyConstructedRecallCommandWithoutRewritingLegacyFalse() throws Exception {
+        boot("features:\n  recall:\n    enabled: false # operator choice\n");
+        com.ultikits.plugins.essentials.commands.RecallCommand command =
+                new com.ultikits.plugins.essentials.commands.RecallCommand(config);
+        Field field = com.ultikits.plugins.essentials.commands.BaseEssentialsCommand.class.getDeclaredField("plugin");
+        field.setAccessible(true);
+        field.set(command, plugin);
+        org.bukkit.entity.Player sender = mock(org.bukkit.entity.Player.class);
+        command.recall(sender, "Nobody");
+        verify(sender).sendMessage("This feature is disabled");
+        assertThat(new String(Files.readAllBytes(configFile.toPath()), StandardCharsets.UTF_8))
+                .contains("enabled: false # operator choice");
+
+        write("features:\n  recall:\n    enabled: true\n");
+        configManager.reloadConfigs(plugin);
+        org.mockito.Mockito.clearInvocations(sender);
+        command.recall(sender, "Nobody");
+        verify(sender).sendMessage("Player not found or offline");
+        verify(sender, org.mockito.Mockito.never()).sendMessage("This feature is disabled");
+
+        write("features:\n  recall:\n    enabled: false\n");
+        configManager.reloadConfigs(plugin);
+        org.mockito.Mockito.clearInvocations(sender);
+        command.recall(sender, "Nobody");
+        verify(sender).sendMessage("This feature is disabled");
     }
 
     @Test
@@ -200,11 +209,11 @@ class UltiEssentialsRemovedConfigKeyTest {
     // ==================== presence read through the framework (UltiKits/UltiEssentials#68) ====================
 
     @Test
-    @DisplayName("#68: a removed key present with an explicit null value is still present in the file, and is reported")
-    void startUpReportsARemovedKeyHoldingAnExplicitNull() throws Exception {
+    @DisplayName("#53: null recall value is not falsely reported as a removed key")
+    void nullRecallDoesNotProduceRemovedKeyWarning() throws Exception {
         boot("features:\n  recall:\n    enabled:\n");
 
-        assertOneWarningNaming(startUpWarnings(), RECALL_ENABLED, "UltiEssentials#53");
+        assertThat(startUpWarnings()).isEmpty();
     }
 
     @Test
@@ -231,8 +240,8 @@ class UltiEssentialsRemovedConfigKeyTest {
     }
 
     @Test
-    @DisplayName("#68: a removed key put back between two reloads is reported on the second, and not once it is removed again")
-    void aRemovedKeyRestoredBetweenTwoReloadsIsReportedOnTheSecond() throws Exception {
+    @DisplayName("#53: adding the now-live recall key between reloads never reports it removed")
+    void liveRecallRestoredBetweenReloadsIsNotReported() throws Exception {
         boot("");
         assertThat(startUpWarnings()).isEmpty();
 
@@ -241,7 +250,7 @@ class UltiEssentialsRemovedConfigKeyTest {
 
         write("features:\n  recall:\n    enabled: true\n");
         configManager.reloadConfigs(plugin);
-        assertOneWarningNaming(warningsDuring(() -> invokeOnReload(plugin)), RECALL_ENABLED, "UltiEssentials#53");
+        assertThat(warningsDuring(() -> invokeOnReload(plugin))).isEmpty();
 
         write("features:\n  wild:\n    enabled: true\n");
         configManager.reloadConfigs(plugin);
@@ -402,17 +411,6 @@ class UltiEssentialsRemovedConfigKeyTest {
     }
 
     // ==================== helpers ====================
-
-    private static void assertOneWarningNaming(List<String> warnings, String key, String whereItWent) {
-        assertThat(warnings)
-                .withFailMessage("expected exactly one warning naming '%s', got %s", key, warnings)
-                .hasSize(1);
-        assertThat(warnings.get(0))
-                .contains("UltiEssentials")
-                .contains(CONFIG_FILE)
-                .contains(key)
-                .contains(whereItWent);
-    }
 
     /**
      * {@link #boot(String, String)} under {@code language: en}, the framework's default -- every

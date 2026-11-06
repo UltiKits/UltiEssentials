@@ -15,6 +15,7 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 | 命令 | 描述 | 权限 |
 |------|------|------|
 | `/back` | 返回上一个传送位置 | `ultiessentials.back` |
+| `/recall <player>` | Bring an online player to you / 召回在线玩家 | `ultiessentials.recall.other` |
 | `/spawn` | 传送到服务器出生点 | `ultiessentials.spawn.teleport` |
 | `/setspawn` | 设置服务器出生点 | `ultiessentials.spawn.set` |
 | `/lobby` `/hub` | 传送到主城 | `ultiessentials.lobby.teleport` |
@@ -55,6 +56,16 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 | `/wl on` | 启用白名单 | `ultiessentials.whitelist.manage` |
 | `/wl off` | 禁用白名单 | `ultiessentials.whitelist.manage` |
 | `/wl status` | 查看白名单状态 | `ultiessentials.whitelist.manage` |
+
+### Staff recall / 管理员召回
+
+`/recall Traveler` immediately brings the online player named `Traveler` to your current position and facing, even from another world; your own position does not change. Use the complete username (case-insensitive), not a prefix. This is a **player-only staff command**, gated by `ultiessentials.recall.other`; `/back` or `/tpahere` access alone does not grant it. It has no self or console variant, cooldown or warmup. For a consent-based request, use `/tpahere` instead. A vanished target looks offline unless you hold `ultiessentials.hide.see`; Tab completion also hides them. Another plugin may cancel the teleport: you then see `Recall failed; the player was not teleported`, not a success. On success you see `Recalled Traveler to your location`, and Traveler is told who recalled them. The recalled player can return using `/back` if that feature and its separate permission are enabled.
+
+`features.recall.enabled` in `config/essentials.yml` defaults to `true` and now actually gates this command. Set it to `false` and run `/ul reload UltiEssentials` to refuse recalls. An existing `false` stays false; the module does not migrate or overwrite your choice. This key was removed in 6.3.0 when no command existed; with the implemented command it is live again and is no longer warned about as removed. A new JAR still requires a server restart.
+
+`/recall Traveler` 会立即把完整用户名为 `Traveler` 的在线玩家传送到你当前的位置和朝向，允许跨世界，你自己不会移动。用户名不区分大小写，但不接受名字前缀。仅玩家可执行，需要独立的 `ultiessentials.recall.other` 权限；拥有 `/back` 或 `/tpahere` 权限不代表可以召回别人。不能召回自己，控制台不可用，无冷却、无预热。需要对方同意时用 `/tpahere`。没有 `ultiessentials.hide.see` 权限时，隐身目标按离线处理，也不会出现在补全中。其他插件取消传送时只提示失败；成功时双方收到通知。被召回者另有 `/back` 权限且该功能开启时，可以返回原位。
+
+`config/essentials.yml` 中的 `features.recall.enabled` 默认 `true`，现在会真正控制召回命令。改为 `false` 后执行 `/ul reload UltiEssentials` 即可禁用；旧文件中已有的 `false` 不会被覆盖。该键在 6.3.0 因命令尚不存在而删除，现在恢复为有效设置，不再报告“已移除”。更换 JAR 仍需重启。
 
 ### Commands that take over vanilla commands / 接管原版命令的命令
 
@@ -103,6 +114,8 @@ features:
   # ===== 传送功能 =====
   back:
     enabled: true          # 启用 /back 返回命令
+  recall:
+    enabled: true          # Enable staff /recall; 启用管理员召回
   spawn:
     enabled: true          # 启用 /spawn 出生点命令
   lobby:
@@ -204,6 +217,7 @@ UltiEssentials 不提供自动回复，也不读取 `config/autoreply.yml`。关
 | 权限 | 描述 | 默认 |
 |------|------|------|
 | `ultiessentials.back` | 使用 /back 命令 | 玩家 |
+| `ultiessentials.recall.other` | Staff recall of another online player / 召回其他在线玩家 | Grant explicitly through your permissions plugin / 通过权限插件单独授予 |
 | `ultiessentials.spawn.teleport` | 传送到出生点 | 玩家 |
 | `ultiessentials.spawn.set` | 设置出生点 | OP |
 | `ultiessentials.lobby.teleport` | 传送到主城 | 玩家 |

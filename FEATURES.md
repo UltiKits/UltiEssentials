@@ -48,8 +48,8 @@ for UAT execution and issue reconciliation — the public description of these f
   Kind (`config`, `event`, `gate`, `gui`, `persistence`, `scheduled`, `placeholder`) — the concept
   of "who this targets" does not apply to a config key or a background task the way it applies to
   a command. No class in this repository declares `@CmdTarget(CONSOLE)`; every command row below
-  is `player` (33 classes) or `both` (5 classes: `BanCommand`, `UnbanCommand`, `BanListCommand`,
-  `TempBanCommand`, `WhitelistCommand` — all moderation commands, deliberately console-runnable).
+  is `player` (34 classes) or `both` (7 classes: `BanCommand`, `UnbanCommand`, `BanListCommand`,
+  `TempBanCommand`, `WhitelistCommand`, `BanIpCommand`, `UnbanIpCommand` — all moderation commands, deliberately console-runnable).
 - **Permission:** the literal node string, `none`, or `n/a`, each optionally suffixed with the
   literal text `(requireOp=true)` (preceded by one space) when the row's class-level
   `@CmdExecutor` carries that flag — the suffix augments whichever of the three base values
@@ -94,8 +94,8 @@ rather than an error:
    (naive 1) and `@ConditionalOnConfig` (naive 2), whose only occurrences are javadoc mentions in
    `UltiEssentials.java` — exactly the case the anchor exists to exclude.
 
-**Positive control:** the line-start form returns `@CmdExecutor` = 38 (classes), `@CmdMapping` =
-57 (formats), `@EventListener` = 12 (classes — 11 in `listener/`, 1 in `commands/BackCommand.java`
+**Positive control:** the line-start form returns `@CmdExecutor` = 41 (classes), `@CmdMapping` =
+61 (formats), `@EventListener` = 12 (classes — 11 in `listener/`, 1 in `commands/BackCommand.java`
 which is simultaneously a command executor and an event listener), `@EventHandler` = 22 (handler
 methods across those 12 classes; `JoinQuitListener#hideVanishedPlayers` became the 22nd with
 UltiKits/UltiEssentials#32), `@Scheduled` = 0, `@ConditionalOnConfig` = 0, `@ConfigEntity` = 5
@@ -105,9 +105,9 @@ confirmed by reading `WhitelistCommand.java` directly (6 `@CmdMapping` sites: `a
 module) and `ChestLockListener.java` (7 `@EventHandler` sites: `onPlayerInteract`, `onBlockBreak`,
 `onEntityExplode`, `onBlockExplode`, `onPistonExtend`, `onPistonRetract`, `onInventoryMove` — the
 largest single-class handler count). `ultiessentials.whitelist.add` (`WhitelistCommand#add`) is
-this module's standing positive control for the command-row count: 57 `@CmdMapping` sites, each the
+this module's standing positive control for the command-row count: 61 `@CmdMapping` sites, each the
 Source of exactly one `command`-Kind row below, checked by identity, not merely by count — a table that
-reports 38 (classes) instead of 57 (formats) is wrong. There are 58 `command` rows: the 58th,
+reports 41 (classes) instead of 61 (formats) is wrong. There are 62 `command` rows: the extra row,
 `ultiessentials.home.set-named.outcome-verified`,
 is a second row on `/sethome <name>` whose Source is `HomeService#setHome`, not a mapping (re-measured
 when the `@EventHandler` count above was updated; the earlier figure of 57 rows predates that row).
@@ -266,6 +266,12 @@ another player's inventory contents live.
 
 ## Moderation
 
+`BanIpCommand` and `UnbanIpCommand` add numeric-IP-only creation and verified lifting (#63),
+with separate permissions and no vanilla command aliases. Creation is permanent, stores no player UUID,
+and kicks every connection sharing the canonical address. No address completion is exposed. Lifting
+also deactivates legacy combined UUID/IP records as a whole; independent UUID bans remain. Both use
+the existing broadcast switches (announcements contain the IP); vanilla IP bans remain independent.
+
 `BanCommand`/`UnbanCommand`/`BanListCommand`/`TempBanCommand` (gated by `features.ban.enabled`,
 backed by `BanService` and the persisted `BanData` entity — see `## Data Persistence`) and
 `WhitelistCommand` (gated by `features.whitelist.enabled`, backed directly by Bukkit's own
@@ -282,6 +288,9 @@ report that distinction rather than a false "not banned anywhere".
 | ultiessentials.ban.tempban | Temporarily ban a player for a parsed duration (`1d`/`2h`/`30m`/`1w`, combinable e.g. `1d12h30m`) with the same default reason as `ultiessentials.ban.ban` (see that row), refusing on an unparseable duration, and announcing the ban as `ultiessentials.ban.ban` does | command | `/tempban <player> <duration>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempban |
 | ultiessentials.ban.tempban-with-reason | Temporarily ban a player for a parsed duration with a given reason, announcing the ban and reason as `ultiessentials.ban.ban-with-reason` does | command | `/tempban <player> <duration> <reason>` | ultiessentials.ban.temp | both | admin | brief | TempBanCommand#tempbanWithReason |
 | ultiessentials.ban.unban | Unban a player by name (this plugin's own record only), reporting one of four distinct outcomes depending on whether the plugin's own record and/or the server's own vanilla ban list currently ban the name (see section note); the two success outcomes are reported only once no active record remains for the name (re-queried after the deactivation, because the framework's `update(T)` returns no affected-row count), so the unban broadcast (sent on the plain-success outcome only, and only while `features.ban.broadcast-unban` is `true`) cannot fire for a ban that is still in force; a ban record that survives the attempt is reported as a failure to lift it, never as a name that was never banned | command | `/unban <player>` | ultiessentials.unban | both | admin | brief | UnbanCommand#unban |
+| ultiessentials.ban.ip-create | Permanently ban a canonical numeric IPv4/IPv6 address without a player UUID; verify insertion before kicking every matching online connection and confirming to the issuer; duplicate, disabled, invalid and failed writes are distinct outcomes; broadcast only with `features.ban.broadcast-ban` | command | `/banip <ip>` | ultiessentials.banip | both | admin | brief | BanIpCommand#ban, BanService#banIp |
+| ultiessentials.ban.ip-create-with-reason | Same IP-only ban with an explicit reason, retained in the record and kick message | command | `/banip <ip> <reason>` | ultiessentials.banip | both | admin | brief | BanIpCommand#banWithReason |
+| ultiessentials.ban.ip-lift | Deactivate every active, unexpired module record matching the canonical address; re-query before success, distinguish failed update from no active record, report a remaining vanilla IP ban without modifying it, and broadcast only plain success with `features.ban.broadcast-unban`; remains available while enforcement is disabled | command | `/unbanip <ip>` | ultiessentials.unbanip | both | admin | brief | UnbanIpCommand#unban, BanService#unbanIp |
 | ultiessentials.banlist.list | List active bans, page 1, 10 per page, each entry showing name, permanent-or-remaining-time, reason, and operator `/banlist` deliberately takes over the vanilla `/banlist` of the same name (maintainer decision 2026-09-27, UltiKits/UltiEssentials#61): it lists this module's own bans, not the server's ban list, and the vanilla command stays reachable as `minecraft:banlist`. | command | `/banlist` (alias `/bans`) | ultiessentials.banlist | both | admin | brief | BanListCommand#banlist |
 | ultiessentials.banlist.list-page | List active bans on a specific page (clamped to `1..totalPages`) | command | `/banlist <page>` | ultiessentials.banlist | both | admin | none | BanListCommand#banlistPage |
 | ultiessentials.ban.login-check | Reject a joining player's login (`KICK_BANNED`) if either their UUID or their connecting IP address currently has an active, unexpired ban record | event | attempt to join while an active UUID or IP ban exists | n/a | n/a | admin | detailed | BanListener#onPlayerLogin |

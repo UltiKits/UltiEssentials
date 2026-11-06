@@ -56,6 +56,21 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 | `/wl off` | 禁用白名单 | `ultiessentials.whitelist.manage` |
 | `/wl status` | 查看白名单状态 | `ultiessentials.whitelist.manage` |
 
+### IP bans / IP 封禁
+
+| Command | Description | Permission |
+|---|---|---|
+| `/banip <ip> [reason]` | Permanently ban a numeric IPv4/IPv6 address in this module and kick every online connection sharing it | `ultiessentials.banip` |
+| `/unbanip <ip>` | Lift all active module ban records for that address, confirming the stored result before reporting success | `ultiessentials.unbanip` |
+
+Both commands accept players and console. Use numeric addresses only, without hostnames, ports, CIDR, brackets or scope suffixes. IPv6 spellings are normalized; `/banlist` displays an IP-only record with its address in the name column. `/banip` does not create a player UUID ban. Shared addresses affect everyone using them (including a proxy's address); use the address the server actually sees and prefer `/ban` when only one account should be blocked. No IP-address tab completion is provided.
+
+`features.ban.enabled` gates new IP bans and login enforcement; `/unbanip` still works while disabled. The existing `features.ban.broadcast-ban` and `features.ban.broadcast-unban` switches govern the announcements (which contain the IP address); the issuer always receives confirmation. Set them to `false` if addresses must not be shown to other players. `/unbanip` deactivates every matching record, including a legacy record that also carries a player UUID; independent player bans without that address remain. It reports a surviving module record as failure, not as success or not-banned.
+
+These commands never change the separate vanilla IP ban list. A remaining vanilla IP ban is reported explicitly; lift it separately with `minecraft:pardon-ip`. Vanilla `/ban-ip` and `/pardon-ip` are not replaced. Successful lifting means this module has no active IP ban for the address, not that all other player/login restrictions are gone.
+
+新增 `/banip <IP> [原因]` 与 `/unbanip <IP>`，玩家和控制台均可使用。只接受数值 IPv4/IPv6 地址；封禁共享地址会影响该地址的全部玩家。命令仅管理本模块记录，不改动原版 IP 名单。解封会确认全部匹配记录已停用；独立玩家封禁仍可能生效。广播包含 IP，可通过现有广播开关关闭；执行者仍会收到结果。
+
 ### Commands that take over vanilla commands / 接管原版命令的命令
 
 `/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name: `/ban` and `/banlist` work on this module's own ban records, not on the server's ban list, and `/scoreboard` toggles this module's sidebar. The vanilla commands stay reachable as `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard`.

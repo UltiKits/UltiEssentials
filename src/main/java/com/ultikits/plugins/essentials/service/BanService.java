@@ -116,6 +116,104 @@ public class BanService {
     }
     
     /**
+     * Validates a numeric address without hostname resolution and returns the same canonical text
+     * used by the login event. Hostnames, ports, CIDR and scope identifiers are not accepted.
+     *
+     * @param address IPv4 or IPv6 literal
+     * @return canonical address, or null for invalid input
+     */
+    @Nullable
+    public static String normalizeIpAddress(String address) {
+        if (address == null || address.isEmpty()) {
+            return null;
+        }
+        if (address.indexOf(':') >= 0) {
+            if (!address.matches("[0-9a-fA-F:.]+")) {
+                return null;
+            }
+        } else {
+            if (!address.matches("(?:0|[1-9][0-9]{0,2})(?:\\.(?:0|[1-9][0-9]{0,2})){3}")) {
+                return null;
+            }
+        }
+        try {
+            // Only numeric literal characters can reach this call; it cannot perform a DNS lookup.
+            return java.net.InetAddress.getByName(address).getHostAddress();
+        } catch (java.net.UnknownHostException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Creates a permanent IP-only ban. No player UUID is invented or banned. The insert is
+     * confirmed before kicking all connected players sharing the address or reporting success.
+     *
+     * @param address numeric address to ban
+     * @param reason reason, or null for the localized default
+     * @param operatorUuid issuer UUID, or null for console
+     * @param operatorName issuer display name
+     * @return creation outcome
+     */
+    public IpBanResult banIp(String address, @Nullable String reason, @Nullable UUID operatorUuid,
+                             String operatorName) {
+        String ip = normalizeIpAddress(address);
+        if (ip == null) {
+            return IpBanResult.INVALID_ADDRESS;
+        }
+        if (!config.isBanEnabled()) {
+            return IpBanResult.DISABLED;
+        }
+        if (getActiveIpBan(ip) != null) {
+            return IpBanResult.ALREADY_BANNED;
+        }
+        BanData ban = BanData.builder().uuid(UUID.randomUUID()).playerName(ip)
+                .reason(reason != null ? reason : plugin.i18n("essentials.ban.no_reason"))
+                .bannedBy(operatorUuid != null ? operatorUuid.toString() : null)
+                .bannedByName(operatorName).banTime(System.currentTimeMillis()).expireTime(-1)
+                .active(true).ipAddress(ip).build();
+        banOperator.insert(ban);
+        if (getActiveIpBan(ip) == null) {
+            return IpBanResult.FAILED;
+        }
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            java.net.InetSocketAddress socket = player.getAddress();
+            if (socket != null && socket.getAddress() != null
+                    && ip.equals(socket.getAddress().getHostAddress())) {
+                player.kickPlayer(formatKickMessage(ban));
+            }
+        }
+        return IpBanResult.SUCCESS;
+    }
+
+    /**
+     * Deactivates every active record for this address and confirms that none remains. Legacy
+     * records carrying both a player UUID and an IP are deactivated as a whole, as on name unban.
+     * This remains available with ban enforcement disabled and never changes the vanilla list.
+     *
+     * @param address numeric IP literal
+     * @return verified deactivation outcome
+     * @throws IllegalArgumentException if the address is not a numeric IP literal
+     */
+    public UnbanResult unbanIp(String address) {
+        String ip = normalizeIpAddress(address);
+        if (ip == null) {
+            throw new IllegalArgumentException("A numeric IP address is required");
+        }
+        return deactivateActiveBans("ip_address", ip, "IP '" + ip + "'");
+    }
+
+    /** Checks the independent vanilla IP list without changing it. */
+    @SuppressWarnings("deprecation")
+    public boolean isIpBannedInServerBanList(String address) {
+        return Bukkit.getBanList(BanList.Type.IP).isBanned(address);
+    }
+
+    /** IP creation outcomes, separate from the existing player-ban API. */
+    public enum IpBanResult {
+        SUCCESS, ALREADY_BANNED, DISABLED, INVALID_ADDRESS, FAILED
+    }
+
+    /**
      * Unbans a player by name, reporting success only once no active ban record remains for that
      * name.
      * <p>
@@ -168,8 +266,8 @@ public class BanService {
      * none is left active before reporting success.
      * <p>
      * The unban paths once held three copies of this body, so a fix applied to one of them would
-     * have left the others reporting success on an unchanged store; {@link #unbanPlayerByName} is
-     * the only path left (UltiKits/UltiEssentials#47). A failed update on a single
+     * have left the others reporting success on an unchanged store. Both the name command and
+     * the IP command reuse this confirmation (UltiKits/UltiEssentials#63). A failed update on a single
      * record is logged and the remaining records are still attempted: the re-query, not the
      * individual call, decides the outcome.
      *

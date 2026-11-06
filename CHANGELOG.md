@@ -9,17 +9,67 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- This module raises `api-version` in `plugin.yml` from `620` in the released v1.0.0 to `630`,
+  so it loads only on UltiTools 6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools
+  it would load with no cooldown at all, silently, so it now refuses to load there instead
+  (UltiKits/UltiEssentials#27, UltiKits/UltiTools-Reborn#531).
+  **Upgrade UltiTools to 6.3.0 before replacing this module's JAR.**
+- 本模块 `plugin.yml` 的 `api-version` 从已发布 v1.0.0 的 `620` 升至 `630`，因此只能在 UltiTools 6.3.0 及以上版本加载。其 `/wild` 冷却使用了
+  6.3.0 新增的框架功能；在旧版 UltiTools 上它会在没有任何冷却的情况下静默加载，因此现在改为直接拒绝加载
+  （UltiKits/UltiEssentials#27、UltiKits/UltiTools-Reborn#531）。
+  **请先将 UltiTools 升级至 6.3.0，再替换本模块的 JAR。**
+
 - `plugin.yml` now declares `identify-string: ultiessentials`, the key of this module's entry in the
   UltiCloud catalogue. The framework's update check and `/upm update` skip a module that does not
   declare it, so this module now takes part in both: a later published version carrying the same key
   is reported at startup and can be installed with `/upm update` (UltiKits/UltiTools-Reborn#474).
-  The README's UltiTools-API badge and install step now say UltiTools 6.3.0 or later, matching the
-  `api-version: 630` the module already declares (an older framework refuses it with a warning that the
-  UltiTools version is outdated).
 - `plugin.yml` 现在声明 `identify-string: ultiessentials`，即本模块在 UltiCloud 模块目录中的条目键。框架的更新检查和
   `/upm update` 会跳过未声明该键的模块，因此本模块现在会参与两者：带有同一键的更高发布版本会在启动时提示，
-  并可用 `/upm update` 安装（UltiKits/UltiTools-Reborn#474）。README 中的 UltiTools-API 徽章和安装步骤现在写明
-  UltiTools 6.3.0 或更高版本，与本模块已声明的 `api-version: 630` 一致（更早的框架会拒绝加载并给出 UltiTools 版本过旧的警告）。
+  并可用 `/upm update` 安装（UltiKits/UltiTools-Reborn#474）。
+
+- `/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name, as
+  the maintainer decided; this is now stated in the documentation. The vanilla commands stay reachable as
+  `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard` (UltiKits/UltiEssentials#61).
+- `/ban`、`/banlist`、`/scoreboard` 按维护者决定有意接管同名原版命令，现已写入文档；原版命令仍可用 `minecraft:ban`、
+  `minecraft:banlist`、`minecraft:scoreboard` 调用（UltiKits/UltiEssentials#61）。
+- Changed: message and title settings in `config/essentials.yml` (the scoreboard title and lines, the
+  scheduled-command text and the death-punishment command text), `config/tabbar.yml` (the tab-list
+  header and footer) and `config/motd.yml` (the two MOTD lines) are written in the server's language
+  when the module starts, and the file is what the module shows. A setting that is still built-in
+  text — in any language, or a default an earlier version shipped — follows `language`: it is
+  rewritten when the module starts or after `/ul reload`. A setting you edited is kept. To keep a
+  built-in text but stop it following `language`, change at least one character. An edit of the
+  extracted language file no longer flows into these settings — customise them in the config file
+  instead; released versions never read these keys from the language file, so this is no regression.
+  A blank scoreboard title is refused at load, exactly as every released version (`@NotEmpty`); a
+  blank `features.scoreboard.lines`, `tabbar.header` or `tabbar.footer` is kept blank and shows
+  nothing, exactly as every released version.
+- 变更：`config/essentials.yml`（计分板标题与内容、定时命令文字、死亡惩罚命令文字）、`config/tabbar.yml`
+  （Tab 栏头尾）与 `config/motd.yml`（两行 MOTD）中的消息与标题设置在模块启动时按服务器语言写入，文件内容即模块显示的内容。
+  仍为内置文本（任一语言的内置文本，或旧版本的出厂默认值）的设置会跟随 `language`：模块启动或执行 `/ul reload` 后改写为
+  当前语言的文本。你改过的设置保持不变。若想保留内置文本又不让它跟随语言，请至少改动一个字符。改动运维已解压的语言文件
+  不再影响这些设置——请直接在配置文件中修改；已发布版本从未从语言文件读取过这些键，因此这不是回归。空的计分板标题会在
+  启动时被拒绝，与历来发布的每个版本一致（`@NotEmpty`）；空的 `features.scoreboard.lines`、`tabbar.header` 或
+  `tabbar.footer` 保持为空且不显示任何内容，与历来发布的每个版本一致。
+
+- Language keys were renamed to dotted ASCII keys (for example `essentials.home.set`): every key that
+  was a Chinese sentence, and `teleport_success`, the one older ASCII key still in use.
+  This module's official language files (`lang/en.json` and `lang/zh.json` under
+  `plugins/UltiTools/pluginConfig/UltiEssentials/`) belong to UltiTools: from UltiTools-API 6.3.0 an edited
+  official file is restored to the shipped text at every start, its edited copy kept as a backup and named in
+  the server log, so edits made there are not kept. To customise messages, copy the official file under a new
+  name that starts with its language code and a hyphen and holds only ASCII letters, digits, `_` and `-`
+  (`en.json` to `en-myserver.json`), edit the copy against the new keys, and set `language: en-myserver` in
+  `plugins/UltiTools/config.yml` (one setting for the framework and every module). Messages the copy lacks come
+  from the official file its name starts with (`en` here), and a module with no file under that name uses its
+  official `en`. A server whose
+  language files were never edited needs no action.
+- 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。本模块的官方语言文件
+  （`plugins/UltiTools/pluginConfig/UltiEssentials/` 下的 `lang/en.json` 和 `lang/zh.json`）归 UltiTools 所有：自 UltiTools-API 6.3.0 起，
+  被修改过的官方文件会在每次启动时恢复为自带内容，修改过的副本作为备份保留并在服务器日志中注明，因此在其中所做的修改不会保留。
+  要自定义消息，请把官方文件复制为以语言代码加连字符开头、只含 ASCII 字母、数字、`_` 和 `-` 的新名称
+  （`zh.json` → `zh-myserver.json`），按新键修改副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`
+  （框架和所有模块共用这一个设置）。副本中没有的消息取自名称开头对应的官方文件（此处为 `zh`），没有该名称文件的模块使用其官方 `zh`。从未改过语言文件的服务器无需任何操作。
 
 ### Fixed
 
@@ -193,7 +243,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   expansion throws for that player) no longer stops the scoreboard and name-prefix refreshes for
   every other player. That player is retried on every update, and the failure is logged once and
   again only after a refresh for that player has succeeded in between. A name-prefix team removed
-  with the vanilla `team remove` command is re-created on the next update (UltiKits/UltiEssentials#44).
+  with the vanilla `team remove` command is re-created on the second update after removal: the first
+  clears the stale cached team. With the default 5-second interval, recovery can take about 10 seconds
+  (UltiKits/UltiEssentials#44).
 - Unloading this module (`/upm uninstall UltiEssentials`) now runs the framework's command
   unregistration and then its listener unregistration, so the module's commands are really removed
   and its listeners stop firing. Previously this module's unload method replaced the framework's, so
@@ -245,7 +297,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   deleting or updating it keeps failing, and the warning names it so it can be re-created by hand
   (UltiKits/UltiEssentials#34).
 - New configuration key `features.data-repair.enabled` in `config/essentials.yml`, default `true`:
-  whether the module's start-up repair described above runs on JSON storage. Set it to `false` to
+  whether the module's start-up repair described above runs; it only has an effect on JSON storage. Set it to `false` to
   leave those JSON records unchanged — useful during a migration or before taking a backup. One log
   line names the key; deleting or updating those unrepaired JSON records keeps failing until you turn
   it back on. On SQLite, UltiTools-API 6.3.0 repairs missing primary keys when it opens the tables,
@@ -323,7 +375,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   （UltiKits/UltiEssentials#44）。
 - 某位玩家的侧边栏或头顶称号无法刷新时（例如某个 PlaceholderAPI 扩展对该玩家抛出异常），不再会导致其他所有
   玩家的计分板和头顶称号停止刷新。该玩家会在每次更新时重试，失败只记录一次日志，直到该玩家刷新成功后再次失败
-  才会重新记录。通过原版 `team remove` 命令删除的头顶称号队伍会在下次更新时重新创建（UltiKits/UltiEssentials#44）。
+  才会重新记录。通过原版 `team remove` 命令删除的头顶称号队伍会在删除后的第二次更新时重新创建：第一次更新仅清理
+  失效的队伍缓存。默认刷新间隔为 5 秒时，恢复可能需要约 10 秒（UltiKits/UltiEssentials#44）。
 - 卸载本模块（`/upm uninstall UltiEssentials`）现在会由框架先注销命令、再注销监听器，本模块的命令会被
   真正移除，其监听器也不再触发。此前本模块的卸载方法替换了框架的卸载方法，因此执行
   `/upm uninstall UltiEssentials` 后，其命令和监听器都会保持生效，直到服务器重启（UltiKits/UltiEssentials#23）。
@@ -355,7 +408,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   修复只进行一次：已修复的记录在之后的启动中不会再被处理。无法安全修复的记录会原样保留，并以警告形式报告——
   出现在记录自身没有标识、两条记录共用同一标识，或记录已带有与其标识不一致的主键时。此类记录仍可正常读取，
   但删除或更新仍会失败，警告中会指出该记录，便于手动重建（UltiKits/UltiEssentials#34）。
-- `config/essentials.yml` 新增配置项 `features.data-repair.enabled`，默认 `true`：控制本模块是否对 JSON 存储执行上述启动修复。
+- `config/essentials.yml` 新增配置项 `features.data-repair.enabled`，默认 `true`：控制本模块是否执行上述启动修复；该修复仅对 JSON 存储有效。
   设为 `false` 会让这些 JSON 记录保持原样——在数据迁移进行中或尚未备份时很有用。日志会指明该配置项，
   这些未修复 JSON 记录的删除与更新在重新开启前仍会失败。使用 SQLite 时，UltiTools-API 6.3.0 会在打开数据表时
   修复缺失的主键，与此设置无关；MySQL 不会存在这类记录。本项没有“试运行”模式（UltiKits/UltiEssentials#34）。
@@ -396,60 +449,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `/ul reload UltiEssentials` 时负数不会生效：控制台会输出一条指明该配置项的警告，`/wild` 继续使用原来的冷却时间，
   重载的其余部分——文件中的其他设置、各服务的重启——照常完成。该设置原先声明了 3600 秒的上限，该上限已取消，
   最大可接受 2147483647 秒（UltiKits/UltiEssentials#27，依赖 UltiKits/UltiTools-Reborn#531）。
-
-### Changed
-
-- `/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name, as
-  the maintainer decided; this is now stated in the documentation. The vanilla commands stay reachable as
-  `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard` (UltiKits/UltiEssentials#61).
-- `/ban`、`/banlist`、`/scoreboard` 按维护者决定有意接管同名原版命令，现已写入文档；原版命令仍可用 `minecraft:ban`、
-  `minecraft:banlist`、`minecraft:scoreboard` 调用（UltiKits/UltiEssentials#61）。
-- Changed: message and title settings in `config/essentials.yml` (the scoreboard title and lines, the
-  scheduled-command text and the death-punishment command text), `config/tabbar.yml` (the tab-list
-  header and footer) and `config/motd.yml` (the two MOTD lines) are written in the server's language
-  when the module starts, and the file is what the module shows. A setting that is still built-in
-  text — in any language, or a default an earlier version shipped — follows `language`: it is
-  rewritten when the module starts or after `/ul reload`. A setting you edited is kept. To keep a
-  built-in text but stop it following `language`, change at least one character. An edit of the
-  extracted language file no longer flows into these settings — customise them in the config file
-  instead; released versions never read these keys from the language file, so this is no regression.
-  A blank scoreboard title is refused at load, exactly as every released version (`@NotEmpty`); a
-  blank `features.scoreboard.lines`, `tabbar.header` or `tabbar.footer` is kept blank and shows
-  nothing, exactly as every released version.
-- 变更：`config/essentials.yml`（计分板标题与内容、定时命令文字、死亡惩罚命令文字）、`config/tabbar.yml`
-  （Tab 栏头尾）与 `config/motd.yml`（两行 MOTD）中的消息与标题设置在模块启动时按服务器语言写入，文件内容即模块显示的内容。
-  仍为内置文本（任一语言的内置文本，或旧版本的出厂默认值）的设置会跟随 `language`：模块启动或执行 `/ul reload` 后改写为
-  当前语言的文本。你改过的设置保持不变。若想保留内置文本又不让它跟随语言，请至少改动一个字符。改动运维已解压的语言文件
-  不再影响这些设置——请直接在配置文件中修改；已发布版本从未从语言文件读取过这些键，因此这不是回归。空的计分板标题会在
-  启动时被拒绝，与历来发布的每个版本一致（`@NotEmpty`）；空的 `features.scoreboard.lines`、`tabbar.header` 或
-  `tabbar.footer` 保持为空且不显示任何内容，与历来发布的每个版本一致。
-
-- Language keys were renamed to dotted ASCII keys (for example `essentials.home.set`): every key that
-  was a Chinese sentence, and `teleport_success`, the one older ASCII key still in use.
-  This module's official language files (`lang/en.json` and `lang/zh.json` under
-  `plugins/UltiTools/pluginConfig/UltiEssentials/`) belong to UltiTools: from UltiTools-API 6.3.0 an edited
-  official file is restored to the shipped text at every start, its edited copy kept as a backup and named in
-  the server log, so edits made there are not kept. To customise messages, copy the official file under a new
-  name that starts with its language code and a hyphen and holds only ASCII letters, digits, `_` and `-`
-  (`en.json` to `en-myserver.json`), edit the copy against the new keys, and set `language: en-myserver` in
-  `plugins/UltiTools/config.yml` (one setting for the framework and every module). Messages the copy lacks come
-  from the official file its name starts with (`en` here), and a module with no file under that name uses its
-  official `en`. A server whose
-  language files were never edited needs no action.
-- 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。本模块的官方语言文件
-  （`plugins/UltiTools/pluginConfig/UltiEssentials/` 下的 `lang/en.json` 和 `lang/zh.json`）归 UltiTools 所有：自 UltiTools-API 6.3.0 起，
-  被修改过的官方文件会在每次启动时恢复为自带内容，修改过的副本作为备份保留并在服务器日志中注明，因此在其中所做的修改不会保留。
-  要自定义消息，请把官方文件复制为以语言代码加连字符开头、只含 ASCII 字母、数字、`_` 和 `-` 的新名称
-  （`zh.json` → `zh-myserver.json`），按新键修改副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`
-  （框架和所有模块共用这一个设置）。副本中没有的消息取自名称开头对应的官方文件（此处为 `zh`），没有该名称文件的模块使用其官方 `zh`。从未改过语言文件的服务器无需任何操作。
-
-- This module raises `api-version` in `plugin.yml` from `620` in the released v1.0.0 to `630`,
-  so it loads only on UltiTools 6.3.0 or later. Its `/wild` cooldown uses a framework feature new in 6.3.0; on an older UltiTools
-  it would load with no cooldown at all, silently, so it now refuses to load there instead
-  (UltiKits/UltiEssentials#27, UltiKits/UltiTools-Reborn#531).
-- 本模块 `plugin.yml` 的 `api-version` 从已发布 v1.0.0 的 `620` 升至 `630`，因此只能在 UltiTools 6.3.0 及以上版本加载。其 `/wild` 冷却使用了
-  6.3.0 新增的框架功能；在旧版 UltiTools 上它会在没有任何冷却的情况下静默加载，因此现在改为直接拒绝加载
-  （UltiKits/UltiEssentials#27、UltiKits/UltiTools-Reborn#531）。
 
 ### Removed
 

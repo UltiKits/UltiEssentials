@@ -551,6 +551,99 @@ class EssentialsConfigTextTest {
         assertThat(valueLinesOutside(after)).isEqualTo(valueLinesOutside(edited));
     }
 
+    /**
+     * Tabbar has no non-text field: an extra operator key provides the typo sentinel instead.
+     * Compare the entire file, allowing only the two shipped values and their framework comments
+     * to change, rather than discarding all comments or comparing parsed YAML values (#74).
+     */
+    @Test
+    @DisplayName("tabbar language switch changes only shipped text/comments, preserving every operator byte (#74)")
+    void tabBarLanguageSwitchPreservesOperatorBytes() throws Exception {
+        language[0] = "en";
+        EssentialsConfig essentials = loadEssentials();
+        TabBarConfig tabBar = loadTabBar();
+        MotdConfig motd = loadMotd();
+        start(essentials, tabBar, motd);
+        String headerComment = frameworkComment("tabbar", "header", "en");
+        String operatorComment = "  # Keep this note: the tab header is maintained here\n";
+        String started = new String(bytes(tabBarFile()), StandardCharsets.UTF_8);
+        assertThat(started).contains(headerComment);
+        String edited = started.replace(headerComment, operatorComment + headerComment)
+                + "  operator-refresh-ticks: 3O # Preserve spelling and spacing\n";
+        Files.write(tabBarFile().toPath(), edited.getBytes(StandardCharsets.UTF_8));
+        String expected = switchedTextLine(edited, "header", headerText("en"), headerText("zh"));
+        expected = switchedTextLine(expected, "footer", footerText("en"), footerText("zh"));
+        expected = switchedFrameworkComments(expected, "tabbar", "header", "footer");
+
+        language[0] = "zh";
+        essentials.init(plugin);
+        tabBar.init(plugin);
+        motd.init(plugin);
+        reload();
+
+        assertThat(tabBar.getHeader()).isEqualTo(headerText("zh"));
+        assertThat(tabBar.getFooter()).isEqualTo(footerText("zh"));
+        assertThat(expected).as("control: both shipped values really change").isNotEqualTo(edited);
+        assertThat(bytes(tabBarFile())).as("only the explicitly allowed lines may change")
+                .isEqualTo(expected.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** A malformed non-text setting must not be replaced by its in-memory fallback during the text save (#74). */
+    @Test
+    @DisplayName("MOTD language switch preserves a max-players typo and operator comment byte for byte (#74)")
+    void motdLanguageSwitchPreservesOperatorBytes() throws Exception {
+        language[0] = "en";
+        EssentialsConfig essentials = loadEssentials();
+        TabBarConfig tabBar = loadTabBar();
+        MotdConfig motd = loadMotd();
+        start(essentials, tabBar, motd);
+        String maxComment = frameworkComment("motd", "max-players", "en");
+        String operatorComment = "  # Keep this note: the advertised player limit is maintained here\n";
+        String started = new String(bytes(motdFile()), StandardCharsets.UTF_8);
+        assertThat(started).contains(maxComment, "  max-players: -1\n");
+        String edited = started.replace(maxComment, operatorComment + maxComment)
+                .replace("  max-players: -1\n", "  max-players: 3O # Preserve spelling and spacing\n");
+        Files.write(motdFile().toPath(), edited.getBytes(StandardCharsets.UTF_8));
+        String expected = switchedTextLine(edited, "line1", line1Text("en"), line1Text("zh"));
+        expected = switchedTextLine(expected, "line2", line2Text("en"), line2Text("zh"));
+        expected = switchedFrameworkComments(expected, "motd", "line1", "line2", "max-players");
+
+        language[0] = "zh";
+        essentials.init(plugin);
+        tabBar.init(plugin);
+        motd.init(plugin);
+        reload();
+
+        assertThat(motd.getMaxPlayers()).as("control: the typo uses a fallback in memory only").isEqualTo(-1);
+        assertThat(motd.getLine1()).isEqualTo(line1Text("zh"));
+        assertThat(motd.getLine2()).isEqualTo(line2Text("zh"));
+        assertThat(expected).as("control: both shipped values really change").isNotEqualTo(edited);
+        assertThat(bytes(motdFile())).as("only the explicitly allowed lines may change")
+                .isEqualTo(expected.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Pin the whole scalar line; no broad filtering may hide a change to an operator-owned line. */
+    private String switchedTextLine(String text, String key, String english, String chinese) {
+        String before = "  " + key + ": '" + english + "'\n";
+        assertThat(text).as("control: the shipped English " + key + " line exists").containsOnlyOnce(before);
+        return text.replace(before, "  " + key + ": '" + chinese + "'\n");
+    }
+
+    private String switchedFrameworkComments(String text, String file, String... keys) {
+        String expected = text;
+        for (String key : keys) {
+            String before = frameworkComment(file, key, "en");
+            assertThat(expected).as("control: the English framework comment exists for " + key)
+                    .containsOnlyOnce(before);
+            expected = expected.replace(before, frameworkComment(file, key, "zh"));
+        }
+        return expected;
+    }
+
+    private String frameworkComment(String file, String key, String code) {
+        return "  # " + CatalogueText.text(code, "essentials.config." + file + "." + file + "." + key) + "\n";
+    }
+
     /** The non-comment lines of {@code text}, leaving out the lines of the four settings the materializer re-renders. */
     private static List<String> valueLinesOutside(String text) {
         List<String> materialized = Arrays.asList("features.scoreboard.title", "features.scoreboard.lines",
@@ -1321,6 +1414,7 @@ class EssentialsConfigTextTest {
         switch (name) {
             case "registerSelf":
             case "onReload":
+            case "shippedCatalogueTexts":
                 return invocation.callRealMethod();
             case "getConfigFolder":
                 return tempDir.toString();

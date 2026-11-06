@@ -57,7 +57,10 @@ public class EssentialsConfig extends AbstractConfigEntity {
     private int wildCooldown = 60;
 
     // Restored with the implemented staff summon (#53); an operator's existing false is preserved.
-    @ConfigEntry(path = "features.recall.enabled", comment = "{essentials.config.essentials.features.recall.enabled}")
+    // Register v1.0.0's shipped comment so upgraded files follow the server's language;
+    // any other text above this key stays the operator's, as for wild cooldown (#73).
+    @ConfigEntry(path = "features.recall.enabled", comment = "{essentials.config.essentials.features.recall.enabled}",
+            previousComments = {"启用 /recall 召回命令"})
     private boolean recallEnabled = true;
 
     // ============ 玩家状态功能 ============

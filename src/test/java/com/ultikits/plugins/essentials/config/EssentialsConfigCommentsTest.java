@@ -40,9 +40,9 @@ import static org.mockito.Mockito.mock;
  * real catalogues.
  * <p>
  * The expected texts come from {@code src/test/resources/config/config-comments.tsv}: each comment as
- * master {@code 0875d16} wrote it (which the zh catalogue must hold verbatim) and its English
- * translation. They are not read from the catalogue, so a missing or changed catalogue entry fails on
- * the written file, not in the fixture.
+ * master {@code 0875d16} wrote it (or release {@code v1.0.0} for the restored recall switch), its English
+ * translation, and an optional updated Chinese text. They are not read from the catalogue, so a missing
+ * or changed catalogue entry fails on the written file, not in the fixture.
  * <p>
  * 注释从语言文件取：英文服务器写入英文注释，中文服务器写入与之前完全相同的中文注释；升级时只改注释，不改值。
  */
@@ -71,6 +71,7 @@ class EssentialsConfigCommentsTest {
         final String file;
         final String path;
         final String key;
+        final String historical;
         final String zh;
         final String en;
 
@@ -78,7 +79,8 @@ class EssentialsConfigCommentsTest {
             this.file = cells[0];
             this.path = cells[1];
             this.key = cells[2];
-            this.zh = cells[3];
+            this.historical = cells[3];
+            this.zh = cells.length == 6 ? cells[5] : cells[3];
             this.en = cells[4];
         }
     }
@@ -93,7 +95,7 @@ class EssentialsConfigCommentsTest {
                     continue;
                 }
                 String[] cells = line.split("\t", -1);
-                assertThat(cells).as("fixture line " + line).hasSize(5);
+                assertThat(cells.length).as("fixture column count for " + line).isBetween(5, 6);
                 rows.add(new Row(cells));
             }
         }
@@ -235,6 +237,44 @@ class EssentialsConfigCommentsTest {
                 String after = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
                 String expected = old.equals(V1_WILD_COOLDOWN_COMMENT) ? ("en".equals(language) ? row.en : row.zh) : old;
                 assertThat(commentAbove(after, "features.wild.cooldown")).as(language + " after " + old).isEqualTo(expected);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("release v1.0.0's recall comment follows the language, an operator variant stays, and false survives (#53)")
+    void releaseOneRecallCommentFollowsTheLanguage() throws Exception {
+        Row row = null;
+        for (Row candidate : rowsFor("config/essentials.yml")) {
+            if (candidate.path.equals("features.recall.enabled")) {
+                row = candidate;
+            }
+        }
+        assertThat(row).as("control: the fixture has the restored recall row").isNotNull();
+        // Byte-exact text from v1.0.0's EssentialsConfig annotation (the generated default).
+        assertThat(row.historical).isEqualTo("启用 /recall 召回命令");
+        File file = new File(tempDir.toFile(), "config/essentials.yml");
+        for (String language : new String[] {"en", "zh"}) {
+            for (String old : new String[] {row.historical, row.historical + "!"}) {
+                Files.deleteIfExists(file.toPath());
+                load(EssentialsConfig::new, "zh");
+                String current = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                assertThat(commentAbove(current, row.path)).isEqualTo(row.zh);
+                assertThat(current).contains("recall:\n    # " + row.zh + "\n    enabled: true");
+                String legacy = current.replace("# " + row.zh + "\n    enabled: true",
+                        "# " + old + "\n    enabled: false");
+                Files.write(file.toPath(), legacy.getBytes(StandardCharsets.UTF_8));
+
+                EssentialsConfig config = (EssentialsConfig) load(EssentialsConfig::new, language);
+
+                String after = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+                String expected = old.equals(row.historical) ? ("en".equals(language) ? row.en : row.zh) : old;
+                assertThat(commentAbove(after, row.path)).as(language + " after " + old).isEqualTo(expected);
+                assertThat(config.isRecallEnabled()).isFalse();
+                assertThat(nonCommentLines(after)).isEqualTo(nonCommentLines(legacy));
+                load(EssentialsConfig::new, language);
+                assertThat(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8))
+                        .as("the second load is byte-stable").isEqualTo(after);
             }
         }
     }

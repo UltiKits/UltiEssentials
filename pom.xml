@@ -13,6 +13,14 @@
     <description>Essential commands and features for Minecraft servers, built on UltiTools-API</description>
     <url>https://github.com/UltiKits/UltiEssentials</url>
 
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <properties>
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

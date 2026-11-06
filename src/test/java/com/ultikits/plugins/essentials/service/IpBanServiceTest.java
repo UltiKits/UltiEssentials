@@ -96,6 +96,41 @@ class IpBanServiceTest {
         assertThat(store.getAll()).isEmpty();
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {255, 256, 300, 999})
+    void boundsEveryIpv4OctetBeforeResolution(int octet) throws Exception {
+        for (int position = 0; position < 4; position++) {
+            String[] parts = {"1", "2", "3", "4"};
+            parts[position] = Integer.toString(octet);
+            String ip = String.join(".", parts);
+            // This is the actual guard before getByName, not just its eventual return value.
+            assertThat(BanService.IPV4_LITERAL.matcher(ip).matches()).as(ip).isEqualTo(octet <= 255);
+            assertThat(normalize(ip)).as(ip).isEqualTo(octet <= 255 ? ip : null);
+        }
+    }
+
+    @Test
+    void ipv4GuardAcceptsExactlyZeroTo255InEveryPosition() {
+        for (int octet = 0; octet <= 999; octet++) {
+            for (int position = 0; position < 4; position++) {
+                String[] parts = {"1", "2", "3", "4"};
+                parts[position] = Integer.toString(octet);
+                String ip = String.join(".", parts);
+                assertThat(BanService.IPV4_LITERAL.matcher(ip).matches()).as(ip).isEqualTo(octet <= 255);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"127.1", "127.0.1", "2130706433", "4294967295", "4294967296",
+            "0177.0.0.1", "127.00.0.1", "127.0.00.1", "127.0.0.01", "0x7f000001",
+            "0x7f.0.0.1", "+127.0.0.1", "-1.0.0.1", "127.0.0.1.", "256.0.0.1",
+            "1.2.3.1000", "1.2.3", "1.2.3.4.5"})
+    void rejectsAlternativeNumericFormsAtTheResolverGuard(String ip) throws Exception {
+        assertThat(BanService.IPV4_LITERAL.matcher(ip).matches()).isFalse();
+        assertThat(normalize(ip)).isNull();
+    }
+
     @Test
     void disabledCreationDoesNotPreventLifting() throws Exception {
         assertThat(ban("192.0.2.1", "test")).isEqualTo("SUCCESS");

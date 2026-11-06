@@ -16,6 +16,7 @@ import com.ultikits.ultitools.annotations.PostConstruct;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 /**
  * Service for managing player bans.
@@ -30,6 +31,10 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class BanService {
+
+    static final Pattern IPV4_LITERAL = Pattern.compile(
+            "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])"
+                    + "(?:\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}");
 
     @Autowired
     private UltiToolsPlugin plugin;
@@ -132,12 +137,12 @@ public class BanService {
                 return null;
             }
         } else {
-            if (!address.matches("(?:0|[1-9][0-9]{0,2})(?:\\.(?:0|[1-9][0-9]{0,2})){3}")) {
+            if (!IPV4_LITERAL.matcher(address).matches()) {
                 return null;
             }
         }
         try {
-            // Only numeric literal characters can reach this call; it cannot perform a DNS lookup.
+            // IPv4 octets are bounded above; IPv6 input contains ':' and cannot be a hostname.
             return java.net.InetAddress.getByName(address).getHostAddress();
         } catch (java.net.UnknownHostException e) {
             return null;

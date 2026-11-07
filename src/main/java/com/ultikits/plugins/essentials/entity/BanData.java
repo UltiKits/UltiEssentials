@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 public class BanData extends UuidKeyedDataEntity {
 
     /**
-     * UUID of the banned player.
+     * UUID of the banned player, or null for an IP-only ban.
      */
     @Column("player_uuid")
     private String playerUuid;

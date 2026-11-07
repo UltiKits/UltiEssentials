@@ -10,19 +10,16 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * The ban service declares only the unban path a command reaches: {@code /unban <player>} through
- * {@link BanService#unbanPlayerByName(String)}. The by-UUID and by-IP unban methods had no caller
- * and no command, so they were removed rather than left as a declared capability nothing delivers
- * (maintainer ruling 2026-09-22, UltiKits/UltiEssentials#47).
+ * The by-UUID unban helper remains removed (#47). IP lifting is now reachable through
+ * {@code UnbanIpCommand} (#63), so both currently delivered paths are declared.
  */
-@DisplayName("BanService declares only the unban path a command reaches (#47)")
+@DisplayName("BanService declares only delivered unban paths (#47, #63)")
 class BanServiceDeclarationTest {
 
     @Test
-    @DisplayName("There is no by-IP unban method and no by-UUID unban method; the by-name one remains")
+    @DisplayName("By-IP and by-name have commands; there is still no unused by-UUID helper")
     void onlyTheReachableUnbanPathIsDeclared() throws Exception {
-        assertThat(Arrays.stream(BanService.class.getDeclaredMethods()).map(Method::getName))
-                .doesNotContain("unbanIp");
+        assertThat(BanService.class.getMethod("unbanIp", String.class)).isNotNull();
         assertThat(Arrays.stream(BanService.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals("unbanPlayer"))
                 .filter(m -> Arrays.equals(m.getParameterTypes(), new Class<?>[]{UUID.class})))

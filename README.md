@@ -57,6 +57,21 @@ UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插�
 | `/wl off` | 禁用白名单 | `ultiessentials.whitelist.manage` |
 | `/wl status` | 查看白名单状态 | `ultiessentials.whitelist.manage` |
 
+### IP bans / IP 封禁
+
+| Command | Description | Permission |
+|---|---|---|
+| `/banip <ip> [reason]` | Permanently ban a numeric IPv4/IPv6 address in this module and kick every online connection sharing it | `ultiessentials.banip` |
+| `/unbanip <ip>` | Lift all active module ban records for that address, confirming the stored result before reporting success | `ultiessentials.unbanip` |
+
+Both commands accept players and console. Use numeric addresses only, without hostnames, ports, CIDR, brackets or scope suffixes. IPv6 spellings are normalized; `/banlist` displays an IP-only record with its address in the name column. `/banip` does not create a player UUID ban. Shared addresses affect everyone using them (including a proxy's address); use the address the server actually sees and prefer `/ban` when only one account should be blocked. No IP-address tab completion is provided.
+
+`features.ban.enabled` gates new IP bans and login enforcement; `/unbanip` still works while disabled. The existing `features.ban.broadcast-ban` and `features.ban.broadcast-unban` switches govern the announcements (which contain the IP address); the issuer always receives confirmation. Set them to `false` if addresses must not be shown to other players. `/unbanip` deactivates every matching record, including a legacy record that also carries a player UUID; independent player bans without that address remain. It reports a surviving module record as failure, not as success or not-banned.
+
+These commands never change the separate vanilla IP ban list. A remaining vanilla IP ban is reported explicitly; lift it separately with `minecraft:pardon-ip`. Vanilla `/ban-ip` and `/pardon-ip` are not replaced. Successful lifting means this module has no active IP ban for the address, not that all other player/login restrictions are gone.
+
+新增 `/banip <IP> [原因]` 与 `/unbanip <IP>`，玩家和控制台均可使用。只接受数值 IPv4/IPv6 地址；封禁共享地址会影响该地址的全部玩家。命令仅管理本模块记录，不改动原版 IP 名单。解封会确认全部匹配记录已停用；独立玩家封禁仍可能生效。广播包含 IP，可通过现有广播开关关闭；执行者仍会收到结果。
+
 ### Staff recall / 管理员召回
 
 `/recall Traveler` immediately brings the online player named `Traveler` to your current position and facing, even from another world; your own position does not change. Use the complete username (case-insensitive), not a prefix. This is a **player-only staff command**, gated by `ultiessentials.recall.other`; `/back` or `/tpahere` access alone does not grant it. It has no self or console variant, cooldown or warmup. For a consent-based request, use `/tpahere` instead. A vanished target looks offline unless you hold `ultiessentials.hide.see`; Tab completion also hides them. Another plugin may cancel the teleport: you then see `Recall failed; the player was not teleported`, not a success. On success you see `Recalled Traveler to your location`, and Traveler is told who recalled them. The recalled player can return using `/back` if that feature and its separate permission are enabled.
@@ -251,7 +266,25 @@ UltiEssentials 支持多语言，语言文件位于 `lang/` 目录：
 - `lang/zh.json` - 简体中文
 - `lang/en.json` - English
 
-这两个官方语言文件归 UltiTools 管理：直接修改会在下次启动时被恢复（修改过的文件会留下备份）。如需自定义消息，请把官方文件复制为以语言代码加连字符开头、只含 ASCII 字母、数字、`_` 和 `-` 的新名称（例如 `zh.json` → `zh-myserver.json`），修改这个副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`（框架和所有模块共用这一个设置）。副本中没有的消息取自名称开头对应的官方文件（此处为 `zh`）；没有该名称文件的模块使用其官方 `zh`。
+UltiTools manages both official files. In-place edits are restored to the shipped text at every start for all shipped languages, and on `/ul reload` or `/ul reload UltiEssentials` for the official language in use (the official base when using a custom name). The previous file is kept beside it as `.bak` (or `.1.bak`, `.2.bak`, etc. if needed), and a WARNING names the file and backup. On the first start after upgrading from a framework version without language-file hash records (before UltiTools-API 6.3.0), each official file that differs from the new jar is backed up and restored even if you never edited it. Both `en.json` and `zh.json` have renamed keys in this module, so upgrading those older files produces two backups and two WARNINGs; an unedited installation still needs no action.
+
+To customise messages, copy an official file **inside this module's own** `plugins/UltiTools/pluginConfig/UltiEssentials/lang/` folder under a new name: for example, `zh.json` → `zh-myserver.json`. Start the name with the official language code and a hyphen; the name without `.json` must start with an ASCII letter or digit and contain only ASCII letters, digits, `_` and `-`. Edit the copy and set `language: zh-myserver` in `plugins/UltiTools/config.yml` (one setting shared by the framework and every module). Missing messages come from official `zh`; a module without that custom file uses its official `zh`. A safe name without an official-code prefix, such as `ja`, is still read from this module's `lang/ja.json`, but missing messages use English and a WARNING explains the fallback for each module when its language is loaded. An unsafe name is not read; this module uses English instead. A copy in another module's folder does not customise UltiEssentials.
+
+这两个官方语言文件归 UltiTools 管理：每次启动会检查所有自带语言并恢复直接修改过的官方文件；执行 `/ul reload` 或 `/ul reload UltiEssentials` 时，会对当前使用的官方语言（使用自定义名称时则是其对应的官方语言）做相同处理。旧文件在原目录保留为 `.bak`（名称已被占用时使用 `.1.bak`、`.2.bak` 等），一条 WARNING 会指明原文件与备份。首次从没有语言文件哈希记录的框架版本（UltiTools-API 6.3.0 之前）升级后启动时，只要官方文件与新 jar 不同，即使从未手动改过，也会被备份并恢复。本模块的 `en.json` 和 `zh.json` 都改过键名，因此升级这两个旧文件时会产生两个备份与两条 WARNING；从未改过语言文件的服务器仍无需任何操作。
+
+如需自定义消息，请在**本模块自己的** `plugins/UltiTools/pluginConfig/UltiEssentials/lang/` 目录中复制官方文件并改名（例如 `zh.json` → `zh-myserver.json`）。新名称应以官方语言代码加连字符开头；不含 `.json` 的名称必须以 ASCII 字母或数字开头，且只含 ASCII 字母、数字、`_` 和 `-`。修改副本后，在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`（框架和所有模块共用这一个设置）。副本中没有的消息取自官方 `zh`，没有该自定义文件的模块使用其官方 `zh`。`ja` 这类安全但没有官方语言前缀的名称仍会读取本模块的 `lang/ja.json`，但缺少的消息使用英文，各模块加载语言时会以一条 WARNING 解释回退。名称不安全时不会读取该文件，本模块改用英文。放在其他模块目录中的副本不会影响 UltiEssentials。
+
+## Known limitations / 已知限制
+
+### Legacy JSON data filenames / 旧 JSON 数据文件名
+
+Do not rename or hand-edit the framework-owned JSON data files. The start-up primary-key repair expects a legacy record's filename to be `<uuid>.json`, where `uuid` is the identity stored in that record. If a file was manually renamed before the repair runs, the repair can leave the un-keyed original alongside a new keyed copy. It reports zero repaired for that identity; later starts warn that records share an identity, and homes or warps may be listed twice (UltiKits/UltiEssentials#71). This is not a supported way to rename a home or warp.
+
+Take a backup before upgrading or repairing legacy data, and leave data filenames unchanged. If files have already been renamed, stop the server, back up the affected store, and restore a known-good backup with its original filenames before restarting. Setting `features.data-repair.enabled: false` in `config/essentials.yml` before the next start holds off the JSON repair while you investigate; it does not remove duplicates or make un-keyed records updateable or deletable.
+
+不要重命名或手动编辑框架管理的 JSON 数据文件。启动主键修复要求旧记录的文件名为 `<uuid>.json`，其中 `uuid` 是记录内部保存的标识。若修复前手动改过文件名，修复可能留下原来的无主键记录，同时写入一份带主键的副本。该标识的修复计数为零；之后启动会警告多条记录共用标识，家或地标点可能重复列出（UltiKits/UltiEssentials#71）。这不是受支持的家或地标点改名方式。
+
+升级或修复旧数据前先备份，不要改动数据文件名。若已经改名，先停服并备份受影响的数据存储，再从保留原始文件名的可靠备份恢复，然后重启。排查期间可在下次启动前将 `config/essentials.yml` 的 `features.data-repair.enabled` 设为 `false`，暂缓 JSON 修复；该设置不会删除重复记录，也不会让缺少主键的记录变得可以更新或删除。
 
 ## 📄 开源协议
 

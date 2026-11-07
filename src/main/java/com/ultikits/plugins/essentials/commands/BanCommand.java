@@ -18,7 +18,7 @@ import java.util.UUID;
  * <p>
  * Usage: /ban <player> [reason]
  *        /tempban <player> <duration> [reason]
- *        /banip <player|ip> [reason]
+ * IP-only bans are handled separately by {@link BanIpCommand}.
  *
  * @author wisdomme
  * @version 1.0.0

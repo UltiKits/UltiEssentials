@@ -56,20 +56,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   was a Chinese sentence, and `teleport_success`, the one older ASCII key still in use.
   This module's official language files (`lang/en.json` and `lang/zh.json` under
   `plugins/UltiTools/pluginConfig/UltiEssentials/`) belong to UltiTools: from UltiTools-API 6.3.0 an edited
-  official file is restored to the shipped text at every start, its edited copy kept as a backup and named in
-  the server log, so edits made there are not kept. To customise messages, copy the official file under a new
-  name that starts with its language code and a hyphen and holds only ASCII letters, digits, `_` and `-`
-  (`en.json` to `en-myserver.json`), edit the copy against the new keys, and set `language: en-myserver` in
-  `plugins/UltiTools/config.yml` (one setting for the framework and every module). Messages the copy lacks come
-  from the official file its name starts with (`en` here), and a module with no file under that name uses its
-  official `en`. A server whose
-  language files were never edited needs no action.
+  official file is restored to the shipped text at every start for all shipped languages, and on
+  `/ul reload` or `/ul reload UltiEssentials` for the official language in use (the official base of a
+  custom name). The previous file is kept beside it as `.bak` (or `.1.bak`, `.2.bak`, etc. when needed),
+  and one WARNING names the file and backup. On the first start after upgrading from a framework version
+  without language-file hash records (before 6.3.0), every official file that differs from the new jar is
+  backed up and restored, edited or not. Here both older `en.json` and `zh.json` have renamed keys, so
+  upgrading them produces two backups and two WARNINGs. A server whose language files were never edited
+  still needs no action. To customise messages, copy the official file inside this module's own `lang/`
+  folder under a new name starting with its language code and a hyphen (`en.json` to `en-myserver.json`).
+  The name without `.json` must start with an ASCII letter or digit and contain only ASCII letters,
+  digits, `_` and `-`. Edit the copy against the new keys and set `language: en-myserver` in
+  `plugins/UltiTools/config.yml` (one setting for the framework and every module). Missing messages come
+  from official `en`, and a module without that custom file uses its official `en`. A safe name without
+  an official-code prefix, such as `ja`, is still read from this module's `lang/ja.json`, but missing
+  messages use English and a WARNING explains the fallback for each module when its language is loaded.
+  An unsafe name is not read; this module uses English instead. A copy in another module's folder has
+  no effect here.
 - 语言键已改为带点的 ASCII 键（例如 `essentials.home.set`）：包括所有中文句子形式的键，以及仍在使用的旧 ASCII 键 `teleport_success`。本模块的官方语言文件
   （`plugins/UltiTools/pluginConfig/UltiEssentials/` 下的 `lang/en.json` 和 `lang/zh.json`）归 UltiTools 所有：自 UltiTools-API 6.3.0 起，
-  被修改过的官方文件会在每次启动时恢复为自带内容，修改过的副本作为备份保留并在服务器日志中注明，因此在其中所做的修改不会保留。
-  要自定义消息，请把官方文件复制为以语言代码加连字符开头、只含 ASCII 字母、数字、`_` 和 `-` 的新名称
-  （`zh.json` → `zh-myserver.json`），按新键修改副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`
-  （框架和所有模块共用这一个设置）。副本中没有的消息取自名称开头对应的官方文件（此处为 `zh`），没有该名称文件的模块使用其官方 `zh`。从未改过语言文件的服务器无需任何操作。
+  每次启动会检查所有自带语言并恢复直接修改过的官方文件；执行 `/ul reload` 或 `/ul reload UltiEssentials` 时，
+  会对当前使用的官方语言（自定义名称对应的官方语言）做相同处理。旧文件在原目录保留为 `.bak`（名称已占用时使用
+  `.1.bak`、`.2.bak` 等），一条 WARNING 会指明原文件与备份。首次从没有语言文件哈希记录的框架版本（6.3.0 之前）
+  升级后启动时，只要官方文件与新 jar 不同，即使从未手动改过，也会被备份并恢复。本模块的 `en.json` 和 `zh.json`
+  都改过键名，因此升级这两个旧文件时会产生两个备份与两条 WARNING。从未改过语言文件的服务器仍无需任何操作。
+  要自定义消息，请在本模块自己的 `lang/` 目录中复制官方文件并改名（`zh.json` → `zh-myserver.json`），新名称以官方语言代码
+  加连字符开头；不含 `.json` 的名称必须以 ASCII 字母或数字开头，且只含 ASCII 字母、数字、`_` 和 `-`。
+  按新键修改副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`（框架和所有模块共用这一个设置）。
+  副本中没有的消息取自官方 `zh`，没有该自定义文件的模块使用其官方 `zh`。`ja` 这类安全但没有官方语言前缀的名称仍会读取
+  本模块的 `lang/ja.json`，但缺少的消息使用英文，各模块加载语言时会以一条 WARNING 解释回退。名称不安全时不会读取该文件，
+  本模块改用英文。放在其他模块目录中的副本不会影响本模块。
 
 ### Fixed
 

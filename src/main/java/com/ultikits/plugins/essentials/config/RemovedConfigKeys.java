@@ -2,102 +2,31 @@ package com.ultikits.plugins.essentials.config;
 
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Settings this module used to declare in {@code config/essentials.yml} and no longer reads, and the
- * warning that tells an operator whose file still holds one.
- * <p>
- * <b>Why a module needs this at all.</b> Deleting a configuration field removes the key from the
- * code, not from anybody's disk. The framework writes a missing key's declared default into the
- * operator's file on first load and never deletes a key it no longer declares
- * ({@code AbstractConfigEntity#init}), so every server that has run this module still has the keys
- * below in its file, carrying whatever value its operator last set. Without this warning an edited
- * value would go on looking like a setting.
- * <p>
- * Each line names the module, the file and the key, and says where the setting's job went, because
- * "this does nothing" without "here is what does" is only half of what the operator has to act on.
- * <p>
- * The check is scoped to an explicit list rather than derived by comparing the file against the
- * declared fields: an unknown key in the file is not necessarily a key this module ever had (a typo,
- * a hand-written note, another tool's key), and reporting all of them would bury the real removals.
- * <p>
- * 本模块已删除、但仍可能留在运维 {@code config/essentials.yml} 中的配置项，以及提示运维的警告。
+ * Compatibility entry point for the module's removed-setting check.
+ * The only formerly removed key, features.recall.enabled, is live again with #53. There are
+ * currently no removed settings to warn about; neither recall nor wild cooldown may be reported
+ * as having no effect. Retains the existing method and missing-configuration diagnostic.
  */
 public final class RemovedConfigKeys {
-
-    /** The module name each warning names, matching this module's runtime name. */
-    private static final String MODULE = "UltiEssentials";
-
-    /** The file every key below lived in; used when the configuration bean is missing altogether. */
-    private static final String FILE = "config/essentials.yml";
-
-    /**
-     * One entry per removed key, the key path as it appears in the file; where its job went is
-     * {@link #reason}.
-     * <p>
-     * {@code features.wild.cooldown} is deliberately absent: it is a live key, bound to
-     * {@code /wild}'s cooldown through the framework's config-bound {@code @CmdCD}
-     * (UltiKits/UltiTools-Reborn#531), and reporting it here would tell operators to delete a
-     * setting that works.
-     */
-    private static final String[] REMOVED = {
-            "features.recall.enabled",
-    };
-
-    /**
-     * Where a removed key's job went, in the server's language; completes the sentence
-     * "... and can be deleted from the file -- %s.". One literal key per removed setting, so the
-     * language guard checks each of them.
-     */
-    private static String reason(String key, UltiToolsPlugin plugin) {
-        if ("features.recall.enabled".equals(key)) {
-            return plugin.i18n("essentials.warn.removed.recall");
-        }
-        throw new IllegalStateException("no reason text for removed key " + key);
-    }
-
     private RemovedConfigKeys() {
     }
 
     /**
-     * Returns one warning per removed key that is still present in the operator's file, in the
-     * order the keys are listed above; an empty list when there is none.
-     * <p>
-     * Asks the framework whether each removed key is in the file through
-     * {@code AbstractConfigEntity#isPresentInFile(String)}, which answers from the file as it was last
-     * loaded -- including keys the entity no longer declares, which is exactly what a residual key is,
-     * and a key holding an explicit null. A fresh install has none of them, so a clean server gets an
-     * empty list. UltiTools-API 6.3.0 removed the parsed-file accessor this method used to read
-     * (UltiKits/UltiEssentials#68).
-     * <p>
-     * A file the framework could not read or parse reports no key present: the framework has already
-     * logged at SEVERE that it could not load the file and will not overwrite it, and repeating a
-     * removed-key warning for a file nobody could read would be a guess.
-     * <p>
-     * A configuration bean that is missing altogether yields a warning saying the file was not checked
-     * rather than an empty list: a check that silently does nothing and a server with no residual key
-     * would otherwise look the same in the log.
+     * Returns no removed-setting warnings for a loaded configuration.
      *
-     * @param config the module's configuration after the framework has loaded it; may be null
-     * @param plugin the module, whose language catalogue gives the warnings their text
-     * @return the warnings to log, never null
+     * @param config the loaded configuration, or null when it could not be resolved
+     * @param plugin the module providing the diagnostic's translation
+     * @return an empty list, or the existing missing-configuration warning
      */
     public static List<String> warningsFor(EssentialsConfig config, UltiToolsPlugin plugin) {
         if (config == null) {
             return Collections.singletonList(String.format(plugin.i18n("essentials.warn.removed_unreadable"),
-                    MODULE, FILE));
+                    "UltiEssentials", "config/essentials.yml"));
         }
-        String file = config.getConfigFilePath();
-        List<String> warnings = new ArrayList<>();
-        for (String removed : REMOVED) {
-            if (config.isPresentInFile(removed)) {
-                warnings.add(String.format(plugin.i18n("essentials.warn.removed_key"), MODULE, removed, file,
-                        reason(removed, plugin)));
-            }
-        }
-        return warnings;
+        return Collections.emptyList();
     }
 }

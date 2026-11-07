@@ -7,6 +7,14 @@
 
   "essentials.teleport.success_warmup": "§a传送成功！",
 
+  "essentials.command.recall.description": "将在线玩家召回到你的位置",
+  "essentials.help.recall": "用法：/recall <玩家> - 将在线玩家召回到你身边",
+  "essentials.recall.self": "不能召回你自己",
+  "essentials.recall.failed": "召回失败；玩家未被传送",
+  "essentials.recall.success": "已将 %s 召回到你的位置",
+  "essentials.recall.target": "%s 将你召回到了其位置",
+  "essentials.config.essentials.features.recall.enabled": "启用 /recall 将在线玩家召回到你身边（需要 ultiessentials.recall.other 权限）",
+
   "essentials.back.no_location": "没有可返回的位置",
   "essentials.back.success": "已传送到上一个位置",
 
@@ -271,9 +279,7 @@
   "essentials.command.whitelist.description": "白名单管理",
   "essentials.command.wild.description": "随机传送",
   "essentials.help.wild": "使用 /wild 随机传送到野外",
-  "essentials.warn.removed.recall": "本模块没有 /recall 命令，所以该设置从未开关过任何东西；该命令已作为功能请求记录在 UltiKits/UltiEssentials#53（UltiKits/UltiEssentials#27）",
   "essentials.warn.removed_unreadable": "%s：无法读取 %s，因此未检查其中是否残留本模块已删除的设置（UltiKits/UltiEssentials#27）",
-  "essentials.warn.removed_key": "%s：设置 '%s'（位于 %s）不起任何作用，可以从文件中删除——%s。",
   "essentials.lock.refusal_open": "§c该容器被 §f%s §c锁定",
   "essentials.lock.refusal_break": "§c该容器被 §f%s §c锁定，无法破坏",
   "essentials.deathpunish.prefix": "死亡惩罚:",

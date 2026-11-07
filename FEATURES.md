@@ -516,7 +516,9 @@ a PlaceholderAPI expansion throws for that player) is logged once at error level
 update, while the other players are refreshed as usual; the failure is logged again only after a
 refresh for that player has succeeded in between, and is forgotten when the player quits or turns
 the sidebar off. A player's name-prefix team that was removed (for example with the vanilla
-`team remove` command) is looked up again or re-created on the next update, so the prefix comes back. Each scheduled command already runs as its own task, so a command that throws
+`team remove` command) has its stale cache entry cleared on the first update after removal; the second
+looks the team up again or re-creates it, so the prefix comes back. With the default 5-second interval,
+recovery can take about 10 seconds. Each scheduled command already runs as its own task, so a command that throws
 affects only itself.
 
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |

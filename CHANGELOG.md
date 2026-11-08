@@ -62,8 +62,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and one WARNING names the file and backup. On the first start after upgrading from a framework version
   without language-file hash records (before 6.3.0), every official file that differs from the new jar is
   backed up and restored, edited or not. Here both older `en.json` and `zh.json` have renamed keys, so
-  upgrading them produces two backups and two WARNINGs. A server whose language files were never edited
-  still needs no action. To customise messages, copy the official file inside this module's own `lang/`
+  when the framework upgrade and this module's JAR swap meet in one start, they produce two backups and
+  two WARNINGs. With the recommended order and a restart in between (framework first, still running the
+  earlier module), that start records the unedited earlier files as untouched, and after the JAR swap
+  they are refreshed with no backup and no WARNING (#93). A server whose language files were never
+  edited still needs no action. To customise messages, copy the official file inside this module's own `lang/`
   folder under a new name starting with its language code and a hyphen (`en.json` to `en-myserver.json`).
   The name without `.json` must start with an ASCII letter or digit and contain only ASCII letters,
   digits, `_` and `-`. Edit the copy against the new keys and set `language: en-myserver` in
@@ -79,7 +82,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   会对当前使用的官方语言（自定义名称对应的官方语言）做相同处理。旧文件在原目录保留为 `.bak`（名称已占用时使用
   `.1.bak`、`.2.bak` 等），一条 WARNING 会指明原文件与备份。首次从没有语言文件哈希记录的框架版本（6.3.0 之前）
   升级后启动时，只要官方文件与新 jar 不同，即使从未手动改过，也会被备份并恢复。本模块的 `en.json` 和 `zh.json`
-  都改过键名，因此升级这两个旧文件时会产生两个备份与两条 WARNING。从未改过语言文件的服务器仍无需任何操作。
+  都改过键名，因此框架升级与本模块 JAR 替换在同一次启动中完成时，这两个旧文件会产生两个备份与两条 WARNING；
+  若按推荐顺序分两次启动（先升级框架并重启，仍运行旧版本模块），未改动的旧文件会被记录为未修改，替换 JAR 后直接更新，
+  不产生备份与 WARNING（#93）。从未改过语言文件的服务器仍无需任何操作。
   要自定义消息，请在本模块自己的 `lang/` 目录中复制官方文件并改名（`zh.json` → `zh-myserver.json`），新名称以官方语言代码
   加连字符开头；不含 `.json` 的名称必须以 ASCII 字母或数字开头，且只含 ASCII 字母、数字、`_` 和 `-`。
   按新键修改副本，然后在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver`（框架和所有模块共用这一个设置）。

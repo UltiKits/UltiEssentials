@@ -215,6 +215,10 @@ class TempBanCommandTest {
     @Nested
     @DisplayName("suggest")
     class SuggestTests {
+        @BeforeEach
+        void grantCompletionPermission() {
+            when(player.hasPermission("ultiessentials.ban.temp")).thenReturn(true);
+        }
 
         @Test
         @DisplayName("One argument suggests online player names")
@@ -223,7 +227,7 @@ class TempBanCommandTest {
             doReturn(java.util.Collections.singletonList(online))
                     .when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
 
-            List<String> result = command.suggest(player, mock(org.bukkit.command.Command.class), new String[]{"A"});
+            List<String> result = command.onTabComplete(player, mock(org.bukkit.command.Command.class), "tempban", new String[]{"A"});
 
             assertThat(result).contains("Alice");
         }
@@ -231,7 +235,7 @@ class TempBanCommandTest {
         @Test
         @DisplayName("Two arguments suggest the fixed set of duration presets")
         void twoArgsSuggestDurationPresets() {
-            List<String> result = command.suggest(player, mock(org.bukkit.command.Command.class), new String[]{"BadPlayer", ""});
+            List<String> result = command.onTabComplete(player, mock(org.bukkit.command.Command.class), "tempban", new String[]{"BadPlayer", ""});
 
             assertThat(result).contains("1h", "1d", "1w");
         }

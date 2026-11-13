@@ -104,11 +104,12 @@ class BanCommandBehaviorTest {
     @Test
     @DisplayName("suggest with one argument suggests online player names")
     void suggestWithOneArgSuggestsOnlinePlayers() {
+        when(player.hasPermission("ultiessentials.ban")).thenReturn(true);
         Player online = EssentialsTestHelper.createMockPlayer("Alice", UUID.randomUUID());
         doReturn(java.util.Collections.singletonList(online))
                 .when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
 
-        List<String> result = command.suggest(player, mock(org.bukkit.command.Command.class), new String[]{"A"});
+        List<String> result = command.onTabComplete(player, mock(org.bukkit.command.Command.class), "ban", new String[]{"A"});
 
         assertThat(result).contains("Alice");
     }
@@ -126,7 +127,7 @@ class BanCommandBehaviorTest {
         doReturn(java.util.Collections.singletonList(online))
                 .when(EssentialsTestHelper.getMockServer()).getOnlinePlayers();
 
-        List<String> result = command.suggest(player, mock(org.bukkit.command.Command.class), new String[]{});
+        List<String> result = command.onTabComplete(player, mock(org.bukkit.command.Command.class), "ban", new String[]{});
 
         assertThat(result).isEmpty();
     }

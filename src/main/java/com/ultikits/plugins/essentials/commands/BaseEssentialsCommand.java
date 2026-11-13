@@ -58,6 +58,13 @@ public abstract class BaseEssentialsCommand extends BaseCommandExecutor {
     }
 
     /**
+     * 为玩家和非玩家发送者提供封禁目标，复用已有的玩家隐身过滤。
+     */
+    protected List<String> suggestBanPlayers(CommandSender sender, String prefix) {
+        return suggestOnlinePlayers(sender instanceof Player ? (Player) sender : null, prefix);
+    }
+
+    /**
      * Default implementation for help command.
      * Subclasses can override this to provide custom help messages.
      *

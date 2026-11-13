@@ -1,10 +1,10 @@
 # UltiEssentials
 
-[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.3.0%2B-blue)](https://github.com/UltiKits/UltiTools-Reborn)
+[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.4.0%2B-blue)](https://github.com/UltiKits/UltiTools-Reborn)
 
-Requires **UltiTools-API 6.3.0 or later**; an older framework refuses to load this module (it declares `api-version: 630`).
+Requires **UltiTools-API 6.4.0 or later**; an older framework refuses to load this module (it declares `api-version: 640`).
 
-需要 **UltiTools-API 6.3.0 或更高版本**；更早的框架会拒绝加载本模块（本模块声明 `api-version: 630`）。
+需要 **UltiTools-API 6.4.0 或更高版本**；更早的框架会拒绝加载本模块（本模块声明 `api-version: 640`）。
 
 UltiEssentials 是基于 UltiTools-API 框架开发的服务器基础功能插件模块，提供了常用的传送、玩家状态、管理员工具和服务器自定义功能。
 
@@ -82,6 +82,12 @@ These commands never change the separate vanilla IP ban list. A remaining vanill
 
 `config/essentials.yml` 中的 `features.recall.enabled` 默认 `true`，现在会真正控制召回命令。改为 `false` 后执行 `/ul reload UltiEssentials` 即可禁用；旧文件中已有的 `false` 不会被覆盖。该键在 6.3.0 因命令尚不存在而删除，现在恢复为有效设置，不再报告“已移除”。更换 JAR 仍需重启。
 
+### Ban command completion / 封禁命令补全
+
+`/ban` and `/tempban` suggest online names for players, console and RCON through the framework's sender-aware providers. Players without `ultiessentials.hide.see` do not see vanished targets; non-player senders see every online player. `/tempban` also suggests duration presets matching the typed prefix. `/unban` suggests distinct names from this module's active, unexpired ban records (including the address stored as an IP-only record's name), not the online-player list or vanilla bans. Candidates are prefix-matched without regard to case and go through framework permission/target filtering. If no candidates remain for a non-player sender, UltiTools-API 6.4.0 still permits Bukkit's default online-name fallback.
+
+`/ban`、`/tempban` 通过框架的发送者感知提供器，为玩家、控制台和 RCON 补全在线名字；玩家没有 `ultiessentials.hide.see` 权限时看不到隐身目标，非玩家发送者可看到全部在线玩家。`/tempban` 还会按已输入前缀补全预设时长。`/unban` 补全本模块有效、未过期封禁记录中的去重名称（包括 IP 封禁记录保存为名称的地址），而不是在线玩家或原版封禁名单。候选按前缀匹配、不区分大小写，并经过框架的权限和发送者类型过滤。非玩家请求没有候选时，UltiTools-API 6.4.0 仍允许 Bukkit 回退到默认的在线名字补全。
+
 ### Commands that take over vanilla commands / 接管原版命令的命令
 
 `/ban`, `/banlist` and `/scoreboard` deliberately take over the vanilla commands of the same name: `/ban` and `/banlist` work on this module's own ban records, not on the server's ban list, and `/scoreboard` toggles this module's sidebar. The vanilla commands stay reachable as `minecraft:ban`, `minecraft:banlist` and `minecraft:scoreboard`.
@@ -111,7 +117,7 @@ The sidebar is drawn on a private scoreboard this module assigns to each player 
 
 ## 📦 安装
 
-1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.3.0 或更高版本。本模块声明 `api-version: 630`，更早的框架会拒绝加载它
+1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.4.0 或更高版本。本模块声明 `api-version: 640`，更早的框架会拒绝加载它
 2. 将 `UltiEssentials-1.0.0.jar` 放入 `plugins/UltiTools/plugins/` 目录
 3. 重启服务器（`/ul reload` 只重载配置，不会加载新的模块 jar）
 

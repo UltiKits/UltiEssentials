@@ -5,12 +5,10 @@ import com.ultikits.plugins.essentials.service.BanService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.command.*;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -39,14 +37,14 @@ public class BanCommand extends BaseEssentialsCommand {
     private EssentialsConfig config;
     
     @CmdMapping(format = "<player>")
-    public void ban(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
+    public void ban(@CmdSender CommandSender sender, @CmdParam(value = "player", suggest = "suggestBanPlayers") String playerName) {
         banWithReason(sender, playerName, i18n("essentials.ban.no_reason"));
     }
     
     @CmdMapping(format = "<player> <reason>")
     public void banWithReason(
         @CmdSender CommandSender sender,
-        @CmdParam("player") String playerName,
+        @CmdParam(value = "player", suggest = "suggestBanPlayers") String playerName,
         @CmdParam("reason") String reason
     ) {
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
@@ -109,11 +107,4 @@ public class BanCommand extends BaseEssentialsCommand {
         sender.sendMessage(i18n("essentials.help.ban"));
     }
     
-    @Override
-    protected List<String> suggest(Player player, Command command, String[] args) {
-        if (args.length == 1) {
-            return suggestOnlinePlayers(player, args[0]);
-        }
-        return super.suggest(player, command, args);
-    }
 }

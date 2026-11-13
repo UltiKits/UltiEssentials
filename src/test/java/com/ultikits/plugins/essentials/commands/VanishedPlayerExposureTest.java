@@ -157,6 +157,12 @@ class VanishedPlayerExposureTest {
     @Nested
     @DisplayName("ban completion")
     class BanCompletion {
+        @BeforeEach
+        void grantCompletionPermissions() {
+            when(sender.hasPermission("ultiessentials.ban")).thenReturn(true);
+            when(sender.hasPermission("ultiessentials.ban.temp")).thenReturn(true);
+            when(vanished.hasPermission("ultiessentials.ban")).thenReturn(true);
+        }
 
         @Test
         @DisplayName("/ban and /tempban completion leave a vanished player out for a sender who may not see them")
@@ -169,8 +175,8 @@ class VanishedPlayerExposureTest {
             EssentialsTestHelper.setField(tempBan, "plugin", EssentialsTestHelper.getMockPlugin());
             EssentialsTestHelper.setField(tempBan, "banService", mock(BanService.class));
 
-            List<String> banNames = ban.suggest(sender, mock(Command.class), new String[]{""});
-            List<String> tempBanNames = tempBan.suggest(sender, mock(Command.class), new String[]{""});
+            List<String> banNames = ban.onTabComplete(sender, mock(Command.class), "ban", new String[]{""});
+            List<String> tempBanNames = tempBan.onTabComplete(sender, mock(Command.class), "tempban", new String[]{""});
 
             assertThat(banNames).contains("Seeker").doesNotContain("Ghost");
             assertThat(tempBanNames).contains("Seeker").doesNotContain("Ghost");
@@ -184,7 +190,7 @@ class VanishedPlayerExposureTest {
             EssentialsTestHelper.setField(ban, "plugin", EssentialsTestHelper.getMockPlugin());
             EssentialsTestHelper.setField(ban, "banService", mock(BanService.class));
 
-            assertThat(ban.suggest(vanished, mock(Command.class), new String[]{""})).contains("Ghost", "Seeker");
+            assertThat(ban.onTabComplete(vanished, mock(Command.class), "ban", new String[]{""})).contains("Ghost", "Seeker");
         }
 
         @Test
@@ -196,7 +202,7 @@ class VanishedPlayerExposureTest {
             EssentialsTestHelper.setField(ban, "plugin", EssentialsTestHelper.getMockPlugin());
             EssentialsTestHelper.setField(ban, "banService", mock(BanService.class));
 
-            assertThat(ban.suggest(sender, mock(Command.class), new String[]{""})).contains("Ghost", "Seeker");
+            assertThat(ban.onTabComplete(sender, mock(Command.class), "ban", new String[]{""})).contains("Ghost", "Seeker");
         }
     }
 

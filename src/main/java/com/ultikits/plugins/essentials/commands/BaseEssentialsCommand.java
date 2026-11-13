@@ -58,6 +58,19 @@ public abstract class BaseEssentialsCommand extends BaseCommandExecutor {
     }
 
     /**
+     * Suggests online ban targets using the existing player visibility filter.
+     * A non-player sender is treated as the console and sees all online players,
+     * including vanished players.
+     *
+     * @param sender the sender requesting completion
+     * @param prefix the typed prefix, or {@code null}
+     * @return the matching names visible to the sender
+     */
+    protected List<String> suggestBanPlayers(CommandSender sender, String prefix) {
+        return suggestOnlinePlayers(sender instanceof Player ? (Player) sender : null, prefix);
+    }
+
+    /**
      * Default implementation for help command.
      * Subclasses can override this to provide custom help messages.
      *

@@ -6,7 +6,6 @@ import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.command.*;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -40,8 +39,8 @@ public class TempBanCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<player> <duration>")
     public void tempban(
         @CmdSender CommandSender sender,
-        @CmdParam("player") String playerName,
-        @CmdParam("duration") String duration
+        @CmdParam(value = "player", suggest = "suggestBanPlayers") String playerName,
+        @CmdParam(value = "duration", suggest = "suggestDurations") String duration
     ) {
         tempbanWithReason(sender, playerName, duration, i18n("essentials.ban.no_reason"));
     }
@@ -49,7 +48,7 @@ public class TempBanCommand extends BaseEssentialsCommand {
     @CmdMapping(format = "<player> <duration> <reason>")
     public void tempbanWithReason(
         @CmdSender CommandSender sender,
-        @CmdParam("player") String playerName,
+        @CmdParam(value = "player", suggest = "suggestBanPlayers") String playerName,
         @CmdParam("duration") String duration,
         @CmdParam("reason") String reason
     ) {
@@ -122,14 +121,7 @@ public class TempBanCommand extends BaseEssentialsCommand {
         sender.sendMessage(i18n("essentials.help.tempban.combined"));
     }
     
-    @Override
-    protected List<String> suggest(Player player, Command command, String[] args) {
-        if (args.length == 1) {
-            return suggestOnlinePlayers(player, args[0]);
-        }
-        if (args.length == 2) {
-            return java.util.Arrays.asList("1h", "6h", "12h", "1d", "3d", "7d", "30d", "1w");
-        }
-        return super.suggest(player, command, args);
+    private List<String> suggestDurations(CommandSender sender) {
+        return java.util.Arrays.asList("1h", "6h", "12h", "1d", "3d", "7d", "30d", "1w");
     }
 }

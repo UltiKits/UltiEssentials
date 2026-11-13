@@ -6,9 +6,7 @@ import com.ultikits.plugins.essentials.service.BanService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.command.*;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,7 +35,7 @@ public class UnbanCommand extends BaseEssentialsCommand {
     private EssentialsConfig config;
     
     @CmdMapping(format = "<player>")
-    public void unban(@CmdSender CommandSender sender, @CmdParam("player") String playerName) {
+    public void unban(@CmdSender CommandSender sender, @CmdParam(value = "player", suggest = "suggestBannedPlayers") String playerName) {
         BanService.UnbanResult outcome = banService.unbanPlayerByName(playerName);
 
         if (outcome == BanService.UnbanResult.FAILED) {
@@ -81,15 +79,10 @@ public class UnbanCommand extends BaseEssentialsCommand {
         sender.sendMessage(i18n("essentials.help.unban"));
     }
     
-    @Override
-    protected List<String> suggest(Player player, Command command, String[] args) {
-        if (args.length == 1) {
-            return banService.getActiveBans().stream()
-                .map(BanData::getPlayerName)
-                .filter(n -> n.toLowerCase().startsWith(args[0].toLowerCase()))
-                .distinct()
-                .collect(Collectors.toList());
-        }
-        return super.suggest(player, command, args);
+    private List<String> suggestBannedPlayers(CommandSender sender) {
+        return banService.getActiveBans().stream()
+            .map(BanData::getPlayerName)
+            .distinct()
+            .collect(Collectors.toList());
     }
 }

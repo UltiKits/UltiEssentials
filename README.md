@@ -84,9 +84,9 @@ These commands never change the separate vanilla IP ban list. A remaining vanill
 
 ### Ban command completion / 封禁命令补全
 
-`/ban` and `/tempban` suggest online names for players, console and RCON through the framework's sender-aware providers. Players without `ultiessentials.hide.see` do not see vanished targets; non-player senders see every online player. `/tempban` also suggests duration presets matching the typed prefix. `/unban` suggests distinct names from this module's active, unexpired ban records (including the address stored as an IP-only record's name), not the online-player list or vanilla bans. Candidates are prefix-matched without regard to case and go through framework permission/target filtering. If no candidates remain for a non-player sender, UltiTools-API 6.4.0 still permits Bukkit's default online-name fallback.
+`/ban` and `/tempban` suggest online names for players and the server console through the framework's sender-aware providers. Players without `ultiessentials.hide.see` do not see vanished targets; non-player senders see every online player. `/tempban` also suggests duration presets matching the typed prefix. `/unban` suggests distinct names from this module's active, unexpired ban records (including the address stored as an IP-only record's name), not the online-player list or vanilla bans. Candidates are prefix-matched without regard to case and go through framework permission/target filtering. If no candidates remain for a non-player sender, UltiTools-API 6.4.0 still permits Bukkit's default online-name fallback.
 
-`/ban`、`/tempban` 通过框架的发送者感知提供器，为玩家、控制台和 RCON 补全在线名字；玩家没有 `ultiessentials.hide.see` 权限时看不到隐身目标，非玩家发送者可看到全部在线玩家。`/tempban` 还会按已输入前缀补全预设时长。`/unban` 补全本模块有效、未过期封禁记录中的去重名称（包括 IP 封禁记录保存为名称的地址），而不是在线玩家或原版封禁名单。候选按前缀匹配、不区分大小写，并经过框架的权限和发送者类型过滤。非玩家请求没有候选时，UltiTools-API 6.4.0 仍允许 Bukkit 回退到默认的在线名字补全。
+`/ban`、`/tempban` 通过框架的发送者感知提供器，为玩家和服务器控制台补全在线名字；玩家没有 `ultiessentials.hide.see` 权限时看不到隐身目标，非玩家发送者可看到全部在线玩家。`/tempban` 还会按已输入前缀补全预设时长。`/unban` 补全本模块有效、未过期封禁记录中的去重名称（包括 IP 封禁记录保存为名称的地址），而不是在线玩家或原版封禁名单。候选按前缀匹配、不区分大小写，并经过框架的权限和发送者类型过滤。非玩家请求没有候选时，UltiTools-API 6.4.0 仍允许 Bukkit 回退到默认的在线名字补全。
 
 ### Commands that take over vanilla commands / 接管原版命令的命令
 

@@ -97,15 +97,14 @@ class BanCompletionTest {
         }
     }
 
-    @Test
-    void consoleAndPlayerCompleteDurationPresetsWithPrefixFiltering() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void consoleAndPlayerCompleteDurationPresetsWithPrefixFiltering(boolean playerSender) throws Exception {
         BaseEssentialsCommand executor = executor("tempban");
-        for (CommandSender sender : Arrays.asList(mock(ConsoleCommandSender.class), viewer)) {
-            when(sender.hasPermission("ultiessentials.ban.temp")).thenReturn(true);
-            assertThat(executor.onTabComplete(sender, bukkitCommand, "tempban", new String[]{"Alice", "1"}))
-                    .contains("1h", "12h", "1d", "1w")
-                    .allMatch(value -> value.startsWith("1"));
-        }
+        CommandSender sender = playerSender ? viewer : mock(ConsoleCommandSender.class);
+        when(sender.hasPermission("ultiessentials.ban.temp")).thenReturn(true);
+        assertThat(executor.onTabComplete(sender, bukkitCommand, "tempban", new String[]{"Alice", "1"}))
+                .containsExactlyInAnyOrder("1h", "12h", "1d", "1w");
     }
 
     @ParameterizedTest

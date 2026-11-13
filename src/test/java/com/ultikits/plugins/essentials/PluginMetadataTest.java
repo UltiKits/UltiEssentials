@@ -83,7 +83,7 @@ class PluginMetadataTest {
 
     /**
      * Whether {@code major.minor.patch} is exactly the framework level {@code apiVersion} encodes:
-     * {@code 640} 是主版本 6、次版本 4。 The patch never counts.
+     * {@code 640} is major 6, minor 4. The patch never counts.
      */
     static boolean namesLevel(String version, int apiVersion) {
         String[] parts = version.split("\\.");

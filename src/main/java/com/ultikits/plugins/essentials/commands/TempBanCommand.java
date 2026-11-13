@@ -49,7 +49,7 @@ public class TempBanCommand extends BaseEssentialsCommand {
     public void tempbanWithReason(
         @CmdSender CommandSender sender,
         @CmdParam(value = "player", suggest = "suggestBanPlayers") String playerName,
-        @CmdParam(value = "duration", suggest = "suggestDurations") String duration,
+        @CmdParam("duration") String duration,
         @CmdParam("reason") String reason
     ) {
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);

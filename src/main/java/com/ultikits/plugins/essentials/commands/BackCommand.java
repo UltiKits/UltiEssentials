@@ -4,7 +4,6 @@ import com.ultikits.plugins.essentials.service.OwnTeleports;
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.ultitools.annotations.EventListener;
 import com.ultikits.ultitools.annotations.command.*;
-import com.ultikits.ultitools.annotations.I18n;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -24,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(alias = {"back"}, permission = "ultiessentials.back", description = "essentials.command.back.description")
-@I18n("back.description")
 @EventListener
 public class BackCommand extends BaseEssentialsCommand implements Listener {
 

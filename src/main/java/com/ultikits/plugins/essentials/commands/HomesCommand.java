@@ -5,7 +5,6 @@ import com.ultikits.plugins.essentials.entity.HomeData;
 import com.ultikits.plugins.essentials.service.HomeService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.command.*;
-import com.ultikits.ultitools.annotations.I18n;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -17,7 +16,6 @@ import java.util.List;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(alias = {"homes", "homelist"}, permission = "ultiessentials.homes", description = "essentials.command.homes.description")
-@I18n("homes.description")
 public class HomesCommand extends BaseEssentialsCommand {
     
     @Autowired

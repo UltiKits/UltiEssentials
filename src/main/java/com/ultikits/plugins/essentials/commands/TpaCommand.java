@@ -4,7 +4,6 @@ import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.TpaService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.command.*;
-import com.ultikits.ultitools.annotations.I18n;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -15,7 +14,6 @@ import org.bukkit.entity.Player;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(alias = {"tpa"}, permission = "ultiessentials.tpa", description = "essentials.command.tpa.description")
-@I18n("tpa.description")
 public class TpaCommand extends BaseEssentialsCommand {
     
     @Autowired

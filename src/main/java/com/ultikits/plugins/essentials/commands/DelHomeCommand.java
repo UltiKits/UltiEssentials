@@ -4,7 +4,6 @@ import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.HomeService;
 import com.ultikits.ultitools.annotations.Autowired;
 import com.ultikits.ultitools.annotations.command.*;
-import com.ultikits.ultitools.annotations.I18n;
 import org.bukkit.entity.Player;
 
 /**
@@ -14,7 +13,6 @@ import org.bukkit.entity.Player;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(alias = {"delhome", "deletehome", "rmhome"}, permission = "ultiessentials.delhome", description = "essentials.command.delhome.description")
-@I18n("delhome.description")
 public class DelHomeCommand extends BaseEssentialsCommand {
     
     @Autowired

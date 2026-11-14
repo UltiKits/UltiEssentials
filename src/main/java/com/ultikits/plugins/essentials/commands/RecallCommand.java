@@ -2,7 +2,6 @@ package com.ultikits.plugins.essentials.commands;
 
 import com.ultikits.plugins.essentials.config.EssentialsConfig;
 import com.ultikits.plugins.essentials.service.OwnTeleports;
-import com.ultikits.ultitools.annotations.I18n;
 import com.ultikits.ultitools.annotations.command.CmdExecutor;
 import com.ultikits.ultitools.annotations.command.CmdMapping;
 import com.ultikits.ultitools.annotations.command.CmdParam;
@@ -24,7 +23,6 @@ import java.util.stream.Collectors;
  */
 @CmdTarget(CmdTarget.CmdTargetType.PLAYER)
 @CmdExecutor(alias = {"recall"}, permission = "ultiessentials.recall.other", description = "essentials.command.recall.description")
-@I18n("recall.description")
 public class RecallCommand extends BaseEssentialsCommand {
     private final EssentialsConfig config;
 
